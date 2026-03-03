@@ -231,10 +231,8 @@ export function DailyEntryPage() {
     const idToUse = entry ? entry.id : worker.id;
 
     let text = `📝 แจ้งยอดรายวัน ${worker.name} (วันที่ ${formattedDate})\n`;
-    text += `เวลาทำงาน: ${clockIn} - ${clockOut}\n\n`;
-    text += `- ค่าแรง: ฿${baseWage}\n`;
-    if (travelAllowance > 0) text += `- ค่ารถ: ฿${travelAllowance}\n`;
-    if (tollFee > 0) text += `- ทางด่วน: ฿${tollFee}\n`;
+    text += `เวลาทำงาน: ${clockIn} - ${clockOut}\n`;
+    if (lateDeduction > 0) text += `หักมาสาย: -฿${lateDeduction}\n`;
     if (overtimePay > 0) {
       let otTimeStr = '';
       const wEnd = worker.shiftEnd || '16:00';
@@ -244,9 +242,15 @@ export function DailyEntryPage() {
       } else if (clockIn < wStart) {
         otTimeStr = ` ${clockIn}-${wStart}`;
       }
-      text += `- OT${otTimeStr}: ฿${overtimePay}\n`;
+      const otHours = entry?.overtimeHours || 0;
+      const otMins = entry?.overtimeMinutes || 0;
+      const otDurationInfo = ` (${otHours} ชม.${otMins > 0 ? ` ${otMins} นาที` : ''})`;
+      text += `OT${otTimeStr}${otDurationInfo}: ฿${overtimePay}\n`;
     }
-    if (lateDeduction > 0) text += `- หักมาสาย: -฿${lateDeduction}\n`;
+    text += `\n`;
+    text += `- ค่าแรง: ฿${baseWage}\n`;
+    if (travelAllowance > 0) text += `- ค่ารถ: ฿${travelAllowance}\n`;
+    if (tollFee > 0) text += `- ทางด่วน: ฿${tollFee}\n`;
 
     if (adjustments && adjustments.length > 0) {
       adjustments.forEach(adj => {
@@ -283,9 +287,7 @@ export function DailyEntryPage() {
 
       text += `� ช่าง ${worker.name}\n`;
       text += `เวลาทำงาน: ${clockIn} - ${clockOut}\n`;
-      text += `- ค่าแรง: ฿${baseWage}\n`;
-      if (travelAllowance > 0) text += `- ค่ารถ: ฿${travelAllowance}\n`;
-      if (tollFee > 0) text += `- ทางด่วน: ฿${tollFee}\n`;
+      if (lateDeduction > 0) text += `หักมาสาย: -฿${lateDeduction}\n`;
       if (overtimePay > 0) {
         let otTimeStr = '';
         const wEnd = worker.shiftEnd || '16:00';
@@ -295,9 +297,14 @@ export function DailyEntryPage() {
         } else if (clockIn < wStart) {
           otTimeStr = ` ${clockIn}-${wStart}`;
         }
-        text += `- OT${otTimeStr}: ฿${overtimePay}\n`;
+        const otHours = entry?.overtimeHours || 0;
+        const otMins = entry?.overtimeMinutes || 0;
+        const otDurationInfo = ` (${otHours} ชม.${otMins > 0 ? ` ${otMins} นาที` : ''})`;
+        text += `OT${otTimeStr}${otDurationInfo}: ฿${overtimePay}\n`;
       }
-      if (lateDeduction > 0) text += `- หักมาสาย: -฿${lateDeduction}\n`;
+      text += `- ค่าแรง: ฿${baseWage}\n`;
+      if (travelAllowance > 0) text += `- ค่ารถ: ฿${travelAllowance}\n`;
+      if (tollFee > 0) text += `- ทางด่วน: ฿${tollFee}\n`;
 
       if (adjustments && adjustments.length > 0) {
         adjustments.forEach(adj => {
