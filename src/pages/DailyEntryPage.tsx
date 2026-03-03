@@ -94,6 +94,9 @@ export function DailyEntryPage() {
     if (outMins > endMins) {
       otRawMins += (outMins - endMins);
     }
+    if (inMins < startMins) {
+      otRawMins += (startMins - inMins);
+    }
 
     // Snap overtime to nearest 15 minutes (floor)
     const otSnappedMins = Math.floor(otRawMins / 15) * 15;
