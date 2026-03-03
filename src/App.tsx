@@ -12,7 +12,7 @@ export default function App() {
     <div className="min-h-screen bg-gray-50/50 font-sans text-gray-900 pb-24">
       {/* Header */}
       <header className="bg-white sticky top-0 z-10 border-b border-gray-100/80 backdrop-blur-md">
-        <div className="max-w-md mx-auto px-5 py-4 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-5 py-4 flex items-center justify-between">
           <h1 className="text-xl font-bold tracking-tight text-gray-900">
             {activeTab === 'daily' && 'บันทึกรายวัน'}
             {activeTab === 'workers' && 'จัดการช่าง'}
@@ -22,7 +22,7 @@ export default function App() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-md mx-auto px-4 py-6">
+      <main className="max-w-5xl mx-auto px-4 py-6">
         {activeTab === 'daily' && <DailyEntryPage />}
         {activeTab === 'workers' && <WorkersPage />}
         {activeTab === 'reports' && <ReportsPage />}
@@ -30,7 +30,7 @@ export default function App() {
 
       {/* Bottom Navigation for Mobile */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-gray-100 z-20 pb-safe">
-        <div className="max-w-md mx-auto flex justify-around px-2 py-2">
+        <div className="max-w-5xl mx-auto flex justify-around px-2 py-2">
           <button
             onClick={() => setActiveTab('daily')}
             className={cn(
