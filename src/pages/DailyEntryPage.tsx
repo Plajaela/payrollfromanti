@@ -175,6 +175,10 @@ export function DailyEntryPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    handleSave(false);
+  };
+
+  const handleSave = (isDraft: boolean) => {
     if (!formData.workerId) return;
 
     const otRatePerHour = 100;
@@ -196,6 +200,7 @@ export function DailyEntryPage() {
       adjustments: formData.adjustments,
       totalPay,
       note: formData.note,
+      isDraft,
     };
 
     if (editingId) {
@@ -425,15 +430,21 @@ export function DailyEntryPage() {
                         <div className="font-bold text-gray-900 group-hover:text-sky-700 transition-colors">{worker.name}</div>
                         <div className="text-sm mt-0.5">
                           {entry ? (
-                            <span className="text-emerald-600 flex items-center gap-1.5 font-medium bg-emerald-50 px-2 py-0.5 rounded-lg inline-flex">
-                              <CheckCircle2 className="w-3.5 h-3.5" /> บันทึกแล้ว
-                            </span>
+                            entry.isDraft ? (
+                              <span className="text-amber-600 flex items-center gap-1.5 font-medium bg-amber-50 px-2 py-0.5 rounded-lg inline-flex border border-amber-200/50">
+                                <Clock className="w-3.5 h-3.5" /> ฉบับร่าง (ยังไม่เสร็จ)
+                              </span>
+                            ) : (
+                              <span className="text-emerald-600 flex items-center gap-1.5 font-medium bg-emerald-50 px-2 py-0.5 rounded-lg inline-flex">
+                                <CheckCircle2 className="w-3.5 h-3.5" /> บันทึกแล้ว
+                              </span>
+                            )
                           ) : (
                             <span className="text-gray-400 font-medium">รอการบันทึก (เวลา {worker.shiftStart || '07:00'}-{worker.shiftEnd || '16:00'})</span>
                           )}
                         </div>
                       </div>
-                      <div className="font-bold text-lg text-red-500 group-hover:text-red-600 transition-colors">
+                      <div className={`font-bold text-lg transition-colors ${entry?.isDraft ? 'text-amber-500 group-hover:text-amber-600' : 'text-red-500 group-hover:text-red-600'}`}>
                         ฿{totalPay}
                       </div>
                     </div>
@@ -445,15 +456,16 @@ export function DailyEntryPage() {
             <Card
               key={activeWorker.id}
               onClick={() => openModal(activeWorker, activeEntry)}
-              className={`p-6 md:p-8 flex flex-col items-center justify-center min-h-[200px] text-center active:scale-[0.99] transition-all duration-300 cursor-pointer hover:-translate-y-1 hover:shadow-xl ${activeEntry ? 'border-sky-200 bg-gradient-to-b from-sky-50/50 to-white shadow-sky-100' : 'bg-white border-gray-100 hover:border-sky-300 shadow-sm'}`}
+              className={`p-6 md:p-8 flex flex-col items-center justify-center min-h-[200px] text-center active:scale-[0.99] transition-all duration-300 cursor-pointer hover:-translate-y-1 hover:shadow-xl ${activeEntry ? (activeEntry.isDraft ? 'border-amber-200 bg-gradient-to-b from-amber-50/50 to-white shadow-amber-100' : 'border-sky-200 bg-gradient-to-b from-sky-50/50 to-white shadow-sky-100') : 'bg-white border-gray-100 hover:border-sky-300 shadow-sm'}`}
             >
               <div className="mb-4">
                 <div className="font-bold text-gray-900 text-2xl mb-2">{activeWorker.name}</div>
                 {activeEntry ? (
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-sky-100 text-sky-700 rounded-xl text-sm font-semibold shadow-sm">
-                    <CheckCircle2 className="w-4 h-4" /> บันทึกแล้ว
-                    <span className="text-sky-800 ml-1">฿{activeEntry.totalPay}</span>
-                    <span className="text-sky-600/70 font-normal ml-1 border-l border-sky-200 pl-2">
+                  <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-sm font-semibold shadow-sm ${activeEntry.isDraft ? 'bg-amber-100 text-amber-700' : 'bg-sky-100 text-sky-700'}`}>
+                    {activeEntry.isDraft ? <Clock className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                    {activeEntry.isDraft ? 'ฉบับร่าง' : 'บันทึกแล้ว'}
+                    <span className={`${activeEntry.isDraft ? 'text-amber-800' : 'text-sky-800'} ml-1`}>฿{activeEntry.totalPay}</span>
+                    <span className={`${activeEntry.isDraft ? 'text-amber-600/70 border-amber-200' : 'text-sky-600/70 border-sky-200'} font-normal ml-1 border-l pl-2`}>
                       {activeEntry.clockIn} - {activeEntry.clockOut}
                     </span>
                   </div>
@@ -861,8 +873,15 @@ export function DailyEntryPage() {
                   <Trash2 className="w-5 h-5" />
                 </Button>
               )}
-              <Button type="submit" className="px-8 py-4 text-lg rounded-2xl shadow-lg shadow-red-200">
-                บันทึก
+              <Button
+                type="button"
+                className="px-6 py-4 text-base rounded-2xl shadow-sm bg-orange-500 hover:bg-orange-600 text-white flex-1"
+                onClick={() => handleSave(true)}
+              >
+                บันทึกฉบับร่าง
+              </Button>
+              <Button type="button" className="px-6 py-4 text-base rounded-2xl shadow-lg shadow-sky-200 flex-1 bg-sky-500 hover:bg-sky-600 text-white" onClick={() => handleSave(false)}>
+                บันทึกสมบูรณ์
               </Button>
             </div>
           </div>

@@ -31,4 +31,5 @@ export interface DailyEntry {
   adjustments: Adjustment[];
   totalPay: number;
   note: string;
+  isDraft?: boolean;
 }
