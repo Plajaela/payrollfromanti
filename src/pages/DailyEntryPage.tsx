@@ -386,14 +386,19 @@ export function DailyEntryPage() {
               {workers.map(worker => {
                 const entry = entriesForDate.find(e => e.workerId === worker.id);
                 const isActive = worker.id === activeTabWorkerId;
+                const isDraft = entry?.isDraft;
                 return (
                   <button
                     key={worker.id}
                     onClick={() => setActiveTabWorkerId(worker.id)}
-                    className={`flex items-center justify-between p-3.5 md:p-3 rounded-2xl md:rounded-xl text-left transition-all duration-300 flex-shrink-0 border hover:scale-[1.02] active:scale-[0.98] ${isActive ? 'bg-gradient-to-r from-sky-500 to-sky-600 border-sky-500 text-white shadow-md shadow-sky-200' : 'bg-white border-gray-100 text-gray-700 hover:bg-sky-50 hover:border-sky-200'}`}
+                    className={`flex items-center justify-between p-3.5 md:p-3 rounded-2xl md:rounded-xl text-left transition-all duration-300 flex-shrink-0 border hover:scale-[1.02] active:scale-[0.98] ${isActive ? (isDraft ? 'bg-gradient-to-r from-amber-500 to-amber-600 border-amber-500 text-white shadow-md shadow-amber-200' : 'bg-gradient-to-r from-sky-500 to-sky-600 border-sky-500 text-white shadow-md shadow-sky-200') : (isDraft ? 'bg-amber-50 border-amber-200 text-amber-900 hover:bg-amber-100 shadow-sm' : 'bg-white border-gray-100 text-gray-700 hover:bg-sky-50 hover:border-sky-200')}`}
                   >
                     <span className="font-semibold text-[15px]">{worker.name}</span>
-                    {entry && <CheckCircle2 className={`w-4 h-4 ml-2 ${isActive ? 'text-sky-100' : 'text-emerald-500'}`} />}
+                    {entry && (
+                      isDraft ?
+                        <Clock className={`w-4 h-4 ml-2 flex-shrink-0 ${isActive ? 'text-amber-100' : 'text-amber-500'}`} /> :
+                        <CheckCircle2 className={`w-4 h-4 ml-2 flex-shrink-0 ${isActive ? 'text-sky-100' : 'text-emerald-500'}`} />
+                    )}
                   </button>
                 )
               })}
