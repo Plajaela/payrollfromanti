@@ -2,14 +2,15 @@ import React, { useState, useMemo } from 'react';
 import { useStore } from '../useStore';
 import { Button, Input, Card, Label } from '../components/ui';
 import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
-import { FileSpreadsheet } from 'lucide-react';
+import { FileSpreadsheet, Copy, Check } from 'lucide-react';
 
 export function ReportsPage() {
   const { workers, entries } = useStore();
-  
+
   // Default to current month
   const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const reportData = useMemo(() => {
     const filteredEntries = entries.filter(entry => {
@@ -22,20 +23,20 @@ export function ReportsPage() {
 
     const summary = workers.map(worker => {
       const workerEntries = filteredEntries.filter(e => e.workerId === worker.id);
-      
+
       const totalDays = workerEntries.length;
       const totalBaseWage = workerEntries.reduce((sum, e) => sum + e.baseWage, 0);
       const totalTravel = workerEntries.reduce((sum, e) => sum + e.travelAllowance, 0);
       const totalToll = workerEntries.reduce((sum, e) => sum + e.tollFee, 0);
       const totalLate = workerEntries.reduce((sum, e) => sum + e.lateDeduction, 0);
       const totalOT = workerEntries.reduce((sum, e) => sum + e.overtimePay, 0);
-      
-      const totalAdditions = workerEntries.reduce((sum, e) => 
+
+      const totalAdditions = workerEntries.reduce((sum, e) =>
         sum + (e.adjustments?.filter(a => a.type === 'add').reduce((s, a) => s + Number(a.amount), 0) || 0)
-      , 0);
-      const totalDeductions = workerEntries.reduce((sum, e) => 
+        , 0);
+      const totalDeductions = workerEntries.reduce((sum, e) =>
         sum + (e.adjustments?.filter(a => a.type === 'deduct').reduce((s, a) => s + Number(a.amount), 0) || 0)
-      , 0);
+        , 0);
       const netAdjustments = totalAdditions - totalDeductions;
 
       const grandTotal = workerEntries.reduce((sum, e) => sum + e.totalPay, 0);
@@ -55,6 +56,44 @@ export function ReportsPage() {
 
     return summary.filter(s => s.totalDays > 0);
   }, [entries, workers, startDate, endDate]);
+
+  const handleCopy = async (text: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy text', err);
+    }
+  };
+
+  const handleCopySingle = (row: typeof reportData[0]) => {
+    const dateRangeStr = startDate === endDate ? startDate : `${startDate} ถึง ${endDate}`;
+    const text = `สรุปยอด ${row.worker.name} (วันที่ ${dateRangeStr})\n` +
+      `- วันทำงาน: ${row.totalDays} วัน\n` +
+      `- ค่าแรง: ฿${row.totalBaseWage}\n` +
+      `- ค่ารถ: ฿${row.totalTravel}\n` +
+      `- โอที: ฿${row.totalOT}\n` +
+      `- หักสาย: -฿${row.totalLate}\n` +
+      `- อื่นๆ: ฿${row.netAdjustments}\n` +
+      `📌 ยอดสุทธิ: ฿${row.grandTotal}`;
+
+    handleCopy(text, row.worker.id);
+  };
+
+  const handleCopyAll = () => {
+    const dateRangeStr = startDate === endDate ? startDate : `${startDate} ถึง ${endDate}`;
+    let text = `📋 สรุปยอดช่างทุกคน (วันที่ ${dateRangeStr})\n\n`;
+
+    reportData.forEach((row, index) => {
+      text += `${index + 1}. ${row.worker.name}: ${row.totalDays} วัน | สุทธิ: ฿${row.grandTotal}\n`;
+    });
+
+    const grandTotal = reportData.reduce((sum, r) => sum + r.grandTotal, 0);
+    text += `\n💰 รวมยอดทั้งหมด: ฿${grandTotal}`;
+
+    handleCopy(text, 'all');
+  };
 
   const handleExportCSV = () => {
     // CSV Header
@@ -101,9 +140,15 @@ export function ReportsPage() {
   return (
     <div className="space-y-6 pb-20">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <Button onClick={handleExportCSV} disabled={reportData.length === 0} className="w-full sm:w-auto gap-2 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200">
-          <FileSpreadsheet className="w-5 h-5" /> Export CSV (Excel)
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Button onClick={handleCopyAll} disabled={reportData.length === 0} className="w-full sm:w-auto gap-2 bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200 text-white">
+            {copiedId === 'all' ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+            {copiedId === 'all' ? 'คัดลอกแล้ว' : 'คัดลอกสรุปทุกคน'}
+          </Button>
+          <Button onClick={handleExportCSV} disabled={reportData.length === 0} className="w-full sm:w-auto gap-2 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200">
+            <FileSpreadsheet className="w-5 h-5" /> Export CSV
+          </Button>
+        </div>
       </div>
 
       <Card className="p-4 sm:p-6 bg-white">
@@ -143,7 +188,8 @@ export function ReportsPage() {
                     <th scope="col" className="px-3 py-3.5 text-right text-[13px] font-semibold text-zinc-900 uppercase tracking-wide">โอที</th>
                     <th scope="col" className="px-3 py-3.5 text-right text-[13px] font-semibold text-red-600 uppercase tracking-wide">หักสาย</th>
                     <th scope="col" className="px-3 py-3.5 text-right text-[13px] font-semibold text-zinc-900 uppercase tracking-wide">อื่นๆ</th>
-                    <th scope="col" className="py-3.5 pl-3 pr-4 text-right text-[13px] font-semibold text-blue-600 sm:pr-6 uppercase tracking-wide">ยอดสุทธิ</th>
+                    <th scope="col" className="py-3.5 px-3 text-right text-[13px] font-semibold text-blue-600 uppercase tracking-wide">ยอดสุทธิ</th>
+                    <th scope="col" className="py-3.5 pl-3 pr-4 sm:pr-6"><span className="sr-only">คัดลอก</span></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100 bg-white">
@@ -160,7 +206,16 @@ export function ReportsPage() {
                           {row.netAdjustments > 0 ? '+' : ''}{row.netAdjustments !== 0 ? `฿${row.netAdjustments}` : '-'}
                         </span>
                       </td>
-                      <td className="whitespace-nowrap py-4 pl-3 pr-4 text-sm font-bold text-blue-600 text-right sm:pr-6">฿{row.grandTotal}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm font-bold text-blue-600 text-right">฿{row.grandTotal}</td>
+                      <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                        <button
+                          onClick={() => handleCopySingle(row)}
+                          className="inline-flex items-center justify-center text-indigo-600 hover:text-indigo-900 bg-indigo-50 p-2 rounded-xl transition-colors min-w-[36px] min-h-[36px]"
+                          title="คัดลอกสรุป"
+                        >
+                          {copiedId === row.worker.id ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -173,7 +228,8 @@ export function ReportsPage() {
                     <td className="px-3 py-3 text-sm font-bold text-blue-900 text-right">฿{reportData.reduce((sum, r) => sum + r.totalOT, 0)}</td>
                     <td className="px-3 py-3 text-sm font-bold text-red-600 text-right">-฿{reportData.reduce((sum, r) => sum + r.totalLate, 0)}</td>
                     <td className="px-3 py-3 text-sm font-bold text-blue-900 text-right">฿{reportData.reduce((sum, r) => sum + r.netAdjustments, 0)}</td>
-                    <td className="py-3 pl-3 pr-4 text-sm font-bold text-blue-700 text-right sm:pr-6">฿{reportData.reduce((sum, r) => sum + r.grandTotal, 0)}</td>
+                    <td className="px-3 py-3 text-sm font-bold text-blue-700 text-right">฿{reportData.reduce((sum, r) => sum + r.grandTotal, 0)}</td>
+                    <td className="py-3 pl-3 pr-4 sm:pr-6"></td>
                   </tr>
                 </tfoot>
               </table>
