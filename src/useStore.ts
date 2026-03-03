@@ -18,7 +18,7 @@ export function useStore() {
     return saved ? JSON.parse(saved) : [];
   });
 
-  // Fetch workers from Supabase on mount
+  // Fetch workers from Supabase on mount and subscribe to changes
   useEffect(() => {
     const fetchWorkers = async () => {
       setIsWorkersLoading(true);
@@ -53,6 +53,21 @@ export function useStore() {
     };
 
     fetchWorkers();
+
+    const subscription = supabase
+      .channel('workers_channel')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'workers' },
+        () => {
+          fetchWorkers();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, []);
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_WORKERS, JSON.stringify(workers));
