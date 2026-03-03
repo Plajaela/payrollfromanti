@@ -24,8 +24,8 @@ export function DailyEntryPage() {
 
   // Set default tab when workers change or active tab is not set
   useEffect(() => {
-    if (workers.length > 0 && (!activeTabWorkerId || !workers.find(w => w.id === activeTabWorkerId))) {
-      setActiveTabWorkerId(workers[0].id);
+    if (workers.length > 0 && (!activeTabWorkerId || (activeTabWorkerId !== 'all' && !workers.find(w => w.id === activeTabWorkerId)))) {
+      setActiveTabWorkerId('all');
     }
   }, [workers, activeTabWorkerId]);
 
@@ -245,6 +245,45 @@ export function DailyEntryPage() {
     handleCopy(text, idToUse);
   };
 
+  const handleCopyAllDetailed = () => {
+    const formattedDate = format(selectedDate, 'd MMM yyyy', { locale: th });
+
+    let text = `📋 สรุปยอดรวมประจำวัน (วันที่ ${formattedDate})\n`;
+    text += `💰 ยอดรวมทั้งหมด: ฿${totalPayForDay}\n`;
+    text += `========================\n\n`;
+
+    workers.forEach(worker => {
+      const entry = entriesForDate.find(e => e.workerId === worker.id);
+
+      const baseWage = entry ? entry.baseWage : worker.baseWage;
+      const travelAllowance = entry ? entry.travelAllowance : (worker.defaultTravelAllowance || 0);
+      const tollFee = entry ? entry.tollFee : 0;
+      const overtimePay = entry ? entry.overtimePay : 0;
+      const lateDeduction = entry ? entry.lateDeduction : 0;
+      const adjustments = entry ? entry.adjustments : [];
+      const totalPay = entry ? entry.totalPay : (baseWage + travelAllowance);
+
+      text += `📝 ช่าง ${worker.name}\n`;
+      text += `ค่าแรง: ฿${baseWage}\n`;
+      if (travelAllowance > 0) text += `ค่ารถ: ฿${travelAllowance}\n`;
+      if (tollFee > 0) text += `ทางด่วน: ฿${tollFee}\n`;
+      if (overtimePay > 0) text += `โอที: ฿${overtimePay}\n`;
+      if (lateDeduction > 0) text += `หักมาสาย: -฿${lateDeduction}\n`;
+
+      if (adjustments && adjustments.length > 0) {
+        adjustments.forEach(adj => {
+          const amountStr = adj.type === 'add' ? `+฿${Number(adj.amount)}` : `-฿${Math.abs(Number(adj.amount))}`;
+          const noteStr = adj.note ? ` (${adj.note})` : '';
+          text += `อื่นๆ: ${amountStr}${noteStr}\n`;
+        });
+      }
+
+      text += `📌 ยอดสุทธิ: ฿${totalPay}\n\n`;
+    });
+
+    handleCopy(text, 'all_detailed');
+  };
+
   const activeWorker = workers.find(w => w.id === activeTabWorkerId) || workers[0];
   const activeEntry = activeWorker ? entriesForDate.find(e => e.workerId === activeWorker.id) : undefined;
 
@@ -293,26 +332,77 @@ export function DailyEntryPage() {
               ไม่มีข้อมูลช่าง
             </div>
           ) : (
-            workers.map(worker => {
-              const entry = entriesForDate.find(e => e.workerId === worker.id);
-              const isActive = worker.id === activeTabWorkerId;
-              return (
-                <button
-                  key={worker.id}
-                  onClick={() => setActiveTabWorkerId(worker.id)}
-                  className={`flex items-center justify-between p-3.5 md:p-3 rounded-2xl md:rounded-xl text-left transition-all flex-shrink-0 border ${isActive ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-white border-gray-100 text-gray-700 hover:bg-indigo-50 hover:border-indigo-100'}`}
-                >
-                  <span className="font-semibold text-[15px]">{worker.name}</span>
-                  {entry && <CheckCircle2 className={`w-4 h-4 ml-2 ${isActive ? 'text-indigo-200' : 'text-green-500'}`} />}
-                </button>
-              )
-            })
+            <>
+              <button
+                onClick={() => setActiveTabWorkerId('all')}
+                className={`flex items-center justify-between p-3.5 md:p-3 rounded-2xl md:rounded-xl text-left transition-all flex-shrink-0 border ${activeTabWorkerId === 'all' ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-white border-gray-100 text-gray-700 hover:bg-indigo-50 hover:border-indigo-100'}`}
+              >
+                <span className="font-semibold text-[15px]">📋 ข้อมูลทุกคน</span>
+              </button>
+              {workers.map(worker => {
+                const entry = entriesForDate.find(e => e.workerId === worker.id);
+                const isActive = worker.id === activeTabWorkerId;
+                return (
+                  <button
+                    key={worker.id}
+                    onClick={() => setActiveTabWorkerId(worker.id)}
+                    className={`flex items-center justify-between p-3.5 md:p-3 rounded-2xl md:rounded-xl text-left transition-all flex-shrink-0 border ${isActive ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-white border-gray-100 text-gray-700 hover:bg-indigo-50 hover:border-indigo-100'}`}
+                  >
+                    <span className="font-semibold text-[15px]">{worker.name}</span>
+                    {entry && <CheckCircle2 className={`w-4 h-4 ml-2 ${isActive ? 'text-indigo-200' : 'text-green-500'}`} />}
+                  </button>
+                )
+              })}
+            </>
           )}
         </div>
 
         {/* Right Active Content */}
         <div className="w-full md:w-2/3 lg:w-3/4">
-          {workers.length > 0 && activeWorker && (
+          {activeTabWorkerId === 'all' ? (
+            <Card className="p-6 md:p-8 flex flex-col items-center justify-center min-h-[200px] text-center bg-white border-gray-100 shadow-sm">
+              <div className="mb-6">
+                <div className="font-bold text-gray-900 text-2xl mb-2">สรุปข้อมูลช่างทุกคน</div>
+                <div className="text-gray-500 text-sm">
+                  มาทำงานแล้ว <span className="font-bold text-indigo-600">{entriesForDate.length}</span> จาก {workers.length} คน
+                </div>
+              </div>
+
+              <Button
+                onClick={handleCopyAllDetailed}
+                className="w-full sm:w-auto px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-200 gap-2 mb-6"
+              >
+                {copiedId === 'all_detailed' ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                คัดลอกรายละเอียดทุกคน ({workers.length} คน)
+              </Button>
+
+              <div className="w-full space-y-3 text-left">
+                {workers.map(worker => {
+                  const entry = entriesForDate.find(e => e.workerId === worker.id);
+                  const totalPay = entry ? entry.totalPay : (worker.baseWage + (worker.defaultTravelAllowance || 0));
+                  return (
+                    <div key={worker.id} onClick={() => setActiveTabWorkerId(worker.id)} className="flex justify-between items-center p-4 bg-gray-50 hover:bg-indigo-50/50 rounded-2xl border border-gray-100 cursor-pointer transition-colors active:scale-[0.99] group">
+                      <div>
+                        <div className="font-bold text-gray-900 group-hover:text-indigo-700 transition-colors">{worker.name}</div>
+                        <div className="text-sm mt-0.5">
+                          {entry ? (
+                            <span className="text-green-600 flex items-center gap-1 font-medium">
+                              <CheckCircle2 className="w-3.5 h-3.5" /> บันทึกแล้ว
+                            </span>
+                          ) : (
+                            <span className="text-gray-500">รอการบันทึก (เวลา {worker.shiftStart || '07:00'}-{worker.shiftEnd || '16:00'})</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="font-bold text-lg text-indigo-600">
+                        ฿{totalPay}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          ) : workers.length > 0 && activeWorker && (
             <Card
               key={activeWorker.id}
               onClick={() => openModal(activeWorker, activeEntry)}
