@@ -235,7 +235,17 @@ export function DailyEntryPage() {
     text += `- ค่าแรง: ฿${baseWage}\n`;
     if (travelAllowance > 0) text += `- ค่ารถ: ฿${travelAllowance}\n`;
     if (tollFee > 0) text += `- ทางด่วน: ฿${tollFee}\n`;
-    if (overtimePay > 0) text += `- โอที: ฿${overtimePay}\n`;
+    if (overtimePay > 0) {
+      let otTimeStr = '';
+      const wEnd = worker.shiftEnd || '16:00';
+      const wStart = worker.shiftStart || '07:00';
+      if (clockOut > wEnd) {
+        otTimeStr = ` ${wEnd}-${clockOut}`;
+      } else if (clockIn < wStart) {
+        otTimeStr = ` ${clockIn}-${wStart}`;
+      }
+      text += `- OT${otTimeStr}: ฿${overtimePay}\n`;
+    }
     if (lateDeduction > 0) text += `- หักมาสาย: -฿${lateDeduction}\n`;
 
     if (adjustments && adjustments.length > 0) {
@@ -276,7 +286,17 @@ export function DailyEntryPage() {
       text += `- ค่าแรง: ฿${baseWage}\n`;
       if (travelAllowance > 0) text += `- ค่ารถ: ฿${travelAllowance}\n`;
       if (tollFee > 0) text += `- ทางด่วน: ฿${tollFee}\n`;
-      if (overtimePay > 0) text += `- โอที: ฿${overtimePay}\n`;
+      if (overtimePay > 0) {
+        let otTimeStr = '';
+        const wEnd = worker.shiftEnd || '16:00';
+        const wStart = worker.shiftStart || '07:00';
+        if (clockOut > wEnd) {
+          otTimeStr = ` ${wEnd}-${clockOut}`;
+        } else if (clockIn < wStart) {
+          otTimeStr = ` ${clockIn}-${wStart}`;
+        }
+        text += `- OT${otTimeStr}: ฿${overtimePay}\n`;
+      }
       if (lateDeduction > 0) text += `- หักมาสาย: -฿${lateDeduction}\n`;
 
       if (adjustments && adjustments.length > 0) {
@@ -721,7 +741,8 @@ export function DailyEntryPage() {
                   </div>
                   <Input
                     type="text"
-                    placeholder="ระบุหมายเหตุ (เช่น เบิกล่วงหน้า, ค่าอุปกรณ์)"
+                    list={`note-presets-${adj.id}`}
+                    placeholder="ระบุหมายเหตุ (เช่น ค่ารถไปหน้างาน, อื่นๆ)"
                     value={adj.note}
                     onChange={(e) => {
                       const newAdjs = [...formData.adjustments];
@@ -730,6 +751,12 @@ export function DailyEntryPage() {
                     }}
                     className="h-10 text-sm bg-white"
                   />
+                  <datalist id={`note-presets-${adj.id}`}>
+                    <option value="ค่ารถไปหน้างาน" />
+                    <option value="ค่าอาหาร" />
+                    <option value="เบิกล่วงหน้า" />
+                    <option value="อื่นๆ (ระบุ...)" />
+                  </datalist>
                 </div>
                 <button
                   type="button"
