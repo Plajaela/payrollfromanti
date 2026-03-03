@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Worker, DailyEntry } from './types';
 import { v4 as uuidv4 } from 'uuid';
+import { supabase } from './lib/supabase';
 
 const STORAGE_KEY_WORKERS = 'wage_app_workers';
 const STORAGE_KEY_ENTRIES = 'wage_app_entries';
@@ -10,12 +11,49 @@ export function useStore() {
     const saved = localStorage.getItem(STORAGE_KEY_WORKERS);
     return saved ? JSON.parse(saved) : [];
   });
+  const [isWorkersLoading, setIsWorkersLoading] = useState(true);
 
   const [entries, setEntries] = useState<DailyEntry[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEY_ENTRIES);
     return saved ? JSON.parse(saved) : [];
   });
 
+  // Fetch workers from Supabase on mount
+  useEffect(() => {
+    const fetchWorkers = async () => {
+      setIsWorkersLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('workers')
+          .select('*')
+          .order('name');
+
+        if (error) {
+          console.error('Error fetching workers from Supabase:', error);
+          return;
+        }
+
+        if (data) {
+          // Map snake_case to camelCase
+          const formattedWorkers: Worker[] = data.map(w => ({
+            id: w.id,
+            name: w.name,
+            baseWage: Number(w.base_wage),
+            defaultTravelAllowance: Number(w.default_travel_allowance),
+            shiftStart: w.shift_start,
+            shiftEnd: w.shift_end
+          }));
+          setWorkers(formattedWorkers);
+        }
+      } catch (err) {
+        console.error('Failed to fetch workers:', err);
+      } finally {
+        setIsWorkersLoading(false);
+      }
+    };
+
+    fetchWorkers();
+  }, []);
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_WORKERS, JSON.stringify(workers));
   }, [workers]);
@@ -24,19 +62,73 @@ export function useStore() {
     localStorage.setItem(STORAGE_KEY_ENTRIES, JSON.stringify(entries));
   }, [entries]);
 
-  const addWorker = (worker: Omit<Worker, 'id'>) => {
-    setWorkers((prev) => [...prev, { ...worker, id: uuidv4() }]);
+  const addWorker = async (worker: Omit<Worker, 'id'>) => {
+    // Generate ID for optimistic UI update
+    const newId = uuidv4();
+    const newWorker = { ...worker, id: newId };
+
+    // Optimistic update
+    setWorkers((prev) => [...prev, newWorker]);
+
+    // Persist to Supabase
+    try {
+      const { error } = await supabase.from('workers').insert([{
+        id: newId,
+        name: worker.name,
+        base_wage: worker.baseWage,
+        default_travel_allowance: worker.defaultTravelAllowance || 0,
+        shift_start: worker.shiftStart || '07:00',
+        shift_end: worker.shiftEnd || '16:00'
+      }]);
+
+      if (error) throw error;
+    } catch (err) {
+      console.error('Failed to add worker to Supabase:', err);
+      // Revert on error could be implemented here
+    }
   };
 
-  const updateWorker = (id: string, updated: Partial<Worker>) => {
+  const updateWorker = async (id: string, updated: Partial<Worker>) => {
+    // Optimistic update
     setWorkers((prev) =>
       prev.map((w) => (w.id === id ? { ...w, ...updated } : w))
     );
+
+    // Persist to Supabase
+    try {
+      const updateData: any = {};
+      if (updated.name !== undefined) updateData.name = updated.name;
+      if (updated.baseWage !== undefined) updateData.base_wage = updated.baseWage;
+      if (updated.defaultTravelAllowance !== undefined) updateData.default_travel_allowance = updated.defaultTravelAllowance;
+      if (updated.shiftStart !== undefined) updateData.shift_start = updated.shiftStart;
+      if (updated.shiftEnd !== undefined) updateData.shift_end = updated.shiftEnd;
+
+      const { error } = await supabase
+        .from('workers')
+        .update(updateData)
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (err) {
+      console.error('Failed to update worker in Supabase:', err);
+    }
   };
 
-  const deleteWorker = (id: string) => {
+  const deleteWorker = async (id: string) => {
+    // Optimistic update
     setWorkers((prev) => prev.filter((w) => w.id !== id));
-    // Optionally delete associated entries, but maybe better to keep them for history
+
+    // Persist to Supabase
+    try {
+      const { error } = await supabase
+        .from('workers')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (err) {
+      console.error('Failed to delete worker from Supabase:', err);
+    }
   };
 
   const addEntry = (entry: Omit<DailyEntry, 'id'>) => {
@@ -55,6 +147,7 @@ export function useStore() {
 
   return {
     workers,
+    isWorkersLoading,
     addWorker,
     updateWorker,
     deleteWorker,
