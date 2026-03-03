@@ -14,10 +14,11 @@ export function WorkersPage() {
     defaultTravelAllowance: '',
     shiftStart: '07:00',
     shiftEnd: '16:00',
+    paymentType: 'month' as 'month' | 'half-month',
   });
 
   const resetForm = () => {
-    setFormData({ name: '', baseWage: '', defaultTravelAllowance: '', shiftStart: '07:00', shiftEnd: '16:00' });
+    setFormData({ name: '', baseWage: '', defaultTravelAllowance: '', shiftStart: '07:00', shiftEnd: '16:00', paymentType: 'month' });
     setEditingId(null);
     setIsModalOpen(false);
   };
@@ -29,6 +30,7 @@ export function WorkersPage() {
       defaultTravelAllowance: worker.defaultTravelAllowance.toString(),
       shiftStart: worker.shiftStart || '07:00',
       shiftEnd: worker.shiftEnd || '16:00',
+      paymentType: worker.paymentType || 'month',
     });
     setEditingId(worker.id);
     setIsModalOpen(true);
@@ -44,6 +46,7 @@ export function WorkersPage() {
       defaultTravelAllowance: Number(formData.defaultTravelAllowance) || 0,
       shiftStart: formData.shiftStart,
       shiftEnd: formData.shiftEnd,
+      paymentType: formData.paymentType,
     };
 
     if (editingId) {
@@ -78,12 +81,13 @@ export function WorkersPage() {
                     <span className="bg-gray-100 px-2 py-0.5 rounded-md">ค่ารถ ฿{worker.defaultTravelAllowance}</span>
                   )}
                   <span className="bg-sky-50 text-red-700 px-2 py-0.5 rounded-md">เวลา {worker.shiftStart || '07:00'} - {worker.shiftEnd || '16:00'}</span>
+                  <span className="bg-orange-50 text-orange-700 px-2 py-0.5 rounded-md">รับเงิน{worker.paymentType === 'half-month' ? 'ทุก 15 วัน' : 'สิ้นเดือน'}</span>
                 </div>
               </div>
               <div className="flex items-center gap-1 pl-2 border-l border-gray-100 ml-2">
-                <Button 
-                  variant="danger" 
-                  className="p-2 h-auto rounded-xl bg-red-50 text-red-600 hover:bg-red-100" 
+                <Button
+                  variant="danger"
+                  className="p-2 h-auto rounded-xl bg-red-50 text-red-600 hover:bg-red-100"
                   onClick={(e) => {
                     e.stopPropagation();
                     if (window.confirm(`ต้องการลบช่าง ${worker.name} ใช่หรือไม่?`)) {
@@ -126,7 +130,7 @@ export function WorkersPage() {
               required
             />
           </div>
-          
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="baseWage">ค่าแรงพื้นฐาน (บาท)</Label>
@@ -140,7 +144,7 @@ export function WorkersPage() {
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="defaultTravelAllowance">ค่ารถประจำ (บาท)</Label>
               <Input
@@ -165,7 +169,7 @@ export function WorkersPage() {
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="shiftEnd">เวลาเลิกงาน</Label>
               <Input
@@ -178,11 +182,24 @@ export function WorkersPage() {
             </div>
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="paymentType">รอบการจ่ายเงิน</Label>
+            <select
+              id="paymentType"
+              value={formData.paymentType}
+              onChange={(e) => setFormData({ ...formData, paymentType: e.target.value as 'half-month' | 'month' })}
+              className="w-full rounded-2xl border-0 bg-gray-100/80 px-4 py-3 text-base text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all appearance-none"
+            >
+              <option value="month">จ่ายสิ้นเดือน (ทุก 30 วัน)</option>
+              <option value="half-month">จ่ายแบบวิก (ทุก 15 วัน)</option>
+            </select>
+          </div>
+
           <div className="pt-4 flex gap-3">
             {editingId && (
-              <Button 
-                type="button" 
-                variant="danger" 
+              <Button
+                type="button"
+                variant="danger"
                 onClick={() => {
                   if (window.confirm(`ต้องการลบช่าง ${formData.name} ใช่หรือไม่?`)) {
                     deleteWorker(editingId);

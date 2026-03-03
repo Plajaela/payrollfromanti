@@ -48,7 +48,8 @@ export function useStore() {
                   base_wage: w.baseWage,
                   default_travel_allowance: w.defaultTravelAllowance || 0,
                   shift_start: w.shiftStart || '07:00',
-                  shift_end: w.shiftEnd || '16:00'
+                  shift_end: w.shiftEnd || '16:00',
+                  payment_type: w.paymentType || 'month'
                 }))
               );
 
@@ -68,7 +69,8 @@ export function useStore() {
             baseWage: Number(w.base_wage),
             defaultTravelAllowance: Number(w.default_travel_allowance),
             shiftStart: w.shift_start,
-            shiftEnd: w.shift_end
+            shiftEnd: w.shift_end,
+            paymentType: w.payment_type
           }));
           setWorkers(formattedWorkers);
         }
@@ -120,7 +122,8 @@ export function useStore() {
         base_wage: worker.baseWage,
         default_travel_allowance: worker.defaultTravelAllowance || 0,
         shift_start: worker.shiftStart || '07:00',
-        shift_end: worker.shiftEnd || '16:00'
+        shift_end: worker.shiftEnd || '16:00',
+        payment_type: worker.paymentType || 'month'
       }]);
 
       if (error) throw error;
@@ -144,6 +147,7 @@ export function useStore() {
       if (updated.defaultTravelAllowance !== undefined) updateData.default_travel_allowance = updated.defaultTravelAllowance;
       if (updated.shiftStart !== undefined) updateData.shift_start = updated.shiftStart;
       if (updated.shiftEnd !== undefined) updateData.shift_end = updated.shiftEnd;
+      if (updated.paymentType !== undefined) updateData.payment_type = updated.paymentType;
 
       const { error } = await supabase
         .from('workers')
