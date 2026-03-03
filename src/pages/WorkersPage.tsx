@@ -14,11 +14,11 @@ export function WorkersPage() {
     defaultTravelAllowance: '',
     shiftStart: '07:00',
     shiftEnd: '16:00',
-    paymentType: 'month' as 'month' | 'half-month',
+    paymentType: 'day' as 'day' | 'month' | 'half-month',
   });
 
   const resetForm = () => {
-    setFormData({ name: '', baseWage: '', defaultTravelAllowance: '', shiftStart: '07:00', shiftEnd: '16:00', paymentType: 'month' });
+    setFormData({ name: '', baseWage: '', defaultTravelAllowance: '', shiftStart: '07:00', shiftEnd: '16:00', paymentType: 'day' });
     setEditingId(null);
     setIsModalOpen(false);
   };
@@ -30,7 +30,7 @@ export function WorkersPage() {
       defaultTravelAllowance: worker.defaultTravelAllowance.toString(),
       shiftStart: worker.shiftStart || '07:00',
       shiftEnd: worker.shiftEnd || '16:00',
-      paymentType: worker.paymentType || 'month',
+      paymentType: worker.paymentType || 'day',
     });
     setEditingId(worker.id);
     setIsModalOpen(true);
@@ -81,7 +81,7 @@ export function WorkersPage() {
                     <span className="bg-gray-100 px-2 py-0.5 rounded-md">ค่ารถ ฿{worker.defaultTravelAllowance}</span>
                   )}
                   <span className="bg-sky-50 text-red-700 px-2 py-0.5 rounded-md">เวลา {worker.shiftStart || '07:00'} - {worker.shiftEnd || '16:00'}</span>
-                  <span className="bg-orange-50 text-orange-700 px-2 py-0.5 rounded-md">รับเงิน{worker.paymentType === 'half-month' ? 'ทุก 15 วัน' : 'สิ้นเดือน'}</span>
+                  <span className="bg-orange-50 text-orange-700 px-2 py-0.5 rounded-md">รับเงิน{worker.paymentType === 'day' ? 'รายวัน' : worker.paymentType === 'half-month' ? 'ทุก 15 วัน' : 'สิ้นเดือน'}</span>
                 </div>
               </div>
               <div className="flex items-center gap-1 pl-2 border-l border-gray-100 ml-2">
@@ -187,11 +187,12 @@ export function WorkersPage() {
             <select
               id="paymentType"
               value={formData.paymentType}
-              onChange={(e) => setFormData({ ...formData, paymentType: e.target.value as 'half-month' | 'month' })}
+              onChange={(e) => setFormData({ ...formData, paymentType: e.target.value as 'half-month' | 'month' | 'day' })}
               className="w-full rounded-2xl border-0 bg-gray-100/80 px-4 py-3 text-base text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all appearance-none"
             >
-              <option value="month">จ่ายสิ้นเดือน (ทุก 30 วัน)</option>
+              <option value="day">จ่ายรายวัน (จบวันเคลียร์เลย)</option>
               <option value="half-month">จ่ายแบบวิก (ทุก 15 วัน)</option>
+              <option value="month">จ่ายสิ้นเดือน (ทุก 30 วัน)</option>
             </select>
           </div>
 

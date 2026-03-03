@@ -12,7 +12,7 @@ export interface Worker {
   defaultTravelAllowance: number;
   shiftStart: string;
   shiftEnd: string;
-  paymentType?: 'half-month' | 'month';
+  paymentType?: 'half-month' | 'month' | 'day';
 }
 
 export interface DailyEntry {

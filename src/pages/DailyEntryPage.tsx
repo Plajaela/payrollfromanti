@@ -226,24 +226,27 @@ export function DailyEntryPage() {
     const lateDeduction = entry ? entry.lateDeduction : 0;
     const adjustments = entry ? entry.adjustments : [];
     const totalPay = entry ? entry.totalPay : (baseWage + travelAllowance);
+    const clockIn = entry ? entry.clockIn : worker.shiftStart || '07:00';
+    const clockOut = entry ? entry.clockOut : worker.shiftEnd || '16:00';
     const idToUse = entry ? entry.id : worker.id;
 
-    let text = `📝 แจ้งยอดรายวัน ${worker.name} (วันที่ ${formattedDate})\n\n`;
-    text += `💰 ค่าแรง: ฿${baseWage}\n`;
-    if (travelAllowance > 0) text += `🚗 ค่ารถ: ฿${travelAllowance}\n`;
-    if (tollFee > 0) text += `🛣️ ทางด่วน: ฿${tollFee}\n`;
-    if (overtimePay > 0) text += `⏱️ โอที: ฿${overtimePay}\n`;
-    if (lateDeduction > 0) text += `📉 หักมาสาย: -฿${lateDeduction}\n`;
+    let text = `📝 แจ้งยอดรายวัน ${worker.name} (วันที่ ${formattedDate})\n`;
+    text += `เวลาทำงาน: ${clockIn} - ${clockOut}\n\n`;
+    text += `- ค่าแรง: ฿${baseWage}\n`;
+    if (travelAllowance > 0) text += `- ค่ารถ: ฿${travelAllowance}\n`;
+    if (tollFee > 0) text += `- ทางด่วน: ฿${tollFee}\n`;
+    if (overtimePay > 0) text += `- โอที: ฿${overtimePay}\n`;
+    if (lateDeduction > 0) text += `- หักมาสาย: -฿${lateDeduction}\n`;
 
     if (adjustments && adjustments.length > 0) {
       adjustments.forEach(adj => {
         const amountStr = adj.type === 'add' ? `+฿${Number(adj.amount)}` : `-฿${Math.abs(Number(adj.amount))}`;
         const noteStr = adj.note ? ` (${adj.note})` : '';
-        text += `-อื่นๆ: ${amountStr}${noteStr}\n`;
+        text += `- อื่นๆ: ${amountStr}${noteStr}\n`;
       });
     }
 
-    text += `\n📌 ยอดสุทธิวันนี้: ฿${totalPay}`;
+    text += `\n✅ ยอดสุทธิวันนี้: ฿${totalPay}`;
 
     handleCopy(text, idToUse);
   };
@@ -265,23 +268,26 @@ export function DailyEntryPage() {
       const lateDeduction = entry ? entry.lateDeduction : 0;
       const adjustments = entry ? entry.adjustments : [];
       const totalPay = entry ? entry.totalPay : (baseWage + travelAllowance);
+      const clockIn = entry ? entry.clockIn : worker.shiftStart || '07:00';
+      const clockOut = entry ? entry.clockOut : worker.shiftEnd || '16:00';
 
-      text += `📝 ช่าง ${worker.name}\n`;
-      text += `ค่าแรง: ฿${baseWage}\n`;
-      if (travelAllowance > 0) text += `ค่ารถ: ฿${travelAllowance}\n`;
-      if (tollFee > 0) text += `ทางด่วน: ฿${tollFee}\n`;
-      if (overtimePay > 0) text += `โอที: ฿${overtimePay}\n`;
-      if (lateDeduction > 0) text += `หักมาสาย: -฿${lateDeduction}\n`;
+      text += `� ช่าง ${worker.name}\n`;
+      text += `เวลาทำงาน: ${clockIn} - ${clockOut}\n`;
+      text += `- ค่าแรง: ฿${baseWage}\n`;
+      if (travelAllowance > 0) text += `- ค่ารถ: ฿${travelAllowance}\n`;
+      if (tollFee > 0) text += `- ทางด่วน: ฿${tollFee}\n`;
+      if (overtimePay > 0) text += `- โอที: ฿${overtimePay}\n`;
+      if (lateDeduction > 0) text += `- หักมาสาย: -฿${lateDeduction}\n`;
 
       if (adjustments && adjustments.length > 0) {
         adjustments.forEach(adj => {
           const amountStr = adj.type === 'add' ? `+฿${Number(adj.amount)}` : `-฿${Math.abs(Number(adj.amount))}`;
           const noteStr = adj.note ? ` (${adj.note})` : '';
-          text += `อื่นๆ: ${amountStr}${noteStr}\n`;
+          text += `- อื่นๆ: ${amountStr}${noteStr}\n`;
         });
       }
 
-      text += `📌 ยอดสุทธิ: ฿${totalPay}\n\n`;
+      text += `✅ ยอดสุทธิ: ฿${totalPay}\n\n`;
     });
 
     handleCopy(text, 'all_detailed');
