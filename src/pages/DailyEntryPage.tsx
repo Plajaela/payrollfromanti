@@ -301,7 +301,7 @@ export function DailyEntryPage() {
             onChange={(e) => setSelectedDate(new Date(e.target.value))}
             className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
           />
-          <div className="text-sm text-indigo-600 font-semibold">{format(selectedDate, 'EEEE', { locale: th })}</div>
+          <div className="text-sm text-red-600 font-semibold">{format(selectedDate, 'EEEE', { locale: th })}</div>
           <div className="text-lg font-bold text-gray-900">{format(selectedDate, 'd MMM yyyy', { locale: th })}</div>
         </div>
         <button onClick={() => setSelectedDate(addDays(selectedDate, 1))} className="p-3 hover:bg-gray-100 rounded-2xl transition-colors">
@@ -311,8 +311,8 @@ export function DailyEntryPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-indigo-600 text-white p-5 rounded-3xl shadow-md shadow-indigo-200">
-          <div className="text-indigo-100 text-sm font-medium mb-1">ยอดรวมวันนี้</div>
+        <div className="bg-red-600 text-white p-5 rounded-3xl shadow-md shadow-red-200">
+          <div className="text-sky-100 text-sm font-medium mb-1">ยอดรวมวันนี้</div>
           <div className="text-2xl font-bold">฿{totalPayForDay}</div>
         </div>
         <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm">
@@ -335,7 +335,7 @@ export function DailyEntryPage() {
             <>
               <button
                 onClick={() => setActiveTabWorkerId('all')}
-                className={`flex items-center justify-between p-3.5 md:p-3 rounded-2xl md:rounded-xl text-left transition-all flex-shrink-0 border ${activeTabWorkerId === 'all' ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-white border-gray-100 text-gray-700 hover:bg-indigo-50 hover:border-indigo-100'}`}
+                className={`flex items-center justify-between p-3.5 md:p-3 rounded-2xl md:rounded-xl text-left transition-all flex-shrink-0 border ${activeTabWorkerId === 'all' ? 'bg-red-600 border-red-600 text-white shadow-md shadow-red-200' : 'bg-white border-gray-100 text-gray-700 hover:bg-sky-50 hover:border-sky-100'}`}
               >
                 <span className="font-semibold text-[15px]">📋 ข้อมูลทุกคน</span>
               </button>
@@ -346,10 +346,10 @@ export function DailyEntryPage() {
                   <button
                     key={worker.id}
                     onClick={() => setActiveTabWorkerId(worker.id)}
-                    className={`flex items-center justify-between p-3.5 md:p-3 rounded-2xl md:rounded-xl text-left transition-all flex-shrink-0 border ${isActive ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-white border-gray-100 text-gray-700 hover:bg-indigo-50 hover:border-indigo-100'}`}
+                    className={`flex items-center justify-between p-3.5 md:p-3 rounded-2xl md:rounded-xl text-left transition-all flex-shrink-0 border ${isActive ? 'bg-red-600 border-red-600 text-white shadow-md shadow-red-200' : 'bg-white border-gray-100 text-gray-700 hover:bg-sky-50 hover:border-sky-100'}`}
                   >
                     <span className="font-semibold text-[15px]">{worker.name}</span>
-                    {entry && <CheckCircle2 className={`w-4 h-4 ml-2 ${isActive ? 'text-indigo-200' : 'text-green-500'}`} />}
+                    {entry && <CheckCircle2 className={`w-4 h-4 ml-2 ${isActive ? 'text-red-200' : 'text-green-500'}`} />}
                   </button>
                 )
               })}
@@ -364,13 +364,13 @@ export function DailyEntryPage() {
               <div className="mb-6">
                 <div className="font-bold text-gray-900 text-2xl mb-2">สรุปข้อมูลช่างทุกคน</div>
                 <div className="text-gray-500 text-sm">
-                  มาทำงานแล้ว <span className="font-bold text-indigo-600">{entriesForDate.length}</span> จาก {workers.length} คน
+                  มาทำงานแล้ว <span className="font-bold text-red-600">{entriesForDate.length}</span> จาก {workers.length} คน
                 </div>
               </div>
 
               <Button
                 onClick={handleCopyAllDetailed}
-                className="w-full sm:w-auto px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-200 gap-2 mb-6"
+                className="w-full sm:w-auto px-6 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white shadow-md shadow-red-200 gap-2 mb-6"
               >
                 {copiedId === 'all_detailed' ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
                 คัดลอกรายละเอียดทุกคน ({workers.length} คน)
@@ -381,9 +381,9 @@ export function DailyEntryPage() {
                   const entry = entriesForDate.find(e => e.workerId === worker.id);
                   const totalPay = entry ? entry.totalPay : (worker.baseWage + (worker.defaultTravelAllowance || 0));
                   return (
-                    <div key={worker.id} onClick={() => setActiveTabWorkerId(worker.id)} className="flex justify-between items-center p-4 bg-gray-50 hover:bg-indigo-50/50 rounded-2xl border border-gray-100 cursor-pointer transition-colors active:scale-[0.99] group">
+                    <div key={worker.id} onClick={() => setActiveTabWorkerId(worker.id)} className="flex justify-between items-center p-4 bg-gray-50 hover:bg-sky-50/50 rounded-2xl border border-gray-100 cursor-pointer transition-colors active:scale-[0.99] group">
                       <div>
-                        <div className="font-bold text-gray-900 group-hover:text-indigo-700 transition-colors">{worker.name}</div>
+                        <div className="font-bold text-gray-900 group-hover:text-red-700 transition-colors">{worker.name}</div>
                         <div className="text-sm mt-0.5">
                           {entry ? (
                             <span className="text-green-600 flex items-center gap-1 font-medium">
@@ -394,7 +394,7 @@ export function DailyEntryPage() {
                           )}
                         </div>
                       </div>
-                      <div className="font-bold text-lg text-indigo-600">
+                      <div className="font-bold text-lg text-red-600">
                         ฿{totalPay}
                       </div>
                     </div>
@@ -406,7 +406,7 @@ export function DailyEntryPage() {
             <Card
               key={activeWorker.id}
               onClick={() => openModal(activeWorker, activeEntry)}
-              className={`p-6 md:p-8 flex flex-col items-center justify-center min-h-[200px] text-center active:scale-[0.99] transition-all cursor-pointer ${activeEntry ? 'border-green-200 bg-green-50/30' : 'bg-white border-gray-100 hover:border-indigo-200 hover:shadow-md'}`}
+              className={`p-6 md:p-8 flex flex-col items-center justify-center min-h-[200px] text-center active:scale-[0.99] transition-all cursor-pointer ${activeEntry ? 'border-green-200 bg-green-50/30' : 'bg-white border-gray-100 hover:border-red-200 hover:shadow-md'}`}
             >
               <div className="mb-4">
                 <div className="font-bold text-gray-900 text-2xl mb-2">{activeWorker.name}</div>
@@ -437,7 +437,7 @@ export function DailyEntryPage() {
                     <Button
                       variant="secondary"
                       onClick={(e) => handleCopySingle(activeWorker, activeEntry, e)}
-                      className="p-2.5 h-auto rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border-indigo-100"
+                      className="p-2.5 h-auto rounded-xl bg-sky-50 text-red-600 hover:bg-sky-100 border-sky-100"
                       title="คัดลอกสรุปรายวัน"
                     >
                       {copiedId === activeEntry.id ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5" />}
@@ -459,13 +459,13 @@ export function DailyEntryPage() {
                   </>
                 ) : (
                   <>
-                    <Button variant="primary" className="px-8 py-3 text-base rounded-xl shadow-indigo-200 pointer-events-none">
+                    <Button variant="primary" className="px-8 py-3 text-base rounded-xl shadow-red-200 pointer-events-none">
                       คลิกเพื่อบันทึกรายการ
                     </Button>
                     <Button
                       variant="secondary"
                       onClick={(e) => handleCopySingle(activeWorker, undefined, e)}
-                      className="p-3 h-auto rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border-indigo-100"
+                      className="p-3 h-auto rounded-xl bg-sky-50 text-red-600 hover:bg-sky-100 border-sky-100"
                       title="คัดลอกสรุปรายการ (ค่าแรงปกติ)"
                     >
                       {copiedId === activeWorker.id ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5" />}
@@ -487,16 +487,16 @@ export function DailyEntryPage() {
         <form onSubmit={handleSubmit} className="space-y-6">
 
           {/* Time Inputs */}
-          <div className="bg-indigo-50/50 p-4 rounded-3xl border border-indigo-100">
+          <div className="bg-sky-50/50 p-4 rounded-3xl border border-sky-100">
             <div className="flex justify-between items-center mb-3">
-              <h4 className="font-medium text-indigo-900 flex items-center gap-2">
-                <Clock className="w-4 h-4 text-indigo-500" /> เวลาทำงาน
+              <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                <Clock className="w-4 h-4 text-sky-500" /> เวลาทำงาน
               </h4>
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={resetToShiftTimes}
-                  className="text-xs text-indigo-600 bg-white px-2 py-1 rounded-lg border border-indigo-100 flex items-center gap-1 hover:bg-indigo-50"
+                  className="text-xs text-red-600 bg-white px-2 py-1 rounded-lg border border-sky-100 flex items-center gap-1 hover:bg-sky-50"
                   title="รีเซ็ตเป็นเวลาปกติ"
                 >
                   <RefreshCw className="w-3 h-3" />
@@ -505,7 +505,7 @@ export function DailyEntryPage() {
                 <button
                   type="button"
                   onClick={() => setShowShiftSettings(!showShiftSettings)}
-                  className="text-xs text-indigo-600 bg-white px-2 py-1 rounded-lg border border-indigo-100 flex items-center gap-1 hover:bg-indigo-50"
+                  className="text-xs text-red-600 bg-white px-2 py-1 rounded-lg border border-sky-100 flex items-center gap-1 hover:bg-sky-50"
                 >
                   <Settings2 className="w-3 h-3" />
                   {showShiftSettings ? 'ซ่อน' : `กะ: ${formData.shiftStart}-${formData.shiftEnd}`}
@@ -514,7 +514,7 @@ export function DailyEntryPage() {
             </div>
 
             {showShiftSettings && (
-              <div className="bg-white p-3 rounded-xl border border-indigo-100 mb-3 grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2">
+              <div className="bg-white p-3 rounded-xl border border-sky-100 mb-3 grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2">
                 <div>
                   <Label className="text-[10px] text-gray-500">เริ่มกะ</Label>
                   <Input
@@ -538,7 +538,7 @@ export function DailyEntryPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-xs text-indigo-700">เวลาเข้างานจริง</Label>
+                <Label className="text-xs text-red-700">เวลาเข้างานจริง</Label>
                 <div className="flex gap-1">
                   <select
                     value={formData.clockIn.split(':')[0]}
@@ -546,21 +546,21 @@ export function DailyEntryPage() {
                       const [, min] = formData.clockIn.split(':');
                       setFormData(p => ({ ...p, clockIn: `${e.target.value}:${min || '00'}` }));
                     }}
-                    className="w-full rounded-xl border border-indigo-100 bg-white text-center font-bold text-lg focus:ring-2 focus:ring-indigo-500 outline-none h-12 appearance-none"
+                    className="w-full rounded-xl border border-sky-100 bg-white text-center font-bold text-lg focus:ring-2 focus:ring-sky-500 outline-none h-12 appearance-none"
                   >
                     {Array.from({ length: 24 }).map((_, i) => {
                       const hr = i.toString().padStart(2, '0');
                       return <option key={hr} value={hr}>{hr}</option>;
                     })}
                   </select>
-                  <span className="text-xl font-bold self-center text-indigo-900">:</span>
+                  <span className="text-xl font-bold self-center text-gray-900">:</span>
                   <select
                     value={formData.clockIn.split(':')[1] || '00'}
                     onChange={(e) => {
                       const [hr] = formData.clockIn.split(':');
                       setFormData(p => ({ ...p, clockIn: `${hr || '00'}:${e.target.value}` }));
                     }}
-                    className="w-full rounded-xl border border-indigo-100 bg-white text-center font-bold text-lg focus:ring-2 focus:ring-indigo-500 outline-none h-12 appearance-none"
+                    className="w-full rounded-xl border border-sky-100 bg-white text-center font-bold text-lg focus:ring-2 focus:ring-sky-500 outline-none h-12 appearance-none"
                   >
                     <option value="00">00</option>
                     <option value="15">15</option>
@@ -570,7 +570,7 @@ export function DailyEntryPage() {
                 </div>
               </div>
               <div>
-                <Label className="text-xs text-indigo-700">เวลาเลิกงานจริง</Label>
+                <Label className="text-xs text-red-700">เวลาเลิกงานจริง</Label>
                 <div className="flex gap-1">
                   <select
                     value={formData.clockOut.split(':')[0]}
@@ -578,21 +578,21 @@ export function DailyEntryPage() {
                       const [, min] = formData.clockOut.split(':');
                       setFormData(p => ({ ...p, clockOut: `${e.target.value}:${min || '00'}` }));
                     }}
-                    className="w-full rounded-xl border border-indigo-100 bg-white text-center font-bold text-lg focus:ring-2 focus:ring-indigo-500 outline-none h-12 appearance-none"
+                    className="w-full rounded-xl border border-sky-100 bg-white text-center font-bold text-lg focus:ring-2 focus:ring-sky-500 outline-none h-12 appearance-none"
                   >
                     {Array.from({ length: 24 }).map((_, i) => {
                       const hr = i.toString().padStart(2, '0');
                       return <option key={hr} value={hr}>{hr}</option>;
                     })}
                   </select>
-                  <span className="text-xl font-bold self-center text-indigo-900">:</span>
+                  <span className="text-xl font-bold self-center text-gray-900">:</span>
                   <select
                     value={formData.clockOut.split(':')[1] || '00'}
                     onChange={(e) => {
                       const [hr] = formData.clockOut.split(':');
                       setFormData(p => ({ ...p, clockOut: `${hr || '00'}:${e.target.value}` }));
                     }}
-                    className="w-full rounded-xl border border-indigo-100 bg-white text-center font-bold text-lg focus:ring-2 focus:ring-indigo-500 outline-none h-12 appearance-none"
+                    className="w-full rounded-xl border border-sky-100 bg-white text-center font-bold text-lg focus:ring-2 focus:ring-sky-500 outline-none h-12 appearance-none"
                   >
                     <option value="00">00</option>
                     <option value="15">15</option>
@@ -672,7 +672,7 @@ export function DailyEntryPage() {
               <Button
                 type="button"
                 variant="ghost"
-                className="text-indigo-600 px-3 py-1.5 h-auto text-xs bg-indigo-50 rounded-xl"
+                className="text-red-600 px-3 py-1.5 h-auto text-xs bg-sky-50 rounded-xl"
                 onClick={() => setFormData(p => ({
                   ...p,
                   adjustments: [...p.adjustments, { id: uuidv4(), type: 'add', amount: 0, note: '' }]
@@ -693,7 +693,7 @@ export function DailyEntryPage() {
                         newAdjs[idx].type = e.target.value as 'add' | 'deduct';
                         setFormData(p => ({ ...p, adjustments: newAdjs }));
                       }}
-                      className={`h-10 rounded-xl border-0 px-3 text-sm focus:ring-2 focus:ring-indigo-500 font-medium ${adj.type === 'add' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
+                      className={`h-10 rounded-xl border-0 px-3 text-sm focus:ring-2 focus:ring-sky-500 font-medium ${adj.type === 'add' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
                     >
                       <option value="add">เพิ่มเงิน (+)</option>
                       <option value="deduct">หักเงิน (-)</option>
@@ -744,7 +744,7 @@ export function DailyEntryPage() {
           <div className="flex items-center justify-between pt-4 mt-2 border-t border-gray-100">
             <div>
               <div className="text-sm text-gray-500 font-medium">ยอดสุทธิ</div>
-              <div className="text-3xl font-bold text-indigo-600">฿{calculateTotal()}</div>
+              <div className="text-3xl font-bold text-red-600">฿{calculateTotal()}</div>
             </div>
             <div className="flex gap-2">
               {editingId && (
@@ -762,7 +762,7 @@ export function DailyEntryPage() {
                   <Trash2 className="w-5 h-5" />
                 </Button>
               )}
-              <Button type="submit" className="px-8 py-4 text-lg rounded-2xl shadow-lg shadow-indigo-200">
+              <Button type="submit" className="px-8 py-4 text-lg rounded-2xl shadow-lg shadow-red-200">
                 บันทึก
               </Button>
             </div>

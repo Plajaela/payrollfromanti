@@ -77,7 +77,7 @@ export function WorkersPage() {
                   {worker.defaultTravelAllowance > 0 && (
                     <span className="bg-gray-100 px-2 py-0.5 rounded-md">ค่ารถ ฿{worker.defaultTravelAllowance}</span>
                   )}
-                  <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md">เวลา {worker.shiftStart || '07:00'} - {worker.shiftEnd || '16:00'}</span>
+                  <span className="bg-sky-50 text-red-700 px-2 py-0.5 rounded-md">เวลา {worker.shiftStart || '07:00'} - {worker.shiftEnd || '16:00'}</span>
                 </div>
               </div>
               <div className="flex items-center gap-1 pl-2 border-l border-gray-100 ml-2">
@@ -105,7 +105,7 @@ export function WorkersPage() {
           resetForm();
           setIsModalOpen(true);
         }}
-        className="fixed bottom-24 right-4 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-lg shadow-indigo-200 flex items-center justify-center hover:bg-indigo-700 active:scale-95 transition-all z-10"
+        className="fixed bottom-24 right-4 w-14 h-14 bg-red-600 text-white rounded-full shadow-lg shadow-red-200 flex items-center justify-center hover:bg-red-700 active:scale-95 transition-all z-10"
       >
         <Plus className="w-6 h-6" />
       </button>

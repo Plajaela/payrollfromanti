@@ -14,7 +14,7 @@ export const Button = React.forwardRef<
 >(({ className, variant = 'primary', ...props }, ref) => {
   const baseStyles = 'inline-flex items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold transition-all focus:outline-none active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none';
   const variants = {
-    primary: 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-200',
+    primary: 'bg-red-600 text-white hover:bg-red-700 shadow-sm shadow-red-200',
     secondary: 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 shadow-sm',
     danger: 'bg-red-50 text-red-600 hover:bg-red-100',
     ghost: 'bg-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900',
@@ -38,7 +38,7 @@ export const Input = React.forwardRef<
     <input
       ref={ref}
       className={cn(
-        'block w-full rounded-2xl border-0 bg-gray-100/80 px-4 py-3 text-base text-gray-900 placeholder:text-gray-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 transition-all',
+        'block w-full rounded-2xl border-0 bg-gray-100/80 px-4 py-3 text-base text-gray-900 placeholder:text-gray-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 transition-all',
         className
       )}
       {...props}
@@ -55,7 +55,7 @@ export const Select = React.forwardRef<
     <select
       ref={ref}
       className={cn(
-        'flex h-12 w-full rounded-2xl border-0 bg-gray-100/80 px-4 py-2 text-base text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 transition-all',
+        'flex h-12 w-full rounded-2xl border-0 bg-gray-100/80 px-4 py-2 text-base text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 transition-all',
         className
       )}
       {...props}

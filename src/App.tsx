@@ -35,10 +35,10 @@ export default function App() {
             onClick={() => setActiveTab('daily')}
             className={cn(
               "flex flex-col items-center p-2 rounded-2xl w-20 transition-all",
-              activeTab === 'daily' ? "text-indigo-600" : "text-gray-400 hover:text-gray-600"
+              activeTab === 'daily' ? "text-red-600" : "text-gray-400 hover:text-gray-600"
             )}
           >
-            <div className={cn("p-1.5 rounded-xl mb-1 transition-colors", activeTab === 'daily' ? "bg-indigo-50" : "")}>
+            <div className={cn("p-1.5 rounded-xl mb-1 transition-colors", activeTab === 'daily' ? "bg-sky-50" : "")}>
               <CalendarDays className="w-6 h-6" />
             </div>
             <span className="text-[10px] font-semibold">รายวัน</span>
@@ -47,10 +47,10 @@ export default function App() {
             onClick={() => setActiveTab('workers')}
             className={cn(
               "flex flex-col items-center p-2 rounded-2xl w-20 transition-all",
-              activeTab === 'workers' ? "text-indigo-600" : "text-gray-400 hover:text-gray-600"
+              activeTab === 'workers' ? "text-red-600" : "text-gray-400 hover:text-gray-600"
             )}
           >
-            <div className={cn("p-1.5 rounded-xl mb-1 transition-colors", activeTab === 'workers' ? "bg-indigo-50" : "")}>
+            <div className={cn("p-1.5 rounded-xl mb-1 transition-colors", activeTab === 'workers' ? "bg-sky-50" : "")}>
               <Users className="w-6 h-6" />
             </div>
             <span className="text-[10px] font-semibold">ช่าง</span>
@@ -59,10 +59,10 @@ export default function App() {
             onClick={() => setActiveTab('reports')}
             className={cn(
               "flex flex-col items-center p-2 rounded-2xl w-20 transition-all",
-              activeTab === 'reports' ? "text-indigo-600" : "text-gray-400 hover:text-gray-600"
+              activeTab === 'reports' ? "text-red-600" : "text-gray-400 hover:text-gray-600"
             )}
           >
-            <div className={cn("p-1.5 rounded-xl mb-1 transition-colors", activeTab === 'reports' ? "bg-indigo-50" : "")}>
+            <div className={cn("p-1.5 rounded-xl mb-1 transition-colors", activeTab === 'reports' ? "bg-sky-50" : "")}>
               <FileText className="w-6 h-6" />
             </div>
             <span className="text-[10px] font-semibold">รายงาน</span>
