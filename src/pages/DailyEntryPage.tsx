@@ -21,6 +21,8 @@ export function DailyEntryPage() {
   const [showShiftSettings, setShowShiftSettings] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [activeTabWorkerId, setActiveTabWorkerId] = useState<string | null>(null);
+  const [showLalamoveCalc, setShowLalamoveCalc] = useState(false);
+  const [lalamoveDist, setLalamoveDist] = useState<string>('');
 
   // Set default tab when workers change or active tab is not set
   useEffect(() => {
@@ -681,7 +683,17 @@ export function DailyEntryPage() {
               />
             </div>
             <div>
-              <Label className="text-xs">ค่ารถ</Label>
+              <Label className="text-xs flex justify-between items-center mb-1">
+                <span>ค่ารถ</span>
+                <button
+                  type="button"
+                  onClick={() => setShowLalamoveCalc(!showLalamoveCalc)}
+                  className={`text-[9px] px-1 py-0.5 rounded transition-all ${showLalamoveCalc ? 'bg-sky-500 text-white shadow-sm' : 'bg-sky-50 text-sky-600 border border-sky-100 hover:bg-sky-100'}`}
+                  title="คำนวณจาก Lalamove 4 ประตู"
+                >
+                  Lalamove
+                </button>
+              </Label>
               <Input
                 type="number"
                 min="0"
@@ -701,6 +713,46 @@ export function DailyEntryPage() {
               />
             </div>
           </div>
+
+          {/* Lalamove Inline Calculator */}
+          {showLalamoveCalc && (
+            <div className="bg-gradient-to-r from-sky-50 to-white border border-sky-100 rounded-2xl p-3 animate-in fade-in slide-in-from-top-1 shadow-sm">
+              <div className="text-[11px] text-sky-800 mb-2 font-semibold flex items-center gap-1.5">
+                📍 คำนวณค่ารถ Lalamove (กระบะ 4 ประตู)
+                <span className="text-[9px] font-normal text-sky-600 bg-sky-100/50 px-1.5 py-0.5 rounded-md">เริ่ม 159บ. + 14บ./กม.</span>
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  placeholder="ระยะทาง (กม.)"
+                  value={lalamoveDist}
+                  onChange={(e) => setLalamoveDist(e.target.value)}
+                  className="h-9 text-sm px-3 flex-1 border-sky-100 bg-white"
+                />
+                {lalamoveDist && Number(lalamoveDist) > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const dist = Number(lalamoveDist);
+                      const cost = 159 + Math.round(dist * 14);
+                      setFormData(p => ({ ...p, travelAllowance: cost }));
+                      setShowLalamoveCalc(false);
+                      setLalamoveDist('');
+                    }}
+                    className="bg-sky-500 text-white text-xs font-bold px-4 py-1.5 rounded-xl hover:bg-sky-600 active:scale-[0.98] transition-all whitespace-nowrap shadow-sm shadow-sky-200"
+                  >
+                    ใช้ ฿{159 + Math.round(Number(lalamoveDist) * 14)}
+                  </button>
+                ) : (
+                  <div className="text-xs text-gray-400 px-4 flex items-center bg-gray-50 border border-dashed border-gray-200 rounded-xl whitespace-nowrap">
+                    รอระบุระยะทาง...
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Adjustments */}
           <div className="space-y-3">
