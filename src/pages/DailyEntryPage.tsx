@@ -347,14 +347,15 @@ export function DailyEntryPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-red-600 text-white p-5 rounded-3xl shadow-md shadow-red-200">
-          <div className="text-sky-100 text-sm font-medium mb-1">ยอดรวมวันนี้</div>
-          <div className="text-2xl font-bold">฿{totalPayForDay}</div>
+        <div className="bg-gradient-to-br from-red-500 to-red-600 text-white p-5 rounded-3xl shadow-lg shadow-red-200 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+          <div className="text-red-100 text-sm font-medium mb-1">ยอดรวมวันนี้</div>
+          <div className="text-3xl font-bold tracking-tight">฿{totalPayForDay}</div>
         </div>
-        <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm">
-          <div className="text-gray-500 text-sm font-medium mb-1">ช่างที่มาทำงาน</div>
-          <div className="text-2xl font-bold text-gray-900">
-            {entriesForDate.length} <span className="text-base font-normal text-gray-400">/ {workers.length}</span>
+        <div className="bg-gradient-to-br from-sky-50 to-white p-5 rounded-3xl border border-sky-100 shadow-lg shadow-sky-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+          <div className="absolute -right-4 -top-4 w-24 h-24 bg-sky-200 rounded-full opacity-30 blur-2xl transition-all duration-500 group-hover:scale-150"></div>
+          <div className="text-sky-700 text-sm font-medium mb-1 relative z-10">ช่างที่มาทำงาน</div>
+          <div className="text-3xl font-bold text-gray-800 relative z-10">
+            {entriesForDate.length} <span className="text-lg font-normal text-gray-400">/ {workers.length}</span>
           </div>
         </div>
       </div>
@@ -371,7 +372,7 @@ export function DailyEntryPage() {
             <>
               <button
                 onClick={() => setActiveTabWorkerId('all')}
-                className={`flex items-center justify-between p-3.5 md:p-3 rounded-2xl md:rounded-xl text-left transition-all flex-shrink-0 border ${activeTabWorkerId === 'all' ? 'bg-red-600 border-red-600 text-white shadow-md shadow-red-200' : 'bg-white border-gray-100 text-gray-700 hover:bg-sky-50 hover:border-sky-100'}`}
+                className={`flex items-center justify-between p-3.5 md:p-3 rounded-2xl md:rounded-xl text-left transition-all duration-300 flex-shrink-0 border hover:scale-[1.02] active:scale-[0.98] ${activeTabWorkerId === 'all' ? 'bg-gradient-to-r from-sky-500 to-sky-600 border-sky-500 text-white shadow-md shadow-sky-200' : 'bg-white border-gray-100 text-gray-700 hover:bg-sky-50 hover:border-sky-200'}`}
               >
                 <span className="font-semibold text-[15px]">📋 ข้อมูลทุกคน</span>
               </button>
@@ -382,10 +383,10 @@ export function DailyEntryPage() {
                   <button
                     key={worker.id}
                     onClick={() => setActiveTabWorkerId(worker.id)}
-                    className={`flex items-center justify-between p-3.5 md:p-3 rounded-2xl md:rounded-xl text-left transition-all flex-shrink-0 border ${isActive ? 'bg-red-600 border-red-600 text-white shadow-md shadow-red-200' : 'bg-white border-gray-100 text-gray-700 hover:bg-sky-50 hover:border-sky-100'}`}
+                    className={`flex items-center justify-between p-3.5 md:p-3 rounded-2xl md:rounded-xl text-left transition-all duration-300 flex-shrink-0 border hover:scale-[1.02] active:scale-[0.98] ${isActive ? 'bg-gradient-to-r from-sky-500 to-sky-600 border-sky-500 text-white shadow-md shadow-sky-200' : 'bg-white border-gray-100 text-gray-700 hover:bg-sky-50 hover:border-sky-200'}`}
                   >
                     <span className="font-semibold text-[15px]">{worker.name}</span>
-                    {entry && <CheckCircle2 className={`w-4 h-4 ml-2 ${isActive ? 'text-red-200' : 'text-green-500'}`} />}
+                    {entry && <CheckCircle2 className={`w-4 h-4 ml-2 ${isActive ? 'text-sky-100' : 'text-emerald-500'}`} />}
                   </button>
                 )
               })}
@@ -417,20 +418,20 @@ export function DailyEntryPage() {
                   const entry = entriesForDate.find(e => e.workerId === worker.id);
                   const totalPay = entry ? entry.totalPay : (worker.baseWage + (worker.defaultTravelAllowance || 0));
                   return (
-                    <div key={worker.id} onClick={() => setActiveTabWorkerId(worker.id)} className="flex justify-between items-center p-4 bg-gray-50 hover:bg-sky-50/50 rounded-2xl border border-gray-100 cursor-pointer transition-colors active:scale-[0.99] group">
+                    <div key={worker.id} onClick={() => setActiveTabWorkerId(worker.id)} className="flex justify-between items-center p-4 bg-white hover:bg-sky-50 rounded-2xl border border-gray-100 cursor-pointer transition-all duration-300 hover:shadow-md hover:shadow-sky-100 hover:-translate-y-0.5 active:scale-[0.99] group">
                       <div>
-                        <div className="font-bold text-gray-900 group-hover:text-red-700 transition-colors">{worker.name}</div>
+                        <div className="font-bold text-gray-900 group-hover:text-sky-700 transition-colors">{worker.name}</div>
                         <div className="text-sm mt-0.5">
                           {entry ? (
-                            <span className="text-green-600 flex items-center gap-1 font-medium">
+                            <span className="text-emerald-600 flex items-center gap-1.5 font-medium bg-emerald-50 px-2 py-0.5 rounded-lg inline-flex">
                               <CheckCircle2 className="w-3.5 h-3.5" /> บันทึกแล้ว
                             </span>
                           ) : (
-                            <span className="text-gray-500">รอการบันทึก (เวลา {worker.shiftStart || '07:00'}-{worker.shiftEnd || '16:00'})</span>
+                            <span className="text-gray-400 font-medium">รอการบันทึก (เวลา {worker.shiftStart || '07:00'}-{worker.shiftEnd || '16:00'})</span>
                           )}
                         </div>
                       </div>
-                      <div className="font-bold text-lg text-red-600">
+                      <div className="font-bold text-lg text-red-500 group-hover:text-red-600 transition-colors">
                         ฿{totalPay}
                       </div>
                     </div>
@@ -442,20 +443,20 @@ export function DailyEntryPage() {
             <Card
               key={activeWorker.id}
               onClick={() => openModal(activeWorker, activeEntry)}
-              className={`p-6 md:p-8 flex flex-col items-center justify-center min-h-[200px] text-center active:scale-[0.99] transition-all cursor-pointer ${activeEntry ? 'border-green-200 bg-green-50/30' : 'bg-white border-gray-100 hover:border-red-200 hover:shadow-md'}`}
+              className={`p-6 md:p-8 flex flex-col items-center justify-center min-h-[200px] text-center active:scale-[0.99] transition-all duration-300 cursor-pointer hover:-translate-y-1 hover:shadow-xl ${activeEntry ? 'border-sky-200 bg-gradient-to-b from-sky-50/50 to-white shadow-sky-100' : 'bg-white border-gray-100 hover:border-sky-300 shadow-sm'}`}
             >
               <div className="mb-4">
                 <div className="font-bold text-gray-900 text-2xl mb-2">{activeWorker.name}</div>
                 {activeEntry ? (
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-100 text-green-700 rounded-lg text-sm font-semibold">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-sky-100 text-sky-700 rounded-xl text-sm font-semibold shadow-sm">
                     <CheckCircle2 className="w-4 h-4" /> บันทึกแล้ว
-                    <span className="text-green-800 ml-1">฿{activeEntry.totalPay}</span>
-                    <span className="text-gray-500 font-normal ml-1 border-l border-green-200 pl-2">
+                    <span className="text-sky-800 ml-1">฿{activeEntry.totalPay}</span>
+                    <span className="text-sky-600/70 font-normal ml-1 border-l border-sky-200 pl-2">
                       {activeEntry.clockIn} - {activeEntry.clockOut}
                     </span>
                   </div>
                 ) : (
-                  <div className="text-sm text-gray-500 bg-gray-100 inline-block px-3 py-1 rounded-lg">
+                  <div className="text-sm text-gray-500 bg-gray-50 inline-block px-3 py-1 rounded-xl border border-gray-100">
                     รอการบันทึก • เวลาปกติ {activeWorker.shiftStart || '07:00'} - {activeWorker.shiftEnd || '16:00'}
                   </div>
                 )}
