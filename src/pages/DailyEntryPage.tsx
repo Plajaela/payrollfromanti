@@ -20,6 +20,14 @@ export function DailyEntryPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showShiftSettings, setShowShiftSettings] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [activeTabWorkerId, setActiveTabWorkerId] = useState<string | null>(null);
+
+  // Set default tab when workers change or active tab is not set
+  useEffect(() => {
+    if (workers.length > 0 && (!activeTabWorkerId || !workers.find(w => w.id === activeTabWorkerId))) {
+      setActiveTabWorkerId(workers[0].id);
+    }
+  }, [workers, activeTabWorkerId]);
 
   const [formData, setFormData] = useState({
     workerId: '',
@@ -237,6 +245,9 @@ export function DailyEntryPage() {
     handleCopy(text, idToUse);
   };
 
+  const activeWorker = workers.find(w => w.id === activeTabWorkerId) || workers[0];
+  const activeEntry = activeWorker ? entriesForDate.find(e => e.workerId === activeWorker.id) : undefined;
+
   return (
     <div className="space-y-6 pb-20">
       {/* Date Selector */}
@@ -273,76 +284,108 @@ export function DailyEntryPage() {
         </div>
       </div>
 
-      {/* Workers List */}
-      <div className="space-y-3">
-        {workers.length === 0 ? (
-          <div className="text-center py-10 text-gray-500 bg-white rounded-3xl border border-dashed border-gray-200">
-            ยังไม่มีข้อมูลช่าง กรุณาไปที่เมนู "ช่าง"
-          </div>
-        ) : (
-          workers.map(worker => {
-            const entry = entriesForDate.find(e => e.workerId === worker.id);
-            return (
-              <Card
-                key={worker.id}
-                onClick={() => openModal(worker, entry)}
-                className={`p-4 flex justify-between items-center active:scale-[0.98] transition-all cursor-pointer ${entry ? 'border-green-200 bg-green-50/30' : ''}`}
-              >
-                <div>
-                  <div className="font-semibold text-gray-900 text-lg">{worker.name}</div>
-                  {entry ? (
-                    <div className="text-sm text-green-600 font-medium flex items-center gap-1 mt-0.5">
-                      <CheckCircle2 className="w-4 h-4" /> บันทึกแล้ว (฿{entry.totalPay})
-                    </div>
-                  ) : (
-                    <div className="text-sm text-gray-400 mt-0.5">เวลา {worker.shiftStart || '07:00'} - {worker.shiftEnd || '16:00'}</div>
-                  )}
-                </div>
-                <div>
-                  {entry ? (
-                    <div className="flex items-center gap-2">
-                      <div className="text-sm text-gray-600 bg-white px-2 py-1 rounded-lg border border-gray-200 shadow-sm">
-                        {entry.clockIn} - {entry.clockOut}
-                      </div>
-                      <Button
-                        variant="secondary"
-                        onClick={(e) => handleCopySingle(worker, entry, e)}
-                        className="p-2 h-auto rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border-indigo-100"
-                        title="คัดลอกสรุปรายวัน"
-                      >
-                        {copiedId === entry.id ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                      </Button>
-                      <Button
-                        variant="danger"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (window.confirm(`ต้องการลบรายการของ ${worker.name} ใช่หรือไม่?`)) {
-                            deleteEntry(entry.id);
-                          }
-                        }}
-                        className="p-2 h-auto rounded-xl bg-red-50 text-red-600 hover:bg-red-100"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="secondary"
-                        onClick={(e) => handleCopySingle(worker, undefined, e)}
-                        className="p-2 h-auto rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border-indigo-100"
-                        title="คัดลอกสรุปรายการ (ค่าแรงปกติ)"
-                      >
-                        {copiedId === worker.id ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                      </Button>
-                      <Button variant="secondary" className="rounded-full px-5 py-2 text-sm pointer-events-none">บันทึก</Button>
-                    </div>
-                  )}
-                </div>
-              </Card>
-            )
-          })
-        )}
+      {/* Workers List / Tabs */}
+      <div className="flex flex-col md:flex-row gap-4 lg:gap-6 items-start">
+        {/* Left Tabs (Workers List) */}
+        <div className="w-full md:w-1/3 lg:w-1/4 flex flex-row md:flex-col gap-2 overflow-x-auto md:overflow-y-auto pb-2 md:pb-0 scrollbar-hide md:max-h-[calc(100vh-250px)]">
+          {workers.length === 0 ? (
+            <div className="text-center py-10 md:py-6 text-sm text-gray-400 bg-white rounded-3xl md:rounded-2xl border border-dashed border-gray-200">
+              ไม่มีข้อมูลช่าง
+            </div>
+          ) : (
+            workers.map(worker => {
+              const entry = entriesForDate.find(e => e.workerId === worker.id);
+              const isActive = worker.id === activeTabWorkerId;
+              return (
+                <button
+                  key={worker.id}
+                  onClick={() => setActiveTabWorkerId(worker.id)}
+                  className={`flex items-center justify-between p-3.5 md:p-3 rounded-2xl md:rounded-xl text-left whitespace-nowrap md:whitespace-normal transition-all flex-shrink-0 md:flex-shrink border ${isActive ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-white border-gray-100 text-gray-700 hover:bg-indigo-50 hover:border-indigo-100'}`}
+                >
+                  <span className="font-semibold text-[15px]">{worker.name}</span>
+                  {entry && <CheckCircle2 className={`w-4 h-4 ml-2 ${isActive ? 'text-indigo-200' : 'text-green-500'}`} />}
+                </button>
+              )
+            })
+          )}
+        </div>
+
+        {/* Right Active Content */}
+        <div className="w-full md:w-2/3 lg:w-3/4">
+          {workers.length > 0 && activeWorker && (
+            <Card
+              key={activeWorker.id}
+              onClick={() => openModal(activeWorker, activeEntry)}
+              className={`p-6 md:p-8 flex flex-col items-center justify-center min-h-[200px] text-center active:scale-[0.99] transition-all cursor-pointer ${activeEntry ? 'border-green-200 bg-green-50/30' : 'bg-white border-gray-100 hover:border-indigo-200 hover:shadow-md'}`}
+            >
+              <div className="mb-4">
+                <div className="font-bold text-gray-900 text-2xl mb-2">{activeWorker.name}</div>
+                {activeEntry ? (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-100 text-green-700 rounded-lg text-sm font-semibold">
+                    <CheckCircle2 className="w-4 h-4" /> บันทึกแล้ว
+                    <span className="text-green-800 ml-1">฿{activeEntry.totalPay}</span>
+                    <span className="text-gray-500 font-normal ml-1 border-l border-green-200 pl-2">
+                      {activeEntry.clockIn} - {activeEntry.clockOut}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-500 bg-gray-100 inline-block px-3 py-1 rounded-lg">
+                    รอการบันทึก • เวลาปกติ {activeWorker.shiftStart || '07:00'} - {activeWorker.shiftEnd || '16:00'}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-wrap justify-center items-center gap-2 mt-2">
+                {activeEntry ? (
+                  <>
+                    <Button
+                      variant="primary"
+                      className="px-6 py-2.5 rounded-xl shadow-sm"
+                    >
+                      แก้ไขรายการ
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={(e) => handleCopySingle(activeWorker, activeEntry, e)}
+                      className="p-2.5 h-auto rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border-indigo-100"
+                      title="คัดลอกสรุปรายวัน"
+                    >
+                      {copiedId === activeEntry.id ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5" />}
+                      <span className="ml-1 text-sm font-semibold pr-1">คัดลอก</span>
+                    </Button>
+                    <Button
+                      variant="danger"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (window.confirm(`ต้องการลบรายการของ ${activeWorker.name} ใช่หรือไม่?`)) {
+                          deleteEntry(activeEntry.id);
+                        }
+                      }}
+                      className="p-2.5 h-auto rounded-xl bg-red-50 text-red-600 hover:bg-red-100"
+                      title="ลบรายการ"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button variant="primary" className="px-8 py-3 text-base rounded-xl shadow-indigo-200 pointer-events-none">
+                      คลิกเพื่อบันทึกรายการ
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={(e) => handleCopySingle(activeWorker, undefined, e)}
+                      className="p-3 h-auto rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border-indigo-100"
+                      title="คัดลอกสรุปรายการ (ค่าแรงปกติ)"
+                    >
+                      {copiedId === activeWorker.id ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5" />}
+                    </Button>
+                  </>
+                )}
+              </div>
+            </Card>
+          )}
+        </div>
       </div>
 
       {/* Entry Form Modal */}
