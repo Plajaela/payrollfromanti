@@ -3,7 +3,7 @@ import { useStore } from '../useStore';
 import { Button, Input, Label, Card, Modal } from '../components/ui';
 import { format, addDays, subDays } from 'date-fns';
 import { th } from 'date-fns/locale';
-import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Settings2, RefreshCw } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Settings2, RefreshCw, Copy, Check } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Adjustment } from '../types';
 
@@ -19,6 +19,7 @@ export function DailyEntryPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showShiftSettings, setShowShiftSettings] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     workerId: '',
@@ -191,6 +192,40 @@ export function DailyEntryPage() {
     }
     setIsModalOpen(false);
   };
+  const handleCopy = async (text: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy text', err);
+    }
+  };
+
+  const handleCopySingle = (workerName: string, entry: typeof entries[0], e: React.MouseEvent) => {
+    e.stopPropagation(); // prevent modal opening
+
+    const formattedDate = format(selectedDate, 'd MMM yyyy', { locale: th });
+
+    let text = `📝 แจ้งยอดรายวัน ${workerName} (วันที่ ${formattedDate})\n\n`;
+    text += `💰 ค่าแรง: ฿${entry.baseWage}\n`;
+    if (entry.travelAllowance > 0) text += `🚗 ค่ารถ: ฿${entry.travelAllowance}\n`;
+    if (entry.tollFee > 0) text += `🛣️ ทางด่วน: ฿${entry.tollFee}\n`;
+    if (entry.overtimePay > 0) text += `⏱️ โอที: ฿${entry.overtimePay}\n`;
+    if (entry.lateDeduction > 0) text += `📉 หักมาสาย: -฿${entry.lateDeduction}\n`;
+
+    if (entry.adjustments && entry.adjustments.length > 0) {
+      entry.adjustments.forEach(adj => {
+        const amountStr = adj.type === 'add' ? `+฿${Number(adj.amount)}` : `-฿${Math.abs(Number(adj.amount))}`;
+        const noteStr = adj.note ? ` (${adj.note})` : '';
+        text += `✨ อื่นๆ: ${amountStr}${noteStr}\n`;
+      });
+    }
+
+    text += `\n📌 ยอดสุทธิวันนี้: ฿${entry.totalPay}`;
+
+    handleCopy(text, entry.id);
+  };
 
   return (
     <div className="space-y-6 pb-20">
@@ -259,6 +294,14 @@ export function DailyEntryPage() {
                       <div className="text-sm text-gray-600 bg-white px-2 py-1 rounded-lg border border-gray-200 shadow-sm">
                         {entry.clockIn} - {entry.clockOut}
                       </div>
+                      <Button
+                        variant="secondary"
+                        onClick={(e) => handleCopySingle(worker.name, entry, e)}
+                        className="p-2 h-auto rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border-indigo-100"
+                        title="คัดลอกสรุปรายวัน"
+                      >
+                        {copiedId === entry.id ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                      </Button>
                       <Button
                         variant="danger"
                         onClick={(e) => {
