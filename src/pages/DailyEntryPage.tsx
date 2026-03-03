@@ -287,7 +287,7 @@ export function DailyEntryPage() {
       {/* Workers List / Tabs */}
       <div className="flex flex-col md:flex-row gap-4 lg:gap-6 items-start">
         {/* Left Tabs (Workers List) */}
-        <div className="w-full md:w-1/3 lg:w-1/4 flex flex-row md:flex-col gap-2 overflow-x-auto md:overflow-y-auto pb-2 md:pb-0 scrollbar-hide md:max-h-[calc(100vh-250px)]">
+        <div className="w-full md:w-1/3 lg:w-1/4 flex flex-col gap-2 overflow-y-auto pb-4 md:pb-0 md:max-h-[calc(100vh-250px)]">
           {workers.length === 0 ? (
             <div className="text-center py-10 md:py-6 text-sm text-gray-400 bg-white rounded-3xl md:rounded-2xl border border-dashed border-gray-200">
               ไม่มีข้อมูลช่าง
@@ -300,7 +300,7 @@ export function DailyEntryPage() {
                 <button
                   key={worker.id}
                   onClick={() => setActiveTabWorkerId(worker.id)}
-                  className={`flex items-center justify-between p-3.5 md:p-3 rounded-2xl md:rounded-xl text-left whitespace-nowrap md:whitespace-normal transition-all flex-shrink-0 md:flex-shrink border ${isActive ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-white border-gray-100 text-gray-700 hover:bg-indigo-50 hover:border-indigo-100'}`}
+                  className={`flex items-center justify-between p-3.5 md:p-3 rounded-2xl md:rounded-xl text-left transition-all flex-shrink-0 border ${isActive ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-white border-gray-100 text-gray-700 hover:bg-indigo-50 hover:border-indigo-100'}`}
                 >
                   <span className="font-semibold text-[15px]">{worker.name}</span>
                   {entry && <CheckCircle2 className={`w-4 h-4 ml-2 ${isActive ? 'text-indigo-200' : 'text-green-500'}`} />}
