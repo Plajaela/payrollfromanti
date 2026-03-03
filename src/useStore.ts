@@ -34,6 +34,33 @@ export function useStore() {
         }
 
         if (data) {
+          // Check for migration from local storage
+          if (data.length === 0) {
+            const saved = localStorage.getItem(STORAGE_KEY_WORKERS);
+            const localWorkers: Worker[] = saved ? JSON.parse(saved) : [];
+
+            if (localWorkers.length > 0) {
+              // We have local data but no Supabase data, let's migrate it!
+              const { error: insertError } = await supabase.from('workers').insert(
+                localWorkers.map(w => ({
+                  id: w.id,
+                  name: w.name,
+                  base_wage: w.baseWage,
+                  default_travel_allowance: w.defaultTravelAllowance || 0,
+                  shift_start: w.shiftStart || '07:00',
+                  shift_end: w.shiftEnd || '16:00'
+                }))
+              );
+
+              if (!insertError) {
+                setWorkers(localWorkers);
+                return;
+              } else {
+                console.error('Migration failed:', insertError);
+              }
+            }
+          }
+
           // Map snake_case to camelCase
           const formattedWorkers: Worker[] = data.map(w => ({
             id: w.id,
