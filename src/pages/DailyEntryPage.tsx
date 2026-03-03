@@ -202,29 +202,39 @@ export function DailyEntryPage() {
     }
   };
 
-  const handleCopySingle = (workerName: string, entry: typeof entries[0], e: React.MouseEvent) => {
+  const handleCopySingle = (worker: typeof workers[0], entry: typeof entries[0] | undefined, e: React.MouseEvent) => {
     e.stopPropagation(); // prevent modal opening
 
     const formattedDate = format(selectedDate, 'd MMM yyyy', { locale: th });
 
-    let text = `📝 แจ้งยอดรายวัน ${workerName} (วันที่ ${formattedDate})\n\n`;
-    text += `💰 ค่าแรง: ฿${entry.baseWage}\n`;
-    if (entry.travelAllowance > 0) text += `🚗 ค่ารถ: ฿${entry.travelAllowance}\n`;
-    if (entry.tollFee > 0) text += `🛣️ ทางด่วน: ฿${entry.tollFee}\n`;
-    if (entry.overtimePay > 0) text += `⏱️ โอที: ฿${entry.overtimePay}\n`;
-    if (entry.lateDeduction > 0) text += `📉 หักมาสาย: -฿${entry.lateDeduction}\n`;
+    // Fallbacks to showing only basic wage if there's no entry logged yet
+    const baseWage = entry ? entry.baseWage : worker.baseWage;
+    const travelAllowance = entry ? entry.travelAllowance : (worker.defaultTravelAllowance || 0);
+    const tollFee = entry ? entry.tollFee : 0;
+    const overtimePay = entry ? entry.overtimePay : 0;
+    const lateDeduction = entry ? entry.lateDeduction : 0;
+    const adjustments = entry ? entry.adjustments : [];
+    const totalPay = entry ? entry.totalPay : (baseWage + travelAllowance);
+    const idToUse = entry ? entry.id : worker.id;
 
-    if (entry.adjustments && entry.adjustments.length > 0) {
-      entry.adjustments.forEach(adj => {
+    let text = `📝 แจ้งยอดรายวัน ${worker.name} (วันที่ ${formattedDate})\n\n`;
+    text += `💰 ค่าแรง: ฿${baseWage}\n`;
+    if (travelAllowance > 0) text += `🚗 ค่ารถ: ฿${travelAllowance}\n`;
+    if (tollFee > 0) text += `🛣️ ทางด่วน: ฿${tollFee}\n`;
+    if (overtimePay > 0) text += `⏱️ โอที: ฿${overtimePay}\n`;
+    if (lateDeduction > 0) text += `📉 หักมาสาย: -฿${lateDeduction}\n`;
+
+    if (adjustments && adjustments.length > 0) {
+      adjustments.forEach(adj => {
         const amountStr = adj.type === 'add' ? `+฿${Number(adj.amount)}` : `-฿${Math.abs(Number(adj.amount))}`;
         const noteStr = adj.note ? ` (${adj.note})` : '';
-        text += `✨ อื่นๆ: ${amountStr}${noteStr}\n`;
+        text += `-อื่นๆ: ${amountStr}${noteStr}\n`;
       });
     }
 
-    text += `\n📌 ยอดสุทธิวันนี้: ฿${entry.totalPay}`;
+    text += `\n📌 ยอดสุทธิวันนี้: ฿${totalPay}`;
 
-    handleCopy(text, entry.id);
+    handleCopy(text, idToUse);
   };
 
   return (
@@ -296,7 +306,7 @@ export function DailyEntryPage() {
                       </div>
                       <Button
                         variant="secondary"
-                        onClick={(e) => handleCopySingle(worker.name, entry, e)}
+                        onClick={(e) => handleCopySingle(worker, entry, e)}
                         className="p-2 h-auto rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border-indigo-100"
                         title="คัดลอกสรุปรายวัน"
                       >
@@ -316,7 +326,17 @@ export function DailyEntryPage() {
                       </Button>
                     </div>
                   ) : (
-                    <Button variant="secondary" className="rounded-full px-5 py-2 text-sm pointer-events-none">บันทึก</Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="secondary"
+                        onClick={(e) => handleCopySingle(worker, undefined, e)}
+                        className="p-2 h-auto rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border-indigo-100"
+                        title="คัดลอกสรุปรายการ (ค่าแรงปกติ)"
+                      >
+                        {copiedId === worker.id ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                      </Button>
+                      <Button variant="secondary" className="rounded-full px-5 py-2 text-sm pointer-events-none">บันทึก</Button>
+                    </div>
                   )}
                 </div>
               </Card>
