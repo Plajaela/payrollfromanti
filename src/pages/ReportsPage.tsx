@@ -86,7 +86,7 @@ export function ReportsPage() {
     let text = `📋 สรุปยอดช่างทุกคน (วันที่ ${dateRangeStr})\n\n`;
 
     reportData.forEach((row, index) => {
-      text += `${index + 1}. ${row.worker.name}: ${row.totalDays} วัน | สุทธิ: ฿${row.grandTotal}\n`;
+      text += `${index + 1}. ช่าง${row.worker.name}: ${row.totalDays} วัน | สุทธิ ฿${row.grandTotal}\n`;
     });
 
     const grandTotal = reportData.reduce((sum, r) => sum + r.grandTotal, 0);
