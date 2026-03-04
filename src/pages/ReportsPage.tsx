@@ -137,34 +137,63 @@ export function ReportsPage() {
       });
     });
 
-    const sortedEntries = [...filteredEntries].sort((a, b) => {
-      const workerA = workers.find(w => w.id === a.workerId)?.name || '';
-      const workerB = workers.find(w => w.id === b.workerId)?.name || '';
-      if (workerA !== workerB) return workerA.localeCompare(workerB);
-      return a.date.localeCompare(b.date);
+    const groupedByWorker: Record<string, typeof entries[number][]> = {};
+    filteredEntries.forEach(entry => {
+      if (!groupedByWorker[entry.workerId]) {
+        groupedByWorker[entry.workerId] = [];
+      }
+      groupedByWorker[entry.workerId].push(entry);
     });
 
-    sortedEntries.forEach(entry => {
-      const worker = workers.find(w => w.id === entry.workerId);
-      const totalAdditions = entry.adjustments?.filter(a => a.type === 'add').reduce((s, a) => s + Number(a.amount), 0) || 0;
-      const totalDeductions = entry.adjustments?.filter(a => a.type === 'deduct').reduce((s, a) => s + Number(a.amount), 0) || 0;
-      const netAdjustments = totalAdditions - totalDeductions;
+    const sortedWorkers = [...workers].sort((a, b) => a.name.localeCompare(b.name));
 
-      const notes = entry.adjustments?.map(a => `${a.note || 'ไม่มีหมายเหตุ'} (${a.type === 'add' ? '+' : '-'}${a.amount})`).join(', ') || '';
+    sortedWorkers.forEach(worker => {
+      const workerEntries = groupedByWorker[worker.id] || [];
+      if (workerEntries.length === 0) return;
+
+      workerEntries.sort((a, b) => a.date.localeCompare(b.date));
+
+      let workerTotal = 0;
+
+      workerEntries.forEach(entry => {
+        const totalAdditions = entry.adjustments?.filter(a => a.type === 'add').reduce((s, a) => s + Number(a.amount), 0) || 0;
+        const totalDeductions = entry.adjustments?.filter(a => a.type === 'deduct').reduce((s, a) => s + Number(a.amount), 0) || 0;
+        const netAdjustments = totalAdditions - totalDeductions;
+
+        const notes = entry.adjustments?.map(a => `${a.note || 'ไม่มีหมายเหตุ'} (${a.type === 'add' ? '+' : '-'}${a.amount})`).join(', ') || '';
+
+        workerTotal += entry.totalPay;
+
+        detailRows.push({
+          'ชื่อช่าง': worker.name,
+          'วันที่': format(parseISO(entry.date), 'dd/MM/yyyy'),
+          'เวลาทำงาน': `${entry.clockIn} - ${entry.clockOut}`,
+          'ค่าแรง': entry.baseWage,
+          'ค่ารถ': entry.travelAllowance,
+          'ทางด่วน': entry.tollFee,
+          'หักสาย': entry.lateDeduction,
+          'โอที': entry.overtimePay,
+          'รวมอื่นๆ': netAdjustments,
+          'ยอดสุทธิประจำวัน': entry.totalPay,
+          'หมายเหตุอื่นๆ': notes,
+        });
+      });
 
       detailRows.push({
-        'ชื่อช่าง': worker?.name || 'ไม่ระบุ',
-        'วันที่': format(parseISO(entry.date), 'dd/MM/yyyy'),
-        'เวลาทำงาน': `${entry.clockIn} - ${entry.clockOut}`,
-        'ค่าแรง': entry.baseWage,
-        'ค่ารถ': entry.travelAllowance,
-        'ทางด่วน': entry.tollFee,
-        'หักสาย': entry.lateDeduction,
-        'โอที': entry.overtimePay,
-        'รวมอื่นๆ': netAdjustments,
-        'ยอดสุทธิประจำวัน': entry.totalPay,
-        'หมายเหตุอื่นๆ': notes,
+        'ชื่อช่าง': `รวมยอด ${worker.name}`,
+        'วันที่': '',
+        'เวลาทำงาน': '',
+        'ค่าแรง': '',
+        'ค่ารถ': '',
+        'ทางด่วน': '',
+        'หักสาย': '',
+        'โอที': '',
+        'รวมอื่นๆ': '',
+        'ยอดสุทธิประจำวัน': workerTotal,
+        'หมายเหตุอื่นๆ': '',
       });
+
+      detailRows.push({});
     });
 
     const wsDetails = XLSX.utils.json_to_sheet(detailRows);
