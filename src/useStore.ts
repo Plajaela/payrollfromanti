@@ -24,15 +24,33 @@ export function useStore() {
     const fetchWorkers = async () => {
       setIsWorkersLoading(true);
       try {
-        const { data, error } = await supabase
-          .from('workers')
-          .select('*')
-          .order('name');
+        let allWorkers: any[] = [];
+        let from = 0;
+        const step = 1000;
+        let hasMore = true;
 
-        if (error) {
-          console.error('Error fetching workers from Supabase:', error);
-          return;
+        while (hasMore) {
+          const { data, error } = await supabase
+            .from('workers')
+            .select('*')
+            .order('name')
+            .range(from, from + step - 1);
+
+          if (error) {
+            console.error('Error fetching workers from Supabase:', error);
+            return;
+          }
+
+          if (data && data.length > 0) {
+            allWorkers = [...allWorkers, ...data];
+            from += step;
+            if (data.length < step) hasMore = false;
+          } else {
+            hasMore = false;
+          }
         }
+
+        const data = allWorkers;
 
         if (data) {
           // Check for migration from local storage
@@ -105,15 +123,33 @@ export function useStore() {
     const fetchEntries = async () => {
       setIsEntriesLoading(true);
       try {
-        const { data, error } = await supabase
-          .from('daily_entries')
-          .select('*')
-          .order('date', { ascending: false });
+        let allData: any[] = [];
+        let from = 0;
+        const step = 1000;
+        let hasMore = true;
 
-        if (error) {
-          console.error('Error fetching entries from Supabase:', error);
-          return;
+        while (hasMore) {
+          const { data, error } = await supabase
+            .from('daily_entries')
+            .select('*')
+            .order('date', { ascending: false })
+            .range(from, from + step - 1);
+
+          if (error) {
+            console.error('Error fetching entries from Supabase:', error);
+            return;
+          }
+
+          if (data && data.length > 0) {
+            allData = [...allData, ...data];
+            from += step;
+            if (data.length < step) hasMore = false;
+          } else {
+            hasMore = false;
+          }
         }
+
+        const data = allData;
 
         if (data) {
           // Check for migration from local storage
