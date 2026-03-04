@@ -3,7 +3,7 @@ import { useStore } from '../useStore';
 import { Button, Input, Label, Card, Modal } from '../components/ui';
 import { format, addDays, subDays } from 'date-fns';
 import { th } from 'date-fns/locale';
-import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Settings2, RefreshCw, Copy, Check } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Settings2, RefreshCw, Copy, Check, Paperclip, ImagePlus } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Adjustment } from '../types';
 
@@ -46,6 +46,8 @@ export function DailyEntryPage() {
     overtimeMinutes: 0,
     adjustments: [] as Adjustment[],
     note: '',
+    transferSlipUrl: '',
+    tollReceiptUrl: '',
   });
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
@@ -149,6 +151,8 @@ export function DailyEntryPage() {
         overtimeMinutes: existingEntry.overtimeMinutes,
         adjustments: existingEntry.adjustments || [],
         note: existingEntry.note || '',
+        transferSlipUrl: existingEntry.transferSlipUrl || '',
+        tollReceiptUrl: existingEntry.tollReceiptUrl || '',
       });
       setEditingId(existingEntry.id);
     } else {
@@ -167,6 +171,8 @@ export function DailyEntryPage() {
         overtimeMinutes: 0,
         adjustments: [],
         note: '',
+        transferSlipUrl: '',
+        tollReceiptUrl: '',
       });
       setEditingId(null);
     }
@@ -176,6 +182,31 @@ export function DailyEntryPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     handleSave(false);
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'transferSlipUrl' | 'tollReceiptUrl' | 'adjustments', adjId?: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) { // Only compress if larger than 2MB
+      alert('ไฟล์ภาพมีขนาดใหญ่เกินไป แนะนำให้ใช้ไฟล์ที่เล็กกว่า 2MB เพื่อป้องกันเมมโมรี่เต็ม');
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64String = event.target?.result as string;
+      if (field === 'transferSlipUrl') {
+        setFormData(prev => ({ ...prev, transferSlipUrl: base64String }));
+      } else if (field === 'tollReceiptUrl') {
+        setFormData(prev => ({ ...prev, tollReceiptUrl: base64String }));
+      } else if (field === 'adjustments' && adjId) {
+        setFormData(prev => ({
+          ...prev,
+          adjustments: prev.adjustments.map(a => a.id === adjId ? { ...a, receiptUrl: base64String } : a)
+        }));
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSave = (isDraft: boolean) => {
@@ -201,6 +232,8 @@ export function DailyEntryPage() {
       totalPay,
       note: formData.note,
       isDraft,
+      transferSlipUrl: formData.transferSlipUrl,
+      tollReceiptUrl: formData.tollReceiptUrl,
     };
 
     if (editingId) {
@@ -395,9 +428,13 @@ export function DailyEntryPage() {
                   >
                     <span className="font-semibold text-[15px]">{worker.name}</span>
                     {entry && (
-                      isDraft ?
-                        <Clock className={`w-4 h-4 ml-2 flex-shrink-0 ${isActive ? 'text-amber-100' : 'text-amber-500'}`} /> :
-                        <CheckCircle2 className={`w-4 h-4 ml-2 flex-shrink-0 ${isActive ? 'text-sky-100' : 'text-emerald-500'}`} />
+                      <div className="flex items-center gap-1.5 ml-2">
+                        {entry.transferSlipUrl && <Paperclip className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-white/80' : 'text-sky-400'}`} />}
+                        {isDraft ?
+                          <Clock className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-amber-100' : 'text-amber-500'}`} /> :
+                          <CheckCircle2 className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-sky-100' : 'text-emerald-500'}`} />
+                        }
+                      </div>
                     )}
                   </button>
                 )
@@ -710,14 +747,25 @@ export function DailyEntryPage() {
               />
             </div>
             <div>
-              <Label className="text-xs">ทางด่วน</Label>
-              <Input
-                type="number"
-                min="0"
-                value={formData.tollFee || ''}
-                onChange={(e) => setFormData(p => ({ ...p, tollFee: Number(e.target.value) }))}
-                className="font-semibold px-2"
-              />
+              <Label className="text-xs flex justify-between items-center mb-1">
+                <span>ทางด่วน</span>
+                {formData.tollReceiptUrl && (
+                  <span className="text-[10px] text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded flex items-center gap-0.5"><Check className="w-3 h-3" /> แนบแล้ว</span>
+                )}
+              </Label>
+              <div className="relative">
+                <Input
+                  type="number"
+                  min="0"
+                  value={formData.tollFee || ''}
+                  onChange={(e) => setFormData(p => ({ ...p, tollFee: Number(e.target.value) }))}
+                  className="font-semibold px-2 pr-8"
+                />
+                <label className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400 hover:text-sky-500 transition-colors" title="แนบใบเสร็จทางด่วน">
+                  <ImagePlus className="w-5 h-5" />
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'tollReceiptUrl')} />
+                </label>
+              </div>
             </div>
           </div>
 
@@ -819,18 +867,24 @@ export function DailyEntryPage() {
                       className="h-10 text-sm bg-white"
                     />
                   </div>
-                  <Input
-                    type="text"
-                    list={`note-presets-${adj.id}`}
-                    placeholder="ระบุหมายเหตุ (เช่น ค่ารถไปหน้างาน, อื่นๆ)"
-                    value={adj.note}
-                    onChange={(e) => {
-                      const newAdjs = [...formData.adjustments];
-                      newAdjs[idx].note = e.target.value;
-                      setFormData(p => ({ ...p, adjustments: newAdjs }));
-                    }}
-                    className="h-10 text-sm bg-white"
-                  />
+                  <div className="relative w-full">
+                    <Input
+                      type="text"
+                      list={`note-presets-${adj.id}`}
+                      placeholder="ระบุหมายเหตุ (เช่น ค่ารถไปหน้างาน, อื่นๆ)"
+                      value={adj.note}
+                      onChange={(e) => {
+                        const newAdjs = [...formData.adjustments];
+                        newAdjs[idx].note = e.target.value;
+                        setFormData(p => ({ ...p, adjustments: newAdjs }));
+                      }}
+                      className="h-10 text-sm bg-white pr-8 w-full"
+                    />
+                    <label className={`absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer transition-colors ${adj.receiptUrl ? 'text-emerald-500' : 'text-gray-400 hover:text-sky-500'}`} title={adj.receiptUrl ? 'แนบใบเสร็จแล้ว (คลิกเปลี่ยน)' : 'แนบสลิป/ใบเสร็จ'}>
+                      {adj.receiptUrl ? <CheckCircle2 className="w-4 h-4" /> : <ImagePlus className="w-4 h-4" />}
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'adjustments', adj.id)} />
+                    </label>
+                  </div>
                   <datalist id={`note-presets-${adj.id}`}>
                     <option value="ค่ารถไปหน้างาน" />
                     <option value="ค่าอาหาร" />
@@ -857,12 +911,30 @@ export function DailyEntryPage() {
             )}
           </div>
 
-          <div className="flex items-center justify-between pt-4 mt-2 border-t border-gray-100">
-            <div>
-              <div className="text-sm text-gray-500 font-medium">ยอดสุทธิ</div>
-              <div className="text-3xl font-bold text-red-600">฿{calculateTotal()}</div>
+          <div className="flex flex-col gap-4 pt-4 mt-2 border-t border-gray-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm text-gray-500 font-medium">ยอดสุทธิ</div>
+                <div className="text-3xl font-bold text-red-600">฿{calculateTotal()}</div>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <label className={`flex items-center gap-2 px-3 py-1.5 rounded-xl cursor-pointer transition-all border ${formData.transferSlipUrl ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-sky-50 hover:border-sky-200 hover:text-sky-600'}`}>
+                  {formData.transferSlipUrl ? (
+                    <>
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span className="text-sm font-semibold">แนบสลิปโอนเงินแล้ว</span>
+                    </>
+                  ) : (
+                    <>
+                      <Paperclip className="w-4 h-4" />
+                      <span className="text-sm font-medium">แนบสลิปโอนเงิน</span>
+                    </>
+                  )}
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'transferSlipUrl')} />
+                </label>
+              </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 w-full">
               {editingId && (
                 <Button
                   type="button"

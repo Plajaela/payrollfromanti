@@ -3,6 +3,7 @@ export interface Adjustment {
   type: 'add' | 'deduct';
   amount: number;
   note: string;
+  receiptUrl?: string;
 }
 
 export interface Worker {
@@ -32,4 +33,6 @@ export interface DailyEntry {
   totalPay: number;
   note: string;
   isDraft?: boolean;
+  transferSlipUrl?: string;
+  tollReceiptUrl?: string;
 }
