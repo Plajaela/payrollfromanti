@@ -3,6 +3,7 @@ import { useStore } from '../useStore';
 import { Button, Input, Card, Label } from '../components/ui';
 import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { FileSpreadsheet, Copy, Check } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 export function ReportsPage() {
   const { workers, entries } = useStore();
@@ -95,46 +96,91 @@ export function ReportsPage() {
     handleCopy(text, 'all');
   };
 
-  const handleExportCSV = () => {
-    // CSV Header
-    const headers = [
-      'ชื่อช่าง',
-      'จำนวนวันทำงาน',
-      'รวมค่าแรง',
-      'รวมค่ารถ',
-      'รวมค่าทางด่วน',
-      'รวมหักมาสาย',
-      'รวมโอที',
-      'รวมอื่นๆ (สุทธิ)',
-      'ยอดสุทธิ'
-    ];
+  const handleExportExcel = () => {
+    // 1. Summary Sheet
+    const summaryRows = reportData.map(row => ({
+      'ชื่อช่าง': row.worker.name,
+      'จำนวนวันทำงาน': row.totalDays,
+      'รวมค่าแรง': row.totalBaseWage,
+      'รวมค่ารถ': row.totalTravel,
+      'รวมค่าทางด่วน': row.totalToll,
+      'รวมหักมาสาย': row.totalLate,
+      'รวมโอที': row.totalOT,
+      'รวมอื่นๆ (สุทธิ)': row.netAdjustments,
+      'ยอดสุทธิ': row.grandTotal
+    }));
 
-    const rows = reportData.map(row => [
-      row.worker.name,
-      row.totalDays,
-      row.totalBaseWage,
-      row.totalTravel,
-      row.totalToll,
-      row.totalLate,
-      row.totalOT,
-      row.netAdjustments,
-      row.grandTotal
-    ]);
+    const wsSummary = XLSX.utils.json_to_sheet(summaryRows);
 
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(r => r.join(','))
-    ].join('\n');
+    // Add Grand Total row for summary
+    const grandTotal = reportData.reduce((sum, r) => sum + r.grandTotal, 0);
+    XLSX.utils.sheet_add_json(wsSummary, [{
+      'ชื่อช่าง': 'รวมทั้งหมด',
+      'จำนวนวันทำงาน': reportData.reduce((sum, r) => sum + r.totalDays, 0),
+      'รวมค่าแรง': reportData.reduce((sum, r) => sum + r.totalBaseWage, 0),
+      'รวมค่ารถ': reportData.reduce((sum, r) => sum + r.totalTravel, 0),
+      'รวมค่าทางด่วน': reportData.reduce((sum, r) => sum + r.totalToll, 0),
+      'รวมหักมาสาย': reportData.reduce((sum, r) => sum + r.totalLate, 0),
+      'รวมโอที': reportData.reduce((sum, r) => sum + r.totalOT, 0),
+      'รวมอื่นๆ (สุทธิ)': reportData.reduce((sum, r) => sum + r.netAdjustments, 0),
+      'ยอดสุทธิ': grandTotal
+    }], { skipHeader: true, origin: -1 });
 
-    // Add BOM for Excel UTF-8 compatibility
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `wage_report_${startDate}_to_${endDate}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // 2. Details Sheet
+    const detailRows: any[] = [];
+
+    const filteredEntries = entries.filter(entry => {
+      const entryDate = parseISO(entry.date);
+      return isWithinInterval(entryDate, {
+        start: parseISO(startDate),
+        end: parseISO(endDate)
+      });
+    });
+
+    const sortedEntries = [...filteredEntries].sort((a, b) => {
+      const workerA = workers.find(w => w.id === a.workerId)?.name || '';
+      const workerB = workers.find(w => w.id === b.workerId)?.name || '';
+      if (workerA !== workerB) return workerA.localeCompare(workerB);
+      return a.date.localeCompare(b.date);
+    });
+
+    sortedEntries.forEach(entry => {
+      const worker = workers.find(w => w.id === entry.workerId);
+      const totalAdditions = entry.adjustments?.filter(a => a.type === 'add').reduce((s, a) => s + Number(a.amount), 0) || 0;
+      const totalDeductions = entry.adjustments?.filter(a => a.type === 'deduct').reduce((s, a) => s + Number(a.amount), 0) || 0;
+      const netAdjustments = totalAdditions - totalDeductions;
+
+      const notes = entry.adjustments?.map(a => `${a.note || 'ไม่มีหมายเหตุ'} (${a.type === 'add' ? '+' : '-'}${a.amount})`).join(', ') || '';
+
+      detailRows.push({
+        'ชื่อช่าง': worker?.name || 'ไม่ระบุ',
+        'วันที่': format(parseISO(entry.date), 'dd/MM/yyyy'),
+        'เวลาทำงาน': `${entry.clockIn} - ${entry.clockOut}`,
+        'ค่าแรง': entry.baseWage,
+        'ค่ารถ': entry.travelAllowance,
+        'ทางด่วน': entry.tollFee,
+        'หักสาย': entry.lateDeduction,
+        'โอที': entry.overtimePay,
+        'รวมอื่นๆ': netAdjustments,
+        'ยอดสุทธิประจำวัน': entry.totalPay,
+        'หมายเหตุอื่นๆ': notes,
+      });
+    });
+
+    const wsDetails = XLSX.utils.json_to_sheet(detailRows);
+
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, wsSummary, "สรุปยอดรวม");
+    XLSX.utils.book_append_sheet(wb, wsDetails, "รายละเอียดรายบุคคล");
+
+    // Adjust column widths basic
+    const cols = [{ wpx: 120 }, { wpx: 100 }, { wpx: 100 }, { wpx: 80 }, { wpx: 60 }, { wpx: 60 }, { wpx: 60 }, { wpx: 80 }, { wpx: 80 }, { wpx: 120 }, { wpx: 250 }];
+    wsDetails['!cols'] = cols;
+    wsSummary['!cols'] = [{ wpx: 150 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 150 }];
+
+    // Save File
+    XLSX.writeFile(wb, `Payroll_Report_${startDate}_to_${endDate}.xlsx`);
   };
 
   return (
@@ -145,8 +191,8 @@ export function ReportsPage() {
             {copiedId === 'all' ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
             {copiedId === 'all' ? 'คัดลอกแล้ว' : 'คัดลอกสรุปทุกคน'}
           </Button>
-          <Button onClick={handleExportCSV} disabled={reportData.length === 0} className="w-full sm:w-auto gap-2 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200">
-            <FileSpreadsheet className="w-5 h-5" /> Export CSV
+          <Button onClick={handleExportExcel} disabled={reportData.length === 0} className="w-full sm:w-auto gap-2 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200 text-white border-0">
+            <FileSpreadsheet className="w-5 h-5" /> Export Excel
           </Button>
         </div>
       </div>
