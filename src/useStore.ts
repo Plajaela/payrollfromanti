@@ -12,6 +12,7 @@ export function useStore() {
     return saved ? JSON.parse(saved) : [];
   });
   const [isWorkersLoading, setIsWorkersLoading] = useState(true);
+  const [isEntriesLoading, setIsEntriesLoading] = useState(true);
 
   const [entries, setEntries] = useState<DailyEntry[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEY_ENTRIES);
@@ -98,6 +99,109 @@ export function useStore() {
       supabase.removeChannel(subscription);
     };
   }, []);
+
+  // Fetch entries from Supabase
+  useEffect(() => {
+    const fetchEntries = async () => {
+      setIsEntriesLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('daily_entries')
+          .select('*')
+          .order('date', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching entries from Supabase:', error);
+          return;
+        }
+
+        if (data) {
+          // Check for migration from local storage
+          if (data.length === 0) {
+            const saved = localStorage.getItem(STORAGE_KEY_ENTRIES);
+            const localEntries: DailyEntry[] = saved ? JSON.parse(saved) : [];
+
+            if (localEntries.length > 0) {
+              const { error: insertError } = await supabase.from('daily_entries').insert(
+                localEntries.map(e => ({
+                  id: e.id,
+                  worker_id: e.workerId,
+                  date: e.date,
+                  clock_in: e.clockIn,
+                  clock_out: e.clockOut,
+                  base_wage: e.baseWage,
+                  travel_allowance: e.travelAllowance,
+                  toll_fee: e.tollFee,
+                  late_deduction: e.lateDeduction,
+                  overtime_hours: e.overtimeHours,
+                  overtime_minutes: e.overtimeMinutes,
+                  overtime_pay: e.overtimePay,
+                  adjustments: e.adjustments || [],
+                  total_pay: e.totalPay,
+                  note: e.note,
+                  is_draft: e.isDraft || false,
+                  transfer_slip_url: e.transferSlipUrl,
+                  toll_receipt_url: e.tollReceiptUrl
+                }))
+              );
+
+              if (!insertError) {
+                setEntries(localEntries);
+                return;
+              } else {
+                console.error('Entry Migration failed:', insertError);
+              }
+            }
+          }
+
+          // Map snake_case to camelCase
+          const formattedEntries: DailyEntry[] = data.map(e => ({
+            id: e.id,
+            workerId: e.worker_id,
+            date: e.date,
+            clockIn: e.clock_in,
+            clockOut: e.clock_out,
+            baseWage: Number(e.base_wage),
+            travelAllowance: Number(e.travel_allowance),
+            tollFee: Number(e.toll_fee),
+            lateDeduction: Number(e.late_deduction),
+            overtimeHours: Number(e.overtime_hours),
+            overtimeMinutes: Number(e.overtime_minutes),
+            overtimePay: Number(e.overtime_pay),
+            adjustments: e.adjustments,
+            totalPay: Number(e.total_pay),
+            note: e.note,
+            isDraft: e.is_draft,
+            transferSlipUrl: e.transfer_slip_url,
+            tollReceiptUrl: e.toll_receipt_url
+          }));
+          setEntries(formattedEntries);
+        }
+      } catch (err) {
+        console.error('Failed to fetch entries:', err);
+      } finally {
+        setIsEntriesLoading(false);
+      }
+    };
+
+    fetchEntries();
+
+    const subscription = supabase
+      .channel('entries_channel')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'daily_entries' },
+        () => {
+          fetchEntries();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, []);
+
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_WORKERS, JSON.stringify(workers));
   }, [workers]);
@@ -177,23 +281,94 @@ export function useStore() {
     }
   };
 
-  const addEntry = (entry: Omit<DailyEntry, 'id'>) => {
-    setEntries((prev) => [...prev, { ...entry, id: uuidv4() }]);
+  const addEntry = async (entry: Omit<DailyEntry, 'id'>) => {
+    const newId = uuidv4();
+    const newEntry = { ...entry, id: newId };
+    setEntries((prev) => [...prev, newEntry]);
+
+    try {
+      const { error } = await supabase.from('daily_entries').insert([{
+        id: newId,
+        worker_id: entry.workerId,
+        date: entry.date,
+        clock_in: entry.clockIn,
+        clock_out: entry.clockOut,
+        base_wage: entry.baseWage,
+        travel_allowance: entry.travelAllowance,
+        toll_fee: entry.tollFee,
+        late_deduction: entry.lateDeduction,
+        overtime_hours: entry.overtimeHours,
+        overtime_minutes: entry.overtimeMinutes,
+        overtime_pay: entry.overtimePay,
+        adjustments: entry.adjustments || [],
+        total_pay: entry.totalPay,
+        note: entry.note,
+        is_draft: entry.isDraft || false,
+        transfer_slip_url: entry.transferSlipUrl,
+        toll_receipt_url: entry.tollReceiptUrl
+      }]);
+
+      if (error) throw error;
+    } catch (err) {
+      console.error('Failed to add entry to Supabase:', err);
+    }
   };
 
-  const updateEntry = (id: string, updated: Partial<DailyEntry>) => {
+  const updateEntry = async (id: string, updated: Partial<DailyEntry>) => {
     setEntries((prev) =>
       prev.map((e) => (e.id === id ? { ...e, ...updated } : e))
     );
+
+    try {
+      const updateData: any = {};
+      if (updated.workerId !== undefined) updateData.worker_id = updated.workerId;
+      if (updated.date !== undefined) updateData.date = updated.date;
+      if (updated.clockIn !== undefined) updateData.clock_in = updated.clockIn;
+      if (updated.clockOut !== undefined) updateData.clock_out = updated.clockOut;
+      if (updated.baseWage !== undefined) updateData.base_wage = updated.baseWage;
+      if (updated.travelAllowance !== undefined) updateData.travel_allowance = updated.travelAllowance;
+      if (updated.tollFee !== undefined) updateData.toll_fee = updated.tollFee;
+      if (updated.lateDeduction !== undefined) updateData.late_deduction = updated.lateDeduction;
+      if (updated.overtimeHours !== undefined) updateData.overtime_hours = updated.overtimeHours;
+      if (updated.overtimeMinutes !== undefined) updateData.overtime_minutes = updated.overtimeMinutes;
+      if (updated.overtimePay !== undefined) updateData.overtime_pay = updated.overtimePay;
+      if (updated.adjustments !== undefined) updateData.adjustments = updated.adjustments;
+      if (updated.totalPay !== undefined) updateData.total_pay = updated.totalPay;
+      if (updated.note !== undefined) updateData.note = updated.note;
+      if (updated.isDraft !== undefined) updateData.is_draft = updated.isDraft;
+      if (updated.transferSlipUrl !== undefined) updateData.transfer_slip_url = updated.transferSlipUrl;
+      if (updated.tollReceiptUrl !== undefined) updateData.toll_receipt_url = updated.tollReceiptUrl;
+
+      const { error } = await supabase
+        .from('daily_entries')
+        .update(updateData)
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (err) {
+      console.error('Failed to update entry in Supabase:', err);
+    }
   };
 
-  const deleteEntry = (id: string) => {
+  const deleteEntry = async (id: string) => {
     setEntries((prev) => prev.filter((e) => e.id !== id));
+
+    try {
+      const { error } = await supabase
+        .from('daily_entries')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (err) {
+      console.error('Failed to delete entry from Supabase:', err);
+    }
   };
 
   return {
     workers,
     isWorkersLoading,
+    isEntriesLoading,
     addWorker,
     updateWorker,
     deleteWorker,

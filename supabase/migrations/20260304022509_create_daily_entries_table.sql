@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS public.daily_entries (
+  id uuid NOT NULL PRIMARY KEY,
+  worker_id uuid NOT NULL REFERENCES public.workers(id) ON DELETE CASCADE,
+  date date NOT NULL,
+  clock_in text NOT NULL,
+  clock_out text NOT NULL,
+  base_wage numeric NOT NULL,
+  travel_allowance numeric NOT NULL,
+  toll_fee numeric NOT NULL,
+  late_deduction numeric NOT NULL,
+  overtime_hours integer NOT NULL,
+  overtime_minutes integer NOT NULL,
+  overtime_pay numeric NOT NULL,
+  adjustments jsonb NOT NULL DEFAULT '[]'::jsonb,
+  total_pay numeric NOT NULL,
+  note text,
+  is_draft boolean DEFAULT false,
+  transfer_slip_url text,
+  toll_receipt_url text,
+  created_at timestamp with time zone DEFAULT now() NOT NULL
+);
