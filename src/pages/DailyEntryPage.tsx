@@ -256,7 +256,9 @@ export function DailyEntryPage() {
   const handleCopySingle = (worker: typeof workers[0], entry: typeof entries[0] | undefined, e: React.MouseEvent) => {
     e.stopPropagation(); // prevent modal opening
 
-    const formattedDate = format(selectedDate, 'dd/MM/yyyy');
+    const thaiYear = selectedDate.getFullYear() + 543;
+    const shortThaiYear = thaiYear.toString().slice(-2);
+    const formattedDate = format(selectedDate, `dd/MM/${shortThaiYear}`);
 
     // Fallbacks to showing only basic wage if there's no entry logged yet
     const baseWage = entry ? entry.baseWage : worker.baseWage;
@@ -306,7 +308,9 @@ export function DailyEntryPage() {
   };
 
   const handleCopyAllDetailed = () => {
-    const formattedDate = format(selectedDate, 'dd/MM/yyyy');
+    const thaiYear = selectedDate.getFullYear() + 543;
+    const shortThaiYear = thaiYear.toString().slice(-2);
+    const formattedDate = format(selectedDate, `dd/MM/${shortThaiYear}`);
 
     let text = `📋 สรุปยอดรวมประจำวัน (วันที่ ${formattedDate})\n`;
     text += `💰 ยอดรวมทั้งหมด: ฿${totalPayForDay}\n`;
