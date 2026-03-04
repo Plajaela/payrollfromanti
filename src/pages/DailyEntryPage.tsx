@@ -329,7 +329,7 @@ export function DailyEntryPage() {
       const clockIn = entry ? entry.clockIn : worker.shiftStart || '07:00';
       const clockOut = entry ? entry.clockOut : worker.shiftEnd || '16:00';
 
-      text += `� ช่าง ${worker.name}\n`;
+      text += `👤 ${worker.name.startsWith('ช่าง') ? worker.name : `ช่าง${worker.name}`}\n`;
       text += `เวลาทำงาน: ${clockIn} - ${clockOut}\n`;
       if (lateDeduction > 0) text += `หักมาสาย: -฿${lateDeduction}\n`;
       if (overtimePay > 0) {
