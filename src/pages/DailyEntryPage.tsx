@@ -48,6 +48,7 @@ export function DailyEntryPage() {
     note: '',
     transferSlipUrl: '',
     tollReceiptUrl: '',
+    isLeave: false,
   });
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
@@ -59,6 +60,7 @@ export function DailyEntryPage() {
   const totalPayForDay = entriesForDate.reduce((sum, e) => sum + e.totalPay, 0);
 
   const calculateTotal = () => {
+    if (formData.isLeave) return 0;
     const otRatePerHour = 100;
     const otPay = (formData.overtimeHours * otRatePerHour) + (formData.overtimeMinutes / 60 * otRatePerHour);
     const adjustmentsTotal = formData.adjustments.reduce((sum, adj) => {
@@ -153,6 +155,7 @@ export function DailyEntryPage() {
         note: existingEntry.note || '',
         transferSlipUrl: existingEntry.transferSlipUrl || '',
         tollReceiptUrl: existingEntry.tollReceiptUrl || '',
+        isLeave: existingEntry.isLeave || false,
       });
       setEditingId(existingEntry.id);
     } else {
@@ -173,6 +176,7 @@ export function DailyEntryPage() {
         note: '',
         transferSlipUrl: '',
         tollReceiptUrl: '',
+        isLeave: false,
       });
       setEditingId(null);
     }
@@ -232,6 +236,7 @@ export function DailyEntryPage() {
       totalPay,
       note: formData.note,
       isDraft,
+      isLeave: formData.isLeave,
       transferSlipUrl: formData.transferSlipUrl,
       tollReceiptUrl: formData.tollReceiptUrl,
     };
@@ -273,8 +278,12 @@ export function DailyEntryPage() {
     const idToUse = entry ? entry.id : worker.id;
 
     let text = `📝 แจ้งยอดรายวัน ${worker.name} (วันที่ ${formattedDate})\n`;
-    text += `เวลาทำงาน: ${clockIn} - ${clockOut}\n`;
-    if (lateDeduction > 0) text += `หักมาสาย: -฿${lateDeduction}\n`;
+    if (entry?.isLeave) {
+      text += `ลาหยุดพักผ่อน\n`;
+    } else {
+      text += `เวลาทำงาน: ${clockIn} - ${clockOut}\n`;
+      if (lateDeduction > 0) text += `หักมาสาย: -฿${lateDeduction}\n`;
+    }
     if (overtimePay > 0) {
       let otTimeStr = '';
       const wEnd = worker.shiftEnd || '16:00';
@@ -289,10 +298,14 @@ export function DailyEntryPage() {
       const otDurationInfo = ` (${otHours} ชม.${otMins > 0 ? ` ${otMins} นาที` : ''})`;
       text += `OT${otTimeStr}${otDurationInfo}: ฿${overtimePay}\n`;
     }
-    text += `\n`;
-    text += `- ค่าแรง: ฿${baseWage}\n`;
-    if (travelAllowance > 0) text += `- ค่ารถ: ฿${travelAllowance}\n`;
-    if (tollFee > 0) text += `- ทางด่วน: ฿${tollFee}\n`;
+    if (!entry?.isLeave) {
+      text += `\n`;
+      text += `- ค่าแรง: ฿${baseWage}\n`;
+      if (travelAllowance > 0) text += `- ค่ารถ: ฿${travelAllowance}\n`;
+      if (tollFee > 0) text += `- ทางด่วน: ฿${tollFee}\n`;
+    } else {
+      text += `\n`;
+    }
 
     if (adjustments && adjustments.length > 0) {
       adjustments.forEach(adj => {
@@ -330,8 +343,12 @@ export function DailyEntryPage() {
       const clockOut = entry ? entry.clockOut : worker.shiftEnd || '16:00';
 
       text += `👤 ${worker.name.startsWith('ช่าง') ? worker.name : `ช่าง${worker.name}`}\n`;
-      text += `เวลาทำงาน: ${clockIn} - ${clockOut}\n`;
-      if (lateDeduction > 0) text += `หักมาสาย: -฿${lateDeduction}\n`;
+      if (entry?.isLeave) {
+        text += `ลาหยุดพักผ่อน\n`;
+      } else {
+        text += `เวลาทำงาน: ${clockIn} - ${clockOut}\n`;
+        if (lateDeduction > 0) text += `หักมาสาย: -฿${lateDeduction}\n`;
+      }
       if (overtimePay > 0) {
         let otTimeStr = '';
         const wEnd = worker.shiftEnd || '16:00';
@@ -346,9 +363,11 @@ export function DailyEntryPage() {
         const otDurationInfo = ` (${otHours} ชม.${otMins > 0 ? ` ${otMins} นาที` : ''})`;
         text += `OT${otTimeStr}${otDurationInfo}: ฿${overtimePay}\n`;
       }
-      text += `- ค่าแรง: ฿${baseWage}\n`;
-      if (travelAllowance > 0) text += `- ค่ารถ: ฿${travelAllowance}\n`;
-      if (tollFee > 0) text += `- ทางด่วน: ฿${tollFee}\n`;
+      if (!entry?.isLeave) {
+        text += `- ค่าแรง: ฿${baseWage}\n`;
+        if (travelAllowance > 0) text += `- ค่ารถ: ฿${travelAllowance}\n`;
+        if (tollFee > 0) text += `- ทางด่วน: ฿${tollFee}\n`;
+      }
 
       if (adjustments && adjustments.length > 0) {
         adjustments.forEach(adj => {
@@ -582,338 +601,357 @@ export function DailyEntryPage() {
         title={formData.workerName}
       >
         <form onSubmit={handleSubmit} className="space-y-6">
-
-          {/* Time Inputs */}
-          <div className="bg-sky-50/50 p-4 rounded-3xl border border-sky-100">
-            <div className="flex justify-between items-center mb-3">
-              <h4 className="font-medium text-gray-900 flex items-center gap-2">
-                <Clock className="w-4 h-4 text-sky-500" /> เวลาทำงาน
-              </h4>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={resetToShiftTimes}
-                  className="text-xs text-red-600 bg-white px-2 py-1 rounded-lg border border-sky-100 flex items-center gap-1 hover:bg-sky-50"
-                  title="รีเซ็ตเป็นเวลาปกติ"
-                >
-                  <RefreshCw className="w-3 h-3" />
-                  ปกติ
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowShiftSettings(!showShiftSettings)}
-                  className="text-xs text-red-600 bg-white px-2 py-1 rounded-lg border border-sky-100 flex items-center gap-1 hover:bg-sky-50"
-                >
-                  <Settings2 className="w-3 h-3" />
-                  {showShiftSettings ? 'ซ่อน' : `กะ: ${formData.shiftStart}-${formData.shiftEnd}`}
-                </button>
-              </div>
+          <div className="flex items-center justify-between bg-red-50 p-4 rounded-2xl border border-red-100">
+            <div className="flex flex-col">
+              <span className="font-semibold text-red-700">ช่างลาหยุด (Day off)</span>
+              <span className="text-xs text-red-500">ติ๊กเพื่อบันทึกว่าช่างลางานในวันนี้</span>
             </div>
-
-            {showShiftSettings && (
-              <div className="bg-white p-3 rounded-xl border border-sky-100 mb-3 grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2">
-                <div>
-                  <Label className="text-[10px] text-gray-500">เริ่มกะ</Label>
-                  <Input
-                    type="time"
-                    value={formData.shiftStart}
-                    onChange={(e) => setFormData(p => ({ ...p, shiftStart: e.target.value }))}
-                    className="h-9 text-sm"
-                  />
-                </div>
-                <div>
-                  <Label className="text-[10px] text-gray-500">จบกะ</Label>
-                  <Input
-                    type="time"
-                    value={formData.shiftEnd}
-                    onChange={(e) => setFormData(p => ({ ...p, shiftEnd: e.target.value }))}
-                    className="h-9 text-sm"
-                  />
-                </div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-xs text-red-700">เวลาเข้างานจริง</Label>
-                <div className="flex gap-1">
-                  <select
-                    value={formData.clockIn.split(':')[0]}
-                    onChange={(e) => {
-                      const [, min] = formData.clockIn.split(':');
-                      setFormData(p => ({ ...p, clockIn: `${e.target.value}:${min || '00'}` }));
-                    }}
-                    className="w-full rounded-xl border border-sky-100 bg-white text-center font-bold text-lg focus:ring-2 focus:ring-sky-500 outline-none h-12 appearance-none"
-                  >
-                    {Array.from({ length: 24 }).map((_, i) => {
-                      const hr = i.toString().padStart(2, '0');
-                      return <option key={hr} value={hr}>{hr}</option>;
-                    })}
-                  </select>
-                  <span className="text-xl font-bold self-center text-gray-900">:</span>
-                  <select
-                    value={formData.clockIn.split(':')[1] || '00'}
-                    onChange={(e) => {
-                      const [hr] = formData.clockIn.split(':');
-                      setFormData(p => ({ ...p, clockIn: `${hr || '00'}:${e.target.value}` }));
-                    }}
-                    className="w-full rounded-xl border border-sky-100 bg-white text-center font-bold text-lg focus:ring-2 focus:ring-sky-500 outline-none h-12 appearance-none"
-                  >
-                    <option value="00">00</option>
-                    <option value="15">15</option>
-                    <option value="30">30</option>
-                    <option value="45">45</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <Label className="text-xs text-red-700">เวลาเลิกงานจริง</Label>
-                <div className="flex gap-1">
-                  <select
-                    value={formData.clockOut.split(':')[0]}
-                    onChange={(e) => {
-                      const [, min] = formData.clockOut.split(':');
-                      setFormData(p => ({ ...p, clockOut: `${e.target.value}:${min || '00'}` }));
-                    }}
-                    className="w-full rounded-xl border border-sky-100 bg-white text-center font-bold text-lg focus:ring-2 focus:ring-sky-500 outline-none h-12 appearance-none"
-                  >
-                    {Array.from({ length: 24 }).map((_, i) => {
-                      const hr = i.toString().padStart(2, '0');
-                      return <option key={hr} value={hr}>{hr}</option>;
-                    })}
-                  </select>
-                  <span className="text-xl font-bold self-center text-gray-900">:</span>
-                  <select
-                    value={formData.clockOut.split(':')[1] || '00'}
-                    onChange={(e) => {
-                      const [hr] = formData.clockOut.split(':');
-                      setFormData(p => ({ ...p, clockOut: `${hr || '00'}:${e.target.value}` }));
-                    }}
-                    className="w-full rounded-xl border border-sky-100 bg-white text-center font-bold text-lg focus:ring-2 focus:ring-sky-500 outline-none h-12 appearance-none"
-                  >
-                    <option value="00">00</option>
-                    <option value="15">15</option>
-                    <option value="30">30</option>
-                    <option value="45">45</option>
-                  </select>
-                </div>
-              </div>
-            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={formData.isLeave}
+                onChange={(e) => setFormData(p => ({ ...p, isLeave: e.target.checked }))}
+              />
+              <div className="w-11 h-6 bg-red-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+            </label>
           </div>
 
-          {/* Auto Calculated Results */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-red-50 p-3 rounded-2xl border border-red-100 transition-all duration-300" style={{ opacity: formData.lateDeduction > 0 ? 1 : 0.7 }}>
-              <Label className="text-red-700 text-xs mb-1 cursor-help" title={`คำนวณหักสาย 100 บาท/ชม.`}>
-                หักสาย/กลับก่อน (อัตโนมัติ)
-              </Label>
-              <div className="flex items-center gap-2">
-                <span className="text-xl font-bold text-red-600 flex-1">
-                  - ฿{formData.lateDeduction}
-                </span>
-              </div>
-            </div>
+          {!formData.isLeave && (
+            <>
+              {/* Time Inputs */}
+              <div className="bg-sky-50/50 p-4 rounded-3xl border border-sky-100">
+                <div className="flex justify-between items-center mb-3">
+                  <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-sky-500" /> เวลาทำงาน
+                  </h4>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={resetToShiftTimes}
+                      className="text-xs text-red-600 bg-white px-2 py-1 rounded-lg border border-sky-100 flex items-center gap-1 hover:bg-sky-50"
+                      title="รีเซ็ตเป็นเวลาปกติ"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      ปกติ
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowShiftSettings(!showShiftSettings)}
+                      className="text-xs text-red-600 bg-white px-2 py-1 rounded-lg border border-sky-100 flex items-center gap-1 hover:bg-sky-50"
+                    >
+                      <Settings2 className="w-3 h-3" />
+                      {showShiftSettings ? 'ซ่อน' : `กะ: ${formData.shiftStart}-${formData.shiftEnd}`}
+                    </button>
+                  </div>
+                </div>
 
-            <div className="bg-green-50 p-3 rounded-2xl border border-green-100 transition-all duration-300" style={{ opacity: (formData.overtimeHours > 0 || formData.overtimeMinutes > 0) ? 1 : 0.7 }}>
-              <Label className="text-green-700 text-xs mb-1 cursor-help" title={`คำนวณโอที 100 บาท/ชม.`}>
-                โอที (อัตโนมัติ 100บ./ชม.)
-              </Label>
-              <div className="flex items-center gap-2">
-                <span className="text-xl font-bold text-green-700 flex-1">
-                  + ฿{Math.round((formData.overtimeHours * 100) + (formData.overtimeMinutes / 60 * 100))}
-                </span>
-                <span className="text-xs text-green-600 font-medium">
-                  ({formData.overtimeHours} ชม. {formData.overtimeMinutes > 0 ? `${formData.overtimeMinutes} นาที` : ''})
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <Label className="text-xs">ค่าแรง</Label>
-              <Input
-                type="number"
-                min="0"
-                value={formData.baseWage || ''}
-                onChange={(e) => setFormData(p => ({ ...p, baseWage: Number(e.target.value) }))}
-                className="font-semibold px-2"
-              />
-            </div>
-            <div>
-              <Label className="text-xs">ค่ารถ</Label>
-              <Input
-                type="number"
-                min="0"
-                value={formData.travelAllowance || ''}
-                onChange={(e) => setFormData(p => ({ ...p, travelAllowance: Number(e.target.value) }))}
-                className="font-semibold px-2"
-              />
-            </div>
-            <div>
-              <Label className="text-xs flex justify-between items-center mb-1">
-                <span>ทางด่วน</span>
-                {formData.tollReceiptUrl && (
-                  <span className="text-[10px] text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded flex items-center gap-0.5"><Check className="w-3 h-3" /> แนบแล้ว</span>
+                {showShiftSettings && (
+                  <div className="bg-white p-3 rounded-xl border border-sky-100 mb-3 grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2">
+                    <div>
+                      <Label className="text-[10px] text-gray-500">เริ่มกะ</Label>
+                      <Input
+                        type="time"
+                        value={formData.shiftStart}
+                        onChange={(e) => setFormData(p => ({ ...p, shiftStart: e.target.value }))}
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-[10px] text-gray-500">จบกะ</Label>
+                      <Input
+                        type="time"
+                        value={formData.shiftEnd}
+                        onChange={(e) => setFormData(p => ({ ...p, shiftEnd: e.target.value }))}
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                  </div>
                 )}
-              </Label>
-              <div className="relative">
-                <Input
-                  type="number"
-                  min="0"
-                  value={formData.tollFee || ''}
-                  onChange={(e) => setFormData(p => ({ ...p, tollFee: Number(e.target.value) }))}
-                  className="font-semibold px-2 pr-8"
-                />
-                <label className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400 hover:text-sky-500 transition-colors" title="แนบใบเสร็จทางด่วน">
-                  <ImagePlus className="w-5 h-5" />
-                  <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'tollReceiptUrl')} />
-                </label>
-              </div>
-            </div>
-          </div>
 
-          {/* Adjustments */}
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <Label className="mb-0 text-gray-900">รายการอื่นๆ (เพิ่ม/หักเงิน)</Label>
-                <button
-                  type="button"
-                  onClick={() => setShowLalamoveCalc(!showLalamoveCalc)}
-                  className={`text-[9px] px-1.5 py-0.5 rounded-md transition-all font-semibold ${showLalamoveCalc ? 'bg-sky-500 text-white shadow-sm' : 'bg-sky-50 text-sky-600 border border-sky-100 hover:bg-sky-100'}`}
-                  title="คำนวณจาก Lalamove 4 ประตู"
-                >
-                  📍 Lalamove
-                </button>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                className="text-red-600 px-3 py-1.5 h-auto text-xs bg-sky-50 rounded-xl"
-                onClick={() => setFormData(p => ({
-                  ...p,
-                  adjustments: [...p.adjustments, { id: uuidv4(), type: 'add', amount: 0, note: '' }]
-                }))}
-              >
-                <Plus className="w-3 h-3 mr-1" /> เพิ่มรายการ
-              </Button>
-            </div>
-
-            {/* Lalamove Inline Calculator for Adjustments */}
-            {showLalamoveCalc && (
-              <div className="bg-gradient-to-r from-sky-50 to-white border border-sky-100 rounded-2xl p-3 animate-in fade-in slide-in-from-top-1 shadow-sm">
-                <div className="text-[11px] text-sky-800 mb-2 font-semibold flex items-center gap-1.5">
-                  📍 คำนวณค่ารถ Lalamove (กระบะ 4 ประตู)
-                  <span className="text-[9px] font-normal text-sky-600 bg-sky-100/50 px-1.5 py-0.5 rounded-md">เริ่ม 159บ. + 14บ./กม.</span>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs text-red-700">เวลาเข้างานจริง</Label>
+                    <div className="flex gap-1">
+                      <select
+                        value={formData.clockIn.split(':')[0]}
+                        onChange={(e) => {
+                          const [, min] = formData.clockIn.split(':');
+                          setFormData(p => ({ ...p, clockIn: `${e.target.value}:${min || '00'}` }));
+                        }}
+                        className="w-full rounded-xl border border-sky-100 bg-white text-center font-bold text-lg focus:ring-2 focus:ring-sky-500 outline-none h-12 appearance-none"
+                      >
+                        {Array.from({ length: 24 }).map((_, i) => {
+                          const hr = i.toString().padStart(2, '0');
+                          return <option key={hr} value={hr}>{hr}</option>;
+                        })}
+                      </select>
+                      <span className="text-xl font-bold self-center text-gray-900">:</span>
+                      <select
+                        value={formData.clockIn.split(':')[1] || '00'}
+                        onChange={(e) => {
+                          const [hr] = formData.clockIn.split(':');
+                          setFormData(p => ({ ...p, clockIn: `${hr || '00'}:${e.target.value}` }));
+                        }}
+                        className="w-full rounded-xl border border-sky-100 bg-white text-center font-bold text-lg focus:ring-2 focus:ring-sky-500 outline-none h-12 appearance-none"
+                      >
+                        <option value="00">00</option>
+                        <option value="15">15</option>
+                        <option value="30">30</option>
+                        <option value="45">45</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-red-700">เวลาเลิกงานจริง</Label>
+                    <div className="flex gap-1">
+                      <select
+                        value={formData.clockOut.split(':')[0]}
+                        onChange={(e) => {
+                          const [, min] = formData.clockOut.split(':');
+                          setFormData(p => ({ ...p, clockOut: `${e.target.value}:${min || '00'}` }));
+                        }}
+                        className="w-full rounded-xl border border-sky-100 bg-white text-center font-bold text-lg focus:ring-2 focus:ring-sky-500 outline-none h-12 appearance-none"
+                      >
+                        {Array.from({ length: 24 }).map((_, i) => {
+                          const hr = i.toString().padStart(2, '0');
+                          return <option key={hr} value={hr}>{hr}</option>;
+                        })}
+                      </select>
+                      <span className="text-xl font-bold self-center text-gray-900">:</span>
+                      <select
+                        value={formData.clockOut.split(':')[1] || '00'}
+                        onChange={(e) => {
+                          const [hr] = formData.clockOut.split(':');
+                          setFormData(p => ({ ...p, clockOut: `${hr || '00'}:${e.target.value}` }));
+                        }}
+                        className="w-full rounded-xl border border-sky-100 bg-white text-center font-bold text-lg focus:ring-2 focus:ring-sky-500 outline-none h-12 appearance-none"
+                      >
+                        <option value="00">00</option>
+                        <option value="15">15</option>
+                        <option value="30">30</option>
+                        <option value="45">45</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex gap-2">
+              </div>
+
+              {/* Auto Calculated Results */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-red-50 p-3 rounded-2xl border border-red-100 transition-all duration-300" style={{ opacity: formData.lateDeduction > 0 ? 1 : 0.7 }}>
+                  <Label className="text-red-700 text-xs mb-1 cursor-help" title={`คำนวณหักสาย 100 บาท/ชม.`}>
+                    หักสาย/กลับก่อน (อัตโนมัติ)
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl font-bold text-red-600 flex-1">
+                      - ฿{formData.lateDeduction}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-green-50 p-3 rounded-2xl border border-green-100 transition-all duration-300" style={{ opacity: (formData.overtimeHours > 0 || formData.overtimeMinutes > 0) ? 1 : 0.7 }}>
+                  <Label className="text-green-700 text-xs mb-1 cursor-help" title={`คำนวณโอที 100 บาท/ชม.`}>
+                    โอที (อัตโนมัติ 100บ./ชม.)
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl font-bold text-green-700 flex-1">
+                      + ฿{Math.round((formData.overtimeHours * 100) + (formData.overtimeMinutes / 60 * 100))}
+                    </span>
+                    <span className="text-xs text-green-600 font-medium">
+                      ({formData.overtimeHours} ชม. {formData.overtimeMinutes > 0 ? `${formData.overtimeMinutes} นาที` : ''})
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label className="text-xs">ค่าแรง</Label>
                   <Input
                     type="number"
                     min="0"
-                    step="0.1"
-                    placeholder="ระยะทาง (กม.)"
-                    value={lalamoveDist}
-                    onChange={(e) => setLalamoveDist(e.target.value)}
-                    className="h-9 text-sm px-3 flex-1 border-sky-100 bg-white"
+                    value={formData.baseWage || ''}
+                    onChange={(e) => setFormData(p => ({ ...p, baseWage: Number(e.target.value) }))}
+                    className="font-semibold px-2"
                   />
-                  {lalamoveDist && Number(lalamoveDist) > 0 ? (
+                </div>
+                <div>
+                  <Label className="text-xs">ค่ารถ</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={formData.travelAllowance || ''}
+                    onChange={(e) => setFormData(p => ({ ...p, travelAllowance: Number(e.target.value) }))}
+                    className="font-semibold px-2"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs flex justify-between items-center mb-1">
+                    <span>ทางด่วน</span>
+                    {formData.tollReceiptUrl && (
+                      <span className="text-[10px] text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded flex items-center gap-0.5"><Check className="w-3 h-3" /> แนบแล้ว</span>
+                    )}
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      min="0"
+                      value={formData.tollFee || ''}
+                      onChange={(e) => setFormData(p => ({ ...p, tollFee: Number(e.target.value) }))}
+                      className="font-semibold px-2 pr-8"
+                    />
+                    <label className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400 hover:text-sky-500 transition-colors" title="แนบใบเสร็จทางด่วน">
+                      <ImagePlus className="w-5 h-5" />
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'tollReceiptUrl')} />
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Adjustments */}
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <Label className="mb-0 text-gray-900">รายการอื่นๆ (เพิ่ม/หักเงิน)</Label>
+                    <button
+                      type="button"
+                      onClick={() => setShowLalamoveCalc(!showLalamoveCalc)}
+                      className={`text-[9px] px-1.5 py-0.5 rounded-md transition-all font-semibold ${showLalamoveCalc ? 'bg-sky-500 text-white shadow-sm' : 'bg-sky-50 text-sky-600 border border-sky-100 hover:bg-sky-100'}`}
+                      title="คำนวณจาก Lalamove 4 ประตู"
+                    >
+                      📍 Lalamove
+                    </button>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="text-red-600 px-3 py-1.5 h-auto text-xs bg-sky-50 rounded-xl"
+                    onClick={() => setFormData(p => ({
+                      ...p,
+                      adjustments: [...p.adjustments, { id: uuidv4(), type: 'add', amount: 0, note: '' }]
+                    }))}
+                  >
+                    <Plus className="w-3 h-3 mr-1" /> เพิ่มรายการ
+                  </Button>
+                </div>
+
+                {/* Lalamove Inline Calculator for Adjustments */}
+                {showLalamoveCalc && (
+                  <div className="bg-gradient-to-r from-sky-50 to-white border border-sky-100 rounded-2xl p-3 animate-in fade-in slide-in-from-top-1 shadow-sm">
+                    <div className="text-[11px] text-sky-800 mb-2 font-semibold flex items-center gap-1.5">
+                      📍 คำนวณค่ารถ Lalamove (กระบะ 4 ประตู)
+                      <span className="text-[9px] font-normal text-sky-600 bg-sky-100/50 px-1.5 py-0.5 rounded-md">เริ่ม 159บ. + 14บ./กม.</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        placeholder="ระยะทาง (กม.)"
+                        value={lalamoveDist}
+                        onChange={(e) => setLalamoveDist(e.target.value)}
+                        className="h-9 text-sm px-3 flex-1 border-sky-100 bg-white"
+                      />
+                      {lalamoveDist && Number(lalamoveDist) > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const dist = Number(lalamoveDist);
+                            const cost = 159 + Math.round(dist * 14);
+                            setFormData(p => ({
+                              ...p,
+                              adjustments: [...p.adjustments, { id: uuidv4(), type: 'add', amount: cost, note: 'ค่ารถไปหน้างาน' }]
+                            }));
+                            setShowLalamoveCalc(false);
+                            setLalamoveDist('');
+                          }}
+                          className="bg-sky-500 text-white text-xs font-bold px-4 py-1.5 rounded-xl hover:bg-sky-600 active:scale-[0.98] transition-all whitespace-nowrap shadow-sm shadow-sky-200"
+                        >
+                          เพิ่มไปรายการอื่นๆ ฿{159 + Math.round(Number(lalamoveDist) * 14)}
+                        </button>
+                      ) : (
+                        <div className="text-xs text-gray-400 px-4 flex items-center bg-gray-50 border border-dashed border-gray-200 rounded-xl whitespace-nowrap">
+                          รอระบุระยะทาง...
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {formData.adjustments.map((adj, idx) => (
+                  <div key={adj.id} className="flex gap-2 items-start bg-gray-50 p-3 rounded-2xl border border-gray-100">
+                    <div className="flex-1 space-y-2">
+                      <div className="flex gap-2">
+                        <select
+                          value={adj.type}
+                          onChange={(e) => {
+                            const newAdjs = [...formData.adjustments];
+                            newAdjs[idx].type = e.target.value as 'add' | 'deduct';
+                            setFormData(p => ({ ...p, adjustments: newAdjs }));
+                          }}
+                          className={`h-10 rounded-xl border-0 px-3 text-sm focus:ring-2 focus:ring-sky-500 font-medium ${adj.type === 'add' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
+                        >
+                          <option value="add">เพิ่มเงิน (+)</option>
+                          <option value="deduct">หักเงิน (-)</option>
+                        </select>
+                        <Input
+                          type="number"
+                          placeholder="จำนวนเงิน"
+                          value={adj.amount || ''}
+                          onChange={(e) => {
+                            const newAdjs = [...formData.adjustments];
+                            newAdjs[idx].amount = Number(e.target.value);
+                            setFormData(p => ({ ...p, adjustments: newAdjs }));
+                          }}
+                          className="h-10 text-sm bg-white"
+                        />
+                      </div>
+                      <div className="relative w-full">
+                        <Input
+                          type="text"
+                          list={`note-presets-${adj.id}`}
+                          placeholder="ระบุหมายเหตุ (เช่น ค่ารถไปหน้างาน, อื่นๆ)"
+                          value={adj.note}
+                          onChange={(e) => {
+                            const newAdjs = [...formData.adjustments];
+                            newAdjs[idx].note = e.target.value;
+                            setFormData(p => ({ ...p, adjustments: newAdjs }));
+                          }}
+                          className="h-10 text-sm bg-white pr-8 w-full"
+                        />
+                        <label className={`absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer transition-colors ${adj.receiptUrl ? 'text-emerald-500' : 'text-gray-400 hover:text-sky-500'}`} title={adj.receiptUrl ? 'แนบใบเสร็จแล้ว (คลิกเปลี่ยน)' : 'แนบสลิป/ใบเสร็จ'}>
+                          {adj.receiptUrl ? <CheckCircle2 className="w-4 h-4" /> : <ImagePlus className="w-4 h-4" />}
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'adjustments', adj.id)} />
+                        </label>
+                      </div>
+                      <datalist id={`note-presets-${adj.id}`}>
+                        <option value="ค่ารถไปหน้างาน" />
+                        <option value="ค่าอาหาร" />
+                        <option value="เบิกล่วงหน้า" />
+                        <option value="อื่นๆ (ระบุ...)" />
+                      </datalist>
+                    </div>
                     <button
                       type="button"
                       onClick={() => {
-                        const dist = Number(lalamoveDist);
-                        const cost = 159 + Math.round(dist * 14);
-                        setFormData(p => ({
-                          ...p,
-                          adjustments: [...p.adjustments, { id: uuidv4(), type: 'add', amount: cost, note: 'ค่ารถไปหน้างาน' }]
-                        }));
-                        setShowLalamoveCalc(false);
-                        setLalamoveDist('');
+                        const newAdjs = formData.adjustments.filter(a => a.id !== adj.id);
+                        setFormData(p => ({ ...p, adjustments: newAdjs }));
                       }}
-                      className="bg-sky-500 text-white text-xs font-bold px-4 py-1.5 rounded-xl hover:bg-sky-600 active:scale-[0.98] transition-all whitespace-nowrap shadow-sm shadow-sky-200"
+                      className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors mt-1"
                     >
-                      เพิ่มไปรายการอื่นๆ ฿{159 + Math.round(Number(lalamoveDist) * 14)}
+                      <Trash2 className="w-5 h-5" />
                     </button>
-                  ) : (
-                    <div className="text-xs text-gray-400 px-4 flex items-center bg-gray-50 border border-dashed border-gray-200 rounded-xl whitespace-nowrap">
-                      รอระบุระยะทาง...
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {formData.adjustments.map((adj, idx) => (
-              <div key={adj.id} className="flex gap-2 items-start bg-gray-50 p-3 rounded-2xl border border-gray-100">
-                <div className="flex-1 space-y-2">
-                  <div className="flex gap-2">
-                    <select
-                      value={adj.type}
-                      onChange={(e) => {
-                        const newAdjs = [...formData.adjustments];
-                        newAdjs[idx].type = e.target.value as 'add' | 'deduct';
-                        setFormData(p => ({ ...p, adjustments: newAdjs }));
-                      }}
-                      className={`h-10 rounded-xl border-0 px-3 text-sm focus:ring-2 focus:ring-sky-500 font-medium ${adj.type === 'add' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
-                    >
-                      <option value="add">เพิ่มเงิน (+)</option>
-                      <option value="deduct">หักเงิน (-)</option>
-                    </select>
-                    <Input
-                      type="number"
-                      placeholder="จำนวนเงิน"
-                      value={adj.amount || ''}
-                      onChange={(e) => {
-                        const newAdjs = [...formData.adjustments];
-                        newAdjs[idx].amount = Number(e.target.value);
-                        setFormData(p => ({ ...p, adjustments: newAdjs }));
-                      }}
-                      className="h-10 text-sm bg-white"
-                    />
                   </div>
-                  <div className="relative w-full">
-                    <Input
-                      type="text"
-                      list={`note-presets-${adj.id}`}
-                      placeholder="ระบุหมายเหตุ (เช่น ค่ารถไปหน้างาน, อื่นๆ)"
-                      value={adj.note}
-                      onChange={(e) => {
-                        const newAdjs = [...formData.adjustments];
-                        newAdjs[idx].note = e.target.value;
-                        setFormData(p => ({ ...p, adjustments: newAdjs }));
-                      }}
-                      className="h-10 text-sm bg-white pr-8 w-full"
-                    />
-                    <label className={`absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer transition-colors ${adj.receiptUrl ? 'text-emerald-500' : 'text-gray-400 hover:text-sky-500'}`} title={adj.receiptUrl ? 'แนบใบเสร็จแล้ว (คลิกเปลี่ยน)' : 'แนบสลิป/ใบเสร็จ'}>
-                      {adj.receiptUrl ? <CheckCircle2 className="w-4 h-4" /> : <ImagePlus className="w-4 h-4" />}
-                      <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'adjustments', adj.id)} />
-                    </label>
+                ))}
+                {formData.adjustments.length === 0 && (
+                  <div className="text-sm text-gray-400 text-center py-2 border border-dashed border-gray-200 rounded-2xl">
+                    ไม่มีรายการเพิ่มเติม
                   </div>
-                  <datalist id={`note-presets-${adj.id}`}>
-                    <option value="ค่ารถไปหน้างาน" />
-                    <option value="ค่าอาหาร" />
-                    <option value="เบิกล่วงหน้า" />
-                    <option value="อื่นๆ (ระบุ...)" />
-                  </datalist>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newAdjs = formData.adjustments.filter(a => a.id !== adj.id);
-                    setFormData(p => ({ ...p, adjustments: newAdjs }));
-                  }}
-                  className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors mt-1"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
+                )}
               </div>
-            ))}
-            {formData.adjustments.length === 0 && (
-              <div className="text-sm text-gray-400 text-center py-2 border border-dashed border-gray-200 rounded-2xl">
-                ไม่มีรายการเพิ่มเติม
-              </div>
-            )}
-          </div>
+            </>
+          )}
 
           <div className="flex flex-col gap-4 pt-4 mt-2 border-t border-gray-100">
             <div className="flex items-center justify-between">
@@ -968,6 +1006,6 @@ export function DailyEntryPage() {
           </div>
         </form>
       </Modal>
-    </div>
+    </div >
   );
 }

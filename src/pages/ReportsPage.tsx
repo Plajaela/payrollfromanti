@@ -25,7 +25,8 @@ export function ReportsPage() {
     const summary = workers.map(worker => {
       const workerEntries = filteredEntries.filter(e => e.workerId === worker.id);
 
-      const totalDays = workerEntries.length;
+      const totalDays = workerEntries.filter(e => !e.isLeave).length;
+      const leaveDays = workerEntries.filter(e => e.isLeave).length;
       const totalBaseWage = workerEntries.reduce((sum, e) => sum + e.baseWage, 0);
       const totalTravel = workerEntries.reduce((sum, e) => sum + e.travelAllowance, 0);
       const totalToll = workerEntries.reduce((sum, e) => sum + e.tollFee, 0);
@@ -51,11 +52,12 @@ export function ReportsPage() {
         totalLate,
         totalOT,
         netAdjustments,
-        grandTotal
+        grandTotal,
+        leaveDays
       };
     });
 
-    return summary.filter(s => s.totalDays > 0);
+    return summary.filter(s => s.totalDays > 0 || s.leaveDays > 0);
   }, [entries, workers, startDate, endDate]);
 
   const handleCopy = async (text: string, id: string) => {
@@ -71,7 +73,7 @@ export function ReportsPage() {
   const handleCopySingle = (row: typeof reportData[0]) => {
     const dateRangeStr = startDate === endDate ? startDate : `${startDate} ถึง ${endDate}`;
     const text = `สรุปยอด ${row.worker.name} (วันที่ ${dateRangeStr})\n` +
-      `- วันทำงาน: ${row.totalDays} วัน\n` +
+      `- วันทำงาน: ${row.totalDays} วัน${row.leaveDays > 0 ? ` (ลาหยุด ${row.leaveDays} วัน)` : ''}\n` +
       `- ค่าแรง: ฿${row.totalBaseWage}\n` +
       `- ค่ารถ: ฿${row.totalTravel}\n` +
       `- โอที: ฿${row.totalOT}\n` +
@@ -87,7 +89,7 @@ export function ReportsPage() {
     let text = `📋 สรุปยอดช่างทุกคน (วันที่ ${dateRangeStr})\n\n`;
 
     reportData.forEach((row, index) => {
-      text += `${index + 1}. ช่าง${row.worker.name}: ${row.totalDays} วัน | สุทธิ ฿${row.grandTotal}\n`;
+      text += `${index + 1}. ช่าง${row.worker.name}: ทำงาน ${row.totalDays} วัน${row.leaveDays > 0 ? ` (+ ลาหยุด ${row.leaveDays} วัน)` : ''} | สุทธิ ฿${row.grandTotal}\n`;
     });
 
     const grandTotal = reportData.reduce((sum, r) => sum + r.grandTotal, 0);
@@ -100,7 +102,7 @@ export function ReportsPage() {
     // 1. Summary Sheet
     const summaryRows = reportData.map(row => ({
       'ชื่อช่าง': row.worker.name,
-      'จำนวนวันทำงาน': row.totalDays,
+      'จำนวนวันทำงาน': `${row.totalDays}${row.leaveDays > 0 ? ` (ลา ${row.leaveDays})` : ''}`,
       'รวมค่าแรง': row.totalBaseWage,
       'รวมค่ารถ': row.totalTravel,
       'รวมค่าทางด่วน': row.totalToll,
@@ -167,15 +169,15 @@ export function ReportsPage() {
         detailRows.push({
           'ชื่อช่าง': worker.name,
           'วันที่': format(parseISO(entry.date), 'dd/MM/yyyy'),
-          'เวลาทำงาน': `${entry.clockIn} - ${entry.clockOut}`,
-          'ค่าแรง': entry.baseWage,
-          'ค่ารถ': entry.travelAllowance,
-          'ทางด่วน': entry.tollFee,
-          'หักสาย': entry.lateDeduction,
-          'โอที': entry.overtimePay,
-          'รวมอื่นๆ': netAdjustments,
-          'ยอดสุทธิประจำวัน': entry.totalPay,
-          'หมายเหตุอื่นๆ': notes,
+          'เวลาทำงาน': entry.isLeave ? 'ลาหยุด' : `${entry.clockIn} - ${entry.clockOut}`,
+          'ค่าแรง': entry.isLeave ? '-' : entry.baseWage,
+          'ค่ารถ': entry.isLeave ? '-' : entry.travelAllowance,
+          'ทางด่วน': entry.isLeave ? '-' : entry.tollFee,
+          'หักสาย': entry.isLeave ? '-' : entry.lateDeduction,
+          'โอที': entry.isLeave ? '-' : entry.overtimePay,
+          'รวมอื่นๆ': entry.isLeave ? '-' : netAdjustments,
+          'ยอดสุทธิประจำวัน': entry.isLeave ? '-' : entry.totalPay,
+          'หมายเหตุอื่นๆ': entry.isLeave ? 'ลาหยุด' : notes,
         });
       });
 
@@ -271,7 +273,10 @@ export function ReportsPage() {
                   {reportData.map((row) => (
                     <tr key={row.worker.id} className="hover:bg-zinc-50/50 transition-colors">
                       <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-zinc-900 sm:pl-6">{row.worker.name}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-zinc-500 text-center">{row.totalDays}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-zinc-500 text-center">
+                        {row.totalDays}
+                        {row.leaveDays > 0 && <span className="text-red-500 ml-1 text-xs">(ลา {row.leaveDays})</span>}
+                      </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-zinc-500 text-right">฿{row.totalBaseWage}</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-zinc-500 text-right">฿{row.totalTravel}</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-zinc-500 text-right">฿{row.totalOT}</td>

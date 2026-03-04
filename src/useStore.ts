@@ -140,6 +140,7 @@ export function useStore() {
                   total_pay: e.totalPay,
                   note: e.note,
                   is_draft: e.isDraft || false,
+                  is_leave: e.isLeave || false,
                   transfer_slip_url: e.transferSlipUrl,
                   toll_receipt_url: e.tollReceiptUrl
                 }))
@@ -172,6 +173,7 @@ export function useStore() {
             totalPay: Number(e.total_pay),
             note: e.note,
             isDraft: e.is_draft,
+            isLeave: e.is_leave,
             transferSlipUrl: e.transfer_slip_url,
             tollReceiptUrl: e.toll_receipt_url
           }));
@@ -304,6 +306,7 @@ export function useStore() {
         total_pay: entry.totalPay,
         note: entry.note,
         is_draft: entry.isDraft || false,
+        is_leave: entry.isLeave || false,
         transfer_slip_url: entry.transferSlipUrl,
         toll_receipt_url: entry.tollReceiptUrl
       }]);
@@ -336,6 +339,7 @@ export function useStore() {
       if (updated.totalPay !== undefined) updateData.total_pay = updated.totalPay;
       if (updated.note !== undefined) updateData.note = updated.note;
       if (updated.isDraft !== undefined) updateData.is_draft = updated.isDraft;
+      if (updated.isLeave !== undefined) updateData.is_leave = updated.isLeave;
       if (updated.transferSlipUrl !== undefined) updateData.transfer_slip_url = updated.transferSlipUrl;
       if (updated.tollReceiptUrl !== undefined) updateData.toll_receipt_url = updated.tollReceiptUrl;
 

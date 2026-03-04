@@ -33,6 +33,7 @@ export interface DailyEntry {
   totalPay: number;
   note: string;
   isDraft?: boolean;
+  isLeave?: boolean;
   transferSlipUrl?: string;
   tollReceiptUrl?: string;
 }
