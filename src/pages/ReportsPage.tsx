@@ -162,7 +162,22 @@ export function ReportsPage() {
         const totalDeductions = entry.adjustments?.filter(a => a.type === 'deduct').reduce((s, a) => s + Number(a.amount), 0) || 0;
         const netAdjustments = totalAdditions - totalDeductions;
 
-        const notes = entry.adjustments?.map(a => `${a.note || 'ไม่มีหมายเหตุ'} (${a.type === 'add' ? '+' : '-'}${a.amount})`).join(', ') || '';
+        const formatSlipUrl = (url?: string) => {
+          if (!url) return '-';
+          if (url.startsWith('http')) return url;
+          if (url.startsWith('data:image')) return 'มี(ระบบเก่า)';
+          return '-';
+        };
+
+        const notes = entry.adjustments?.map(a => {
+          let s = `${a.note || 'ไม่มีหมายเหตุ'} (${a.type === 'add' ? '+' : '-'}${a.amount})`;
+          if (a.receiptUrl && a.receiptUrl.startsWith('http')) {
+            s += ` ${a.receiptUrl}`;
+          } else if (a.receiptUrl) {
+            s += ' (มีรูปเก่า)';
+          }
+          return s;
+        }).join(', ') || '';
 
         workerTotal += entry.totalPay;
 
@@ -177,6 +192,8 @@ export function ReportsPage() {
           'โอที': entry.isLeave ? '-' : entry.overtimePay,
           'รวมอื่นๆ': entry.isLeave ? '-' : netAdjustments,
           'ยอดสุทธิประจำวัน': entry.isLeave ? '-' : entry.totalPay,
+          'สลิปโอนเงิน': entry.isLeave ? '-' : formatSlipUrl(entry.transferSlipUrl),
+          'สลิปทางด่วน': entry.isLeave || entry.tollFee === 0 ? '-' : formatSlipUrl(entry.tollReceiptUrl),
           'หมายเหตุอื่นๆ': entry.isLeave ? 'ลาหยุด' : notes,
         });
       });
@@ -192,6 +209,8 @@ export function ReportsPage() {
         'โอที': '',
         'รวมอื่นๆ': '',
         'ยอดสุทธิประจำวัน': workerTotal,
+        'สลิปโอนเงิน': '',
+        'สลิปทางด่วน': '',
         'หมายเหตุอื่นๆ': '',
       });
 
@@ -206,7 +225,7 @@ export function ReportsPage() {
     XLSX.utils.book_append_sheet(wb, wsDetails, "รายละเอียดรายบุคคล");
 
     // Adjust column widths basic
-    const cols = [{ wpx: 120 }, { wpx: 100 }, { wpx: 100 }, { wpx: 80 }, { wpx: 60 }, { wpx: 60 }, { wpx: 60 }, { wpx: 80 }, { wpx: 80 }, { wpx: 120 }, { wpx: 250 }];
+    const cols = [{ wpx: 120 }, { wpx: 100 }, { wpx: 100 }, { wpx: 80 }, { wpx: 60 }, { wpx: 60 }, { wpx: 60 }, { wpx: 80 }, { wpx: 80 }, { wpx: 120 }, { wpx: 120 }, { wpx: 120 }, { wpx: 250 }];
     wsDetails['!cols'] = cols;
     wsSummary['!cols'] = [{ wpx: 150 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 150 }];
 

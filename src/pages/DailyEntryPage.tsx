@@ -6,6 +6,7 @@ import { th } from 'date-fns/locale';
 import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Settings2, RefreshCw, Copy, Check, Paperclip, ImagePlus } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Adjustment } from '../types';
+import { supabase } from '../lib/supabase';
 
 const timeToMins = (time: string) => {
   if (!time) return 0;
@@ -23,6 +24,7 @@ export function DailyEntryPage() {
   const [activeTabWorkerId, setActiveTabWorkerId] = useState<string | null>(null);
   const [showLalamoveCalc, setShowLalamoveCalc] = useState(false);
   const [lalamoveDist, setLalamoveDist] = useState<string>('');
+  const [isUploading, setIsUploading] = useState(false);
 
   // Set default tab when workers change or active tab is not set
   useEffect(() => {
@@ -188,29 +190,53 @@ export function DailyEntryPage() {
     handleSave(false);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'transferSlipUrl' | 'tollReceiptUrl' | 'adjustments', adjId?: string) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'transferSlipUrl' | 'tollReceiptUrl' | 'adjustments', adjId?: string) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) { // Only compress if larger than 2MB
-      alert('ไฟล์ภาพมีขนาดใหญ่เกินไป แนะนำให้ใช้ไฟล์ที่เล็กกว่า 2MB เพื่อป้องกันเมมโมรี่เต็ม');
+    if (file.size > 5 * 1024 * 1024) {
+      alert('ไฟล์ภาพมีขนาดใหญ่เกินไป แนะนำให้ใช้ไฟล์ที่เล็กกว่า 5MB');
+      return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64String = event.target?.result as string;
+    try {
+      setIsUploading(true);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${uuidv4()}.${fileExt}`;
+      const filePath = `${formData.workerId || 'unknown'}/${fileName}`;
+
+      const { data, error } = await supabase.storage
+        .from('slips')
+        .upload(filePath, file);
+
+      if (error) {
+        throw error;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('slips')
+        .getPublicUrl(filePath);
+
+      const publicUrl = publicUrlData.publicUrl;
+
       if (field === 'transferSlipUrl') {
-        setFormData(prev => ({ ...prev, transferSlipUrl: base64String }));
+        setFormData(prev => ({ ...prev, transferSlipUrl: publicUrl }));
       } else if (field === 'tollReceiptUrl') {
-        setFormData(prev => ({ ...prev, tollReceiptUrl: base64String }));
+        setFormData(prev => ({ ...prev, tollReceiptUrl: publicUrl }));
       } else if (field === 'adjustments' && adjId) {
         setFormData(prev => ({
           ...prev,
-          adjustments: prev.adjustments.map(a => a.id === adjId ? { ...a, receiptUrl: base64String } : a)
+          adjustments: prev.adjustments.map(a => a.id === adjId ? { ...a, receiptUrl: publicUrl } : a)
         }));
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('เกิดข้อผิดพลาดในการอัพโหลดรูปภาพ กรุณาลองใหม่อีกครั้ง');
+    } finally {
+      setIsUploading(false);
+      // Reset input value so same file can be selected again
+      e.target.value = '';
+    }
   };
 
   const handleSave = (isDraft: boolean) => {
@@ -803,7 +829,7 @@ export function DailyEntryPage() {
                     />
                     <label className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400 hover:text-sky-500 transition-colors" title="แนบใบเสร็จทางด่วน">
                       <ImagePlus className="w-5 h-5" />
-                      <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'tollReceiptUrl')} />
+                      <input disabled={isUploading} type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'tollReceiptUrl')} />
                     </label>
                   </div>
                 </div>
@@ -922,7 +948,7 @@ export function DailyEntryPage() {
                         />
                         <label className={`absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer transition-colors ${adj.receiptUrl ? 'text-emerald-500' : 'text-gray-400 hover:text-sky-500'}`} title={adj.receiptUrl ? 'แนบใบเสร็จแล้ว (คลิกเปลี่ยน)' : 'แนบสลิป/ใบเสร็จ'}>
                           {adj.receiptUrl ? <CheckCircle2 className="w-4 h-4" /> : <ImagePlus className="w-4 h-4" />}
-                          <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'adjustments', adj.id)} />
+                          <input disabled={isUploading} type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'adjustments', adj.id)} />
                         </label>
                       </div>
                       <datalist id={`note-presets-${adj.id}`}>
@@ -960,8 +986,13 @@ export function DailyEntryPage() {
                 <div className="text-3xl font-bold text-red-600">฿{calculateTotal()}</div>
               </div>
               <div className="flex flex-col items-end gap-2">
-                <label className={`flex items-center gap-2 px-3 py-1.5 rounded-xl cursor-pointer transition-all border ${formData.transferSlipUrl ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-sky-50 hover:border-sky-200 hover:text-sky-600'}`}>
-                  {formData.transferSlipUrl ? (
+                <label className={`flex items-center gap-2 px-3 py-1.5 rounded-xl cursor-pointer transition-all border ${isUploading ? 'bg-amber-50 border-amber-200 text-amber-700 cursor-not-allowed' : formData.transferSlipUrl ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-sky-50 hover:border-sky-200 hover:text-sky-600'}`}>
+                  {isUploading ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span className="text-sm font-semibold">กำลังอัพโหลด...</span>
+                    </>
+                  ) : formData.transferSlipUrl ? (
                     <>
                       <CheckCircle2 className="w-4 h-4" />
                       <span className="text-sm font-semibold">แนบสลิปโอนเงินแล้ว</span>
@@ -972,7 +1003,7 @@ export function DailyEntryPage() {
                       <span className="text-sm font-medium">แนบสลิปโอนเงิน</span>
                     </>
                   )}
-                  <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'transferSlipUrl')} />
+                  <input disabled={isUploading} type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'transferSlipUrl')} />
                 </label>
               </div>
             </div>
@@ -994,13 +1025,19 @@ export function DailyEntryPage() {
               )}
               <Button
                 type="button"
-                className="px-6 py-4 text-base rounded-2xl shadow-sm bg-orange-500 hover:bg-orange-600 text-white flex-1"
+                disabled={isUploading}
+                className="px-6 py-4 text-base rounded-2xl shadow-sm bg-orange-500 hover:bg-orange-600 text-white flex-1 disabled:opacity-50"
                 onClick={() => handleSave(true)}
               >
-                บันทึกฉบับร่าง
+                {isUploading ? 'รออัพโหลดรูป...' : 'บันทึกฉบับร่าง'}
               </Button>
-              <Button type="button" className="px-6 py-4 text-base rounded-2xl shadow-lg shadow-sky-200 flex-1 bg-sky-500 hover:bg-sky-600 text-white" onClick={() => handleSave(false)}>
-                บันทึกสมบูรณ์
+              <Button
+                type="button"
+                disabled={isUploading}
+                className="px-6 py-4 text-base rounded-2xl shadow-lg shadow-sky-200 flex-1 bg-sky-500 hover:bg-sky-600 text-white disabled:opacity-50"
+                onClick={() => handleSave(false)}
+              >
+                {isUploading ? 'รออัพโหลดรูป...' : 'บันทึกสมบูรณ์'}
               </Button>
             </div>
           </div>
