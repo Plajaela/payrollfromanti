@@ -970,7 +970,7 @@ export function DailyEntryPage() {
                         <Input
                           type="text"
                           list={`note-presets-${adj.id}`}
-                          placeholder="ระบุหมายเหตุ (เช่น ค่ารถไปหน้างาน, อื่นๆ)"
+                          placeholder="ระบุหมายเหตุ (เช่น ค่ารถไปงานที่ 1, อื่นๆ)"
                           value={adj.note}
                           onChange={(e) => {
                             const newAdjs = [...formData.adjustments];
@@ -979,6 +979,14 @@ export function DailyEntryPage() {
                           }}
                           className={`h-10 text-sm bg-white w-full ${adj.receiptUrl ? 'pr-20' : 'pr-8'}`}
                         />
+                        <datalist id={`note-presets-${adj.id}`}>
+                          <option value="ค่ารถไปงานที่ 1" />
+                          <option value="ค่ารถไปงานที่ 2" />
+                          <option value="ค่ารถไปงานที่ 3" />
+                          <option value="ค่ารถไปงานที่ 4" />
+                          <option value="เบี้ยเลี้ยง" />
+                          <option value="โบนัสพิเศษ" />
+                        </datalist>
                         {adj.receiptUrl && (
                           <div className="absolute right-8 top-1/2 -translate-y-1/2 flex items-center gap-0.5 bg-white p-0.5 rounded-md shadow-sm border border-emerald-100 transition-colors z-10">
                             <button type="button" onClick={() => setPreviewImageUrl(adj.receiptUrl!)} className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 p-1 rounded transition-colors" title="ดูรูปที่แนบ">

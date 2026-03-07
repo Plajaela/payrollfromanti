@@ -12,13 +12,13 @@ export function WorkersPage() {
     name: '',
     baseWage: '',
     defaultTravelAllowance: '',
-    shiftStart: '07:00',
     shiftEnd: '16:00',
     paymentType: 'day' as 'day' | 'month' | 'half-month',
+    hasGuarantee: false,
   });
 
   const resetForm = () => {
-    setFormData({ name: '', baseWage: '', defaultTravelAllowance: '', shiftStart: '07:00', shiftEnd: '16:00', paymentType: 'day' });
+    setFormData({ name: '', baseWage: '', defaultTravelAllowance: '', shiftStart: '07:00', shiftEnd: '16:00', paymentType: 'day', hasGuarantee: false });
     setEditingId(null);
     setIsModalOpen(false);
   };
@@ -31,6 +31,7 @@ export function WorkersPage() {
       shiftStart: worker.shiftStart || '07:00',
       shiftEnd: worker.shiftEnd || '16:00',
       paymentType: worker.paymentType || 'day',
+      hasGuarantee: worker.hasGuarantee || false,
     });
     setEditingId(worker.id);
     setIsModalOpen(true);
@@ -47,6 +48,7 @@ export function WorkersPage() {
       shiftStart: formData.shiftStart,
       shiftEnd: formData.shiftEnd,
       paymentType: formData.paymentType,
+      hasGuarantee: formData.hasGuarantee,
     };
 
     if (editingId) {
@@ -101,6 +103,9 @@ export function WorkersPage() {
                             <span className="bg-gray-100 px-2 py-0.5 rounded-md">ค่ารถ ฿{worker.defaultTravelAllowance}</span>
                           )}
                           <span className="bg-sky-50 text-red-700 px-2 py-0.5 rounded-md">เวลา {worker.shiftStart || '07:00'} - {worker.shiftEnd || '16:00'}</span>
+                          {worker.hasGuarantee && (
+                            <span className="bg-orange-50 text-orange-700 px-2 py-0.5 rounded-md shrink-0">หักประกัน</span>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-1 pl-2 border-l border-gray-100 ml-2">
@@ -217,6 +222,19 @@ export function WorkersPage() {
               <option value="half-month">จ่ายแบบวิก (ทุก 15 วัน)</option>
               <option value="month">จ่ายสิ้นเดือน (ทุก 30 วัน)</option>
             </select>
+          </div>
+
+          <div className="bg-orange-50/50 p-4 rounded-2xl border border-orange-100">
+            <label className="flex items-center justify-between cursor-pointer">
+              <div>
+                <div className="font-semibold text-gray-900">หักเงินประกันสะสมเริ่มต้น</div>
+                <div className="text-xs text-gray-500 mt-0.5">เปิดไว้เพื่อหักเงินทุกครั้งที่เพิ่มบิลรายวัน</div>
+              </div>
+              <div className="relative">
+                <input type="checkbox" className="sr-only peer" checked={formData.hasGuarantee} onChange={(e) => setFormData(p => ({ ...p, hasGuarantee: e.target.checked }))} />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-red-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-500"></div>
+              </div>
+            </label>
           </div>
 
           <div className="pt-4 flex gap-3">

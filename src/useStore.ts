@@ -70,7 +70,8 @@ export function useStore() {
                   default_travel_allowance: w.defaultTravelAllowance || 0,
                   shift_start: w.shiftStart || '07:00',
                   shift_end: w.shiftEnd || '16:00',
-                  payment_type: w.paymentType || 'month'
+                  payment_type: w.paymentType || 'month',
+                  has_guarantee: w.hasGuarantee || false
                 }))
               );
 
@@ -91,7 +92,8 @@ export function useStore() {
             defaultTravelAllowance: Number(w.default_travel_allowance),
             shiftStart: w.shift_start,
             shiftEnd: w.shift_end,
-            paymentType: w.payment_type
+            paymentType: w.payment_type,
+            hasGuarantee: w.has_guarantee || false
           }));
           setWorkers(formattedWorkers);
         }
@@ -317,7 +319,8 @@ export function useStore() {
         default_travel_allowance: worker.defaultTravelAllowance || 0,
         shift_start: worker.shiftStart || '07:00',
         shift_end: worker.shiftEnd || '16:00',
-        payment_type: worker.paymentType || 'month'
+        payment_type: worker.paymentType || 'month',
+        has_guarantee: worker.hasGuarantee || false
       }]);
 
       if (error) throw error;
@@ -342,6 +345,7 @@ export function useStore() {
       if (updated.shiftStart !== undefined) updateData.shift_start = updated.shiftStart;
       if (updated.shiftEnd !== undefined) updateData.shift_end = updated.shiftEnd;
       if (updated.paymentType !== undefined) updateData.payment_type = updated.paymentType;
+      if (updated.hasGuarantee !== undefined) updateData.has_guarantee = updated.hasGuarantee;
 
       const { error } = await supabase
         .from('workers')
