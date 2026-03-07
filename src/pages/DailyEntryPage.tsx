@@ -826,7 +826,7 @@ export function DailyEntryPage() {
                   <Label className="text-xs flex justify-between items-center mb-1">
                     <span>ทางด่วน</span>
                     {formData.tollReceiptUrl && (
-                      <span className="text-[10px] text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded flex items-center gap-0.5"><Check className="w-3 h-3" /> แนบแล้ว</span>
+                      <a href={formData.tollReceiptUrl} target="_blank" rel="noreferrer" className="text-[10px] text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded flex items-center gap-0.5 hover:bg-emerald-100 transition-colors" title="คลิกเพื่อดูรูป"><Check className="w-3 h-3" /> ดูใบเสร็จ</a>
                     )}
                   </Label>
                   <div className="relative">
@@ -973,10 +973,15 @@ export function DailyEntryPage() {
                             newAdjs[idx].note = e.target.value;
                             setFormData(p => ({ ...p, adjustments: newAdjs }));
                           }}
-                          className="h-10 text-sm bg-white pr-8 w-full"
+                          className={`h-10 text-sm bg-white w-full ${adj.receiptUrl ? 'pr-16' : 'pr-8'}`}
                         />
-                        <label className={`absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer transition-colors ${adj.receiptUrl ? 'text-emerald-500' : 'text-gray-400 hover:text-sky-500'}`} title={adj.receiptUrl ? 'แนบใบเสร็จแล้ว (คลิกเปลี่ยน)' : 'แนบสลิป/ใบเสร็จ'}>
-                          {adj.receiptUrl ? <CheckCircle2 className="w-4 h-4" /> : <ImagePlus className="w-4 h-4" />}
+                        {adj.receiptUrl && (
+                          <a href={adj.receiptUrl} target="_blank" rel="noreferrer" className="absolute right-8 top-1/2 -translate-y-1/2 text-emerald-600 hover:text-emerald-700 bg-white p-1 rounded-md shadow-sm border border-emerald-100" title="ดูรูปที่แนบ">
+                            <ImagePlus className="w-3.5 h-3.5" />
+                          </a>
+                        )}
+                        <label className={`absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer transition-colors text-gray-400 hover:text-sky-500 ${adj.receiptUrl ? 'bg-white p-1 rounded-md' : ''}`} title={adj.receiptUrl ? 'อัพโหลดรูปใหม่' : 'แนบสลิป/ใบเสร็จ'}>
+                          <ImagePlus className="w-4 h-4" />
                           <input disabled={isUploading} type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'adjustments', adj.id)} />
                         </label>
                       </div>
@@ -1015,25 +1020,35 @@ export function DailyEntryPage() {
                 <div className="text-3xl font-bold text-red-600">฿{calculateTotal()}</div>
               </div>
               <div className="flex flex-col items-end gap-2">
-                <label className={`flex items-center gap-2 px-3 py-1.5 rounded-xl cursor-pointer transition-all border ${isUploading ? 'bg-amber-50 border-amber-200 text-amber-700 cursor-not-allowed' : formData.transferSlipUrl ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-sky-50 hover:border-sky-200 hover:text-sky-600'}`}>
-                  {isUploading ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span className="text-sm font-semibold">กำลังอัพโหลด...</span>
-                    </>
-                  ) : formData.transferSlipUrl ? (
-                    <>
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span className="text-sm font-semibold">แนบสลิปโอนเงินแล้ว</span>
-                    </>
-                  ) : (
-                    <>
-                      <Paperclip className="w-4 h-4" />
-                      <span className="text-sm font-medium">แนบสลิปโอนเงิน</span>
-                    </>
+                <div className="flex items-center gap-2">
+                  {formData.transferSlipUrl && (
+                    <a href={formData.transferSlipUrl} target="_blank" rel="noreferrer" className="shrink-0 group relative rounded-lg overflow-hidden border border-emerald-200 shadow-sm" title="คลิกเพื่อดูสลิปโอนเงิน">
+                      <img src={formData.transferSlipUrl} alt="slip" className="w-10 h-10 object-cover group-hover:scale-110 transition-transform duration-300" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
+                        <span className="text-[9px] text-white font-bold tracking-wide">ดูสลิป</span>
+                      </div>
+                    </a>
                   )}
-                  <input disabled={isUploading} type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'transferSlipUrl')} />
-                </label>
+                  <label className={`flex items-center gap-2 px-3 py-1.5 rounded-xl cursor-pointer transition-all border ${isUploading ? 'bg-amber-50 border-amber-200 text-amber-700 cursor-not-allowed' : formData.transferSlipUrl ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-sky-50 hover:border-sky-200 hover:text-sky-600'}`}>
+                    {isUploading ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span className="text-sm font-semibold">กำลังอัพโหลด...</span>
+                      </>
+                    ) : formData.transferSlipUrl ? (
+                      <>
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span className="text-sm font-semibold">แนบสลิปโอนเงินแล้ว</span>
+                      </>
+                    ) : (
+                      <>
+                        <Paperclip className="w-4 h-4" />
+                        <span className="text-sm font-medium">แนบสลิปโอนเงิน</span>
+                      </>
+                    )}
+                    <input disabled={isUploading} type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'transferSlipUrl')} />
+                  </label>
+                </div>
               </div>
             </div>
             <div className="flex gap-2 w-full">
