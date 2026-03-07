@@ -63,7 +63,7 @@ export function WorkersPage() {
         <div className="text-gray-500 text-sm">จำนวนช่างทั้งหมด {workers.length} คน</div>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-6">
         {workers.length === 0 ? (
           <div className="text-center py-16 text-gray-500 bg-white rounded-3xl border border-dashed border-gray-200">
             <UserPlus className="w-12 h-12 mx-auto text-gray-300 mb-3" />
@@ -71,35 +71,58 @@ export function WorkersPage() {
             <p className="text-sm mt-1">กดปุ่ม + ด้านล่างเพื่อเพิ่มช่าง</p>
           </div>
         ) : (
-          workers.map((worker) => (
-            <Card key={worker.id} className="p-4 flex items-center justify-between active:scale-[0.98] transition-transform">
-              <div className="flex-1" onClick={() => handleEdit(worker)}>
-                <h4 className="font-semibold text-gray-900 text-lg">{worker.name}</h4>
-                <div className="text-sm text-gray-500 mt-1 flex flex-wrap gap-2">
-                  <span className="bg-gray-100 px-2 py-0.5 rounded-md">ค่าแรง ฿{worker.baseWage}</span>
-                  {worker.defaultTravelAllowance > 0 && (
-                    <span className="bg-gray-100 px-2 py-0.5 rounded-md">ค่ารถ ฿{worker.defaultTravelAllowance}</span>
-                  )}
-                  <span className="bg-sky-50 text-red-700 px-2 py-0.5 rounded-md">เวลา {worker.shiftStart || '07:00'} - {worker.shiftEnd || '16:00'}</span>
-                  <span className="bg-orange-50 text-orange-700 px-2 py-0.5 rounded-md">รับเงิน{worker.paymentType === 'day' ? 'รายวัน' : worker.paymentType === 'half-month' ? 'ทุก 15 วัน' : 'สิ้นเดือน'}</span>
+          <>
+            {['day', 'half-month', 'month'].map((paymentTypeGroup) => {
+              const groupWorkers = workers.filter(w => (w.paymentType || 'day') === paymentTypeGroup);
+
+              if (groupWorkers.length === 0) return null;
+
+              const translatePaymentType = (type: string) => {
+                switch (type) {
+                  case 'day': return 'รายวัน';
+                  case 'half-month': return 'ทุก 15 วัน (วิก)';
+                  case 'month': return 'สิ้นเดือน';
+                  default: return 'ไม่ระบุ';
+                }
+              };
+
+              return (
+                <div key={paymentTypeGroup} className="space-y-3">
+                  <h3 className="text-sm font-bold text-gray-700 bg-gray-100/50 px-3 py-1.5 rounded-lg inline-block">
+                    รับเงิน{translatePaymentType(paymentTypeGroup)} <span className="text-gray-400 font-normal">({groupWorkers.length})</span>
+                  </h3>
+                  {groupWorkers.map((worker) => (
+                    <Card key={worker.id} className="p-4 flex items-center justify-between active:scale-[0.98] transition-transform">
+                      <div className="flex-1" onClick={() => handleEdit(worker)}>
+                        <h4 className="font-semibold text-gray-900 text-lg">{worker.name}</h4>
+                        <div className="text-sm text-gray-500 mt-1 flex flex-wrap gap-2">
+                          <span className="bg-gray-100 px-2 py-0.5 rounded-md">ค่าแรง ฿{worker.baseWage}</span>
+                          {worker.defaultTravelAllowance > 0 && (
+                            <span className="bg-gray-100 px-2 py-0.5 rounded-md">ค่ารถ ฿{worker.defaultTravelAllowance}</span>
+                          )}
+                          <span className="bg-sky-50 text-red-700 px-2 py-0.5 rounded-md">เวลา {worker.shiftStart || '07:00'} - {worker.shiftEnd || '16:00'}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 pl-2 border-l border-gray-100 ml-2">
+                        <Button
+                          variant="danger"
+                          className="p-2 h-auto rounded-xl bg-red-50 text-red-600 hover:bg-red-100"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm(`ต้องการลบช่าง ${worker.name} ใช่หรือไม่?`)) {
+                              deleteWorker(worker.id);
+                            }
+                          }}
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
                 </div>
-              </div>
-              <div className="flex items-center gap-1 pl-2 border-l border-gray-100 ml-2">
-                <Button
-                  variant="danger"
-                  className="p-2 h-auto rounded-xl bg-red-50 text-red-600 hover:bg-red-100"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (window.confirm(`ต้องการลบช่าง ${worker.name} ใช่หรือไม่?`)) {
-                      deleteWorker(worker.id);
-                    }
-                  }}
-                >
-                  <Trash2 className="w-5 h-5" />
-                </Button>
-              </div>
-            </Card>
-          ))
+              );
+            })}
+          </>
         )}
       </div>
 
