@@ -99,37 +99,14 @@ export function ReportsPage() {
   };
 
   const handleExportExcel = () => {
-    // 1. Summary Sheet
-    const summaryRows = reportData.map(row => ({
-      'ชื่อช่าง': row.worker.name,
-      'จำนวนวันทำงาน': `${row.totalDays}${row.leaveDays > 0 ? ` (ลา ${row.leaveDays})` : ''}`,
-      'รวมค่าแรง': row.totalBaseWage,
-      'รวมค่ารถ': row.totalTravel,
-      'รวมค่าทางด่วน': row.totalToll,
-      'รวมหักมาสาย': row.totalLate,
-      'รวมโอที': row.totalOT,
-      'รวมอื่นๆ (สุทธิ)': row.netAdjustments,
-      'ยอดสุทธิ': row.grandTotal
-    }));
-
-    const wsSummary = XLSX.utils.json_to_sheet(summaryRows);
-
-    // Add Grand Total row for summary
-    const grandTotal = reportData.reduce((sum, r) => sum + r.grandTotal, 0);
-    XLSX.utils.sheet_add_json(wsSummary, [{
-      'ชื่อช่าง': 'รวมทั้งหมด',
-      'จำนวนวันทำงาน': reportData.reduce((sum, r) => sum + r.totalDays, 0),
-      'รวมค่าแรง': reportData.reduce((sum, r) => sum + r.totalBaseWage, 0),
-      'รวมค่ารถ': reportData.reduce((sum, r) => sum + r.totalTravel, 0),
-      'รวมค่าทางด่วน': reportData.reduce((sum, r) => sum + r.totalToll, 0),
-      'รวมหักมาสาย': reportData.reduce((sum, r) => sum + r.totalLate, 0),
-      'รวมโอที': reportData.reduce((sum, r) => sum + r.totalOT, 0),
-      'รวมอื่นๆ (สุทธิ)': reportData.reduce((sum, r) => sum + r.netAdjustments, 0),
-      'ยอดสุทธิ': grandTotal
-    }], { skipHeader: true, origin: -1 });
-
-    // 2. Details Sheet
-    const detailRows: any[] = [];
+    const PRESETS = [
+      'ค่ารถไปงานที่ 1',
+      'ค่ารถไปงานที่ 2',
+      'ค่ารถไปงานที่ 3',
+      'ค่ารถไปงานที่ 4',
+      'เบี้ยเลี้ยง',
+      'โบนัสพิเศษ'
+    ];
 
     const filteredEntries = entries.filter(entry => {
       const entryDate = parseISO(entry.date);
@@ -138,6 +115,71 @@ export function ReportsPage() {
         end: parseISO(endDate)
       });
     });
+
+    // 1. Summary Sheet
+    const summaryRows = reportData.map(row => {
+      const workerEntries = filteredEntries.filter(e => e.workerId === row.worker.id);
+
+      const presetSums: Record<string, number> = {};
+      PRESETS.forEach(p => presetSums[p] = 0);
+      let otherSums = 0;
+
+      workerEntries.forEach(entry => {
+        entry.adjustments?.forEach(adj => {
+          const amount = adj.type === 'add' ? Number(adj.amount) : -Number(adj.amount);
+          const note = (adj.note || '').trim();
+          if (PRESETS.includes(note)) {
+            presetSums[note] += amount;
+          } else {
+            otherSums += amount;
+          }
+        });
+      });
+
+      const baseRow: any = {
+        'ชื่อช่าง': row.worker.name,
+        'จำนวนวันทำงาน': `${row.totalDays}${row.leaveDays > 0 ? ` (ลา ${row.leaveDays})` : ''}`,
+        'รวมค่าแรง': row.totalBaseWage,
+        'รวมค่ารถ': row.totalTravel,
+      };
+
+      PRESETS.forEach(p => {
+        baseRow[p] = presetSums[p];
+      });
+
+      baseRow['รวมค่าทางด่วน'] = row.totalToll;
+      baseRow['รวมหักมาสาย'] = row.totalLate;
+      baseRow['รวมโอที'] = row.totalOT;
+      baseRow['รวมอื่นๆ (สุทธิ)'] = otherSums;
+      baseRow['ยอดสุทธิ'] = row.grandTotal;
+
+      return baseRow;
+    });
+
+    const wsSummary = XLSX.utils.json_to_sheet(summaryRows);
+
+    // Add Grand Total row for summary
+    const grandTotalRow: any = {
+      'ชื่อช่าง': 'รวมทั้งหมด',
+      'จำนวนวันทำงาน': reportData.reduce((sum, r) => sum + r.totalDays, 0),
+      'รวมค่าแรง': reportData.reduce((sum, r) => sum + r.totalBaseWage, 0),
+      'รวมค่ารถ': reportData.reduce((sum, r) => sum + r.totalTravel, 0),
+    };
+
+    PRESETS.forEach(p => {
+      grandTotalRow[p] = summaryRows.reduce((sum, r) => sum + (r[p] || 0), 0);
+    });
+
+    grandTotalRow['รวมค่าทางด่วน'] = reportData.reduce((sum, r) => sum + r.totalToll, 0);
+    grandTotalRow['รวมหักมาสาย'] = reportData.reduce((sum, r) => sum + r.totalLate, 0);
+    grandTotalRow['รวมโอที'] = reportData.reduce((sum, r) => sum + r.totalOT, 0);
+    grandTotalRow['รวมอื่นๆ (สุทธิ)'] = summaryRows.reduce((sum, r) => sum + (r['รวมอื่นๆ (สุทธิ)'] || 0), 0);
+    grandTotalRow['ยอดสุทธิ'] = reportData.reduce((sum, r) => sum + r.grandTotal, 0);
+
+    XLSX.utils.sheet_add_json(wsSummary, [grandTotalRow], { skipHeader: true, origin: -1 });
+
+    // 2. Details Sheet
+    const detailRows: any[] = [];
 
     const groupedByWorker: Record<string, typeof entries[number][]> = {};
     filteredEntries.forEach(entry => {
@@ -158,9 +200,19 @@ export function ReportsPage() {
       let workerTotal = 0;
 
       workerEntries.forEach(entry => {
-        const totalAdditions = entry.adjustments?.filter(a => a.type === 'add').reduce((s, a) => s + Number(a.amount), 0) || 0;
-        const totalDeductions = entry.adjustments?.filter(a => a.type === 'deduct').reduce((s, a) => s + Number(a.amount), 0) || 0;
-        const netAdjustments = totalAdditions - totalDeductions;
+        const presetSums: Record<string, number> = {};
+        PRESETS.forEach(p => presetSums[p] = 0);
+        let otherSums = 0;
+
+        entry.adjustments?.forEach(a => {
+          const amount = a.type === 'add' ? Number(a.amount) : -Number(a.amount);
+          const note = (a.note || '').trim();
+          if (PRESETS.includes(note)) {
+            presetSums[note] += amount;
+          } else {
+            otherSums += amount;
+          }
+        });
 
         const formatSlipUrl = (url?: string) => {
           if (!url) return '-';
@@ -181,38 +233,52 @@ export function ReportsPage() {
 
         workerTotal += entry.totalPay;
 
-        detailRows.push({
+        const detailRow: any = {
           'ชื่อช่าง': worker.name,
           'วันที่': format(parseISO(entry.date), 'dd/MM/yyyy'),
           'เวลาทำงาน': entry.isLeave ? 'ลาหยุด' : `${entry.clockIn} - ${entry.clockOut}`,
           'ค่าแรง': entry.isLeave ? '-' : entry.baseWage,
           'ค่ารถ': entry.isLeave ? '-' : entry.travelAllowance,
-          'ทางด่วน': entry.isLeave ? '-' : entry.tollFee,
-          'หักสาย': entry.isLeave ? '-' : entry.lateDeduction,
-          'โอที': entry.isLeave ? '-' : entry.overtimePay,
-          'รวมอื่นๆ': entry.isLeave ? '-' : netAdjustments,
-          'ยอดสุทธิประจำวัน': entry.isLeave ? '-' : entry.totalPay,
-          'สลิปโอนเงิน': entry.isLeave ? '-' : formatSlipUrl(entry.transferSlipUrl),
-          'สลิปทางด่วน': entry.isLeave || entry.tollFee === 0 ? '-' : formatSlipUrl(entry.tollReceiptUrl),
-          'หมายเหตุอื่นๆ': entry.isLeave ? 'ลาหยุด' : notes,
+        };
+
+        PRESETS.forEach(p => {
+          detailRow[p] = entry.isLeave ? '-' : presetSums[p];
         });
+
+        detailRow['ทางด่วน'] = entry.isLeave ? '-' : entry.tollFee;
+        detailRow['หักสาย'] = entry.isLeave ? '-' : entry.lateDeduction;
+        detailRow['โอที'] = entry.isLeave ? '-' : entry.overtimePay;
+        detailRow['รวมอื่นๆ'] = entry.isLeave ? '-' : otherSums;
+        detailRow['ยอดสุทธิประจำวัน'] = entry.isLeave ? '-' : entry.totalPay;
+        detailRow['สลิปโอนเงิน'] = entry.isLeave ? '-' : formatSlipUrl(entry.transferSlipUrl);
+        detailRow['สลิปทางด่วน'] = entry.isLeave || entry.tollFee === 0 ? '-' : formatSlipUrl(entry.tollReceiptUrl);
+        detailRow['หมายเหตุอื่นๆ'] = entry.isLeave ? 'ลาหยุด' : notes;
+
+        detailRows.push(detailRow);
       });
 
-      detailRows.push({
+      const workerTotalRow: any = {
         'ชื่อช่าง': `รวมยอด ${worker.name}`,
         'วันที่': '',
         'เวลาทำงาน': '',
         'ค่าแรง': '',
         'ค่ารถ': '',
-        'ทางด่วน': '',
-        'หักสาย': '',
-        'โอที': '',
-        'รวมอื่นๆ': '',
-        'ยอดสุทธิประจำวัน': workerTotal,
-        'สลิปโอนเงิน': '',
-        'สลิปทางด่วน': '',
-        'หมายเหตุอื่นๆ': '',
+      };
+
+      PRESETS.forEach(p => {
+        workerTotalRow[p] = '';
       });
+
+      workerTotalRow['ทางด่วน'] = '';
+      workerTotalRow['หักสาย'] = '';
+      workerTotalRow['โอที'] = '';
+      workerTotalRow['รวมอื่นๆ'] = '';
+      workerTotalRow['ยอดสุทธิประจำวัน'] = workerTotal;
+      workerTotalRow['สลิปโอนเงิน'] = '';
+      workerTotalRow['สลิปทางด่วน'] = '';
+      workerTotalRow['หมายเหตุอื่นๆ'] = '';
+
+      detailRows.push(workerTotalRow);
 
       detailRows.push({});
     });
@@ -225,9 +291,15 @@ export function ReportsPage() {
     XLSX.utils.book_append_sheet(wb, wsDetails, "รายละเอียดรายบุคคล");
 
     // Adjust column widths basic
-    const cols = [{ wpx: 120 }, { wpx: 100 }, { wpx: 100 }, { wpx: 80 }, { wpx: 60 }, { wpx: 60 }, { wpx: 60 }, { wpx: 80 }, { wpx: 80 }, { wpx: 120 }, { wpx: 120 }, { wpx: 120 }, { wpx: 250 }];
-    wsDetails['!cols'] = cols;
-    wsSummary['!cols'] = [{ wpx: 150 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 150 }];
+    const detailCols = [{ wpx: 120 }, { wpx: 100 }, { wpx: 100 }, { wpx: 80 }, { wpx: 60 }];
+    PRESETS.forEach(() => detailCols.push({ wpx: 90 }));
+    detailCols.push({ wpx: 60 }, { wpx: 60 }, { wpx: 60 }, { wpx: 80 }, { wpx: 80 }, { wpx: 120 }, { wpx: 120 }, { wpx: 250 });
+    wsDetails['!cols'] = detailCols;
+
+    const summaryCols = [{ wpx: 150 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }];
+    PRESETS.forEach(() => summaryCols.push({ wpx: 90 }));
+    summaryCols.push({ wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 150 });
+    wsSummary['!cols'] = summaryCols;
 
     // Save File
     XLSX.writeFile(wb, `Payroll_Report_${startDate}_to_${endDate}.xlsx`);
