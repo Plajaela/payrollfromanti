@@ -320,18 +320,40 @@ export function DailyEntryPage() {
       if (lateDeduction > 0) text += `หักมาสาย: -฿${lateDeduction}\n`;
     }
     if (overtimePay > 0) {
-      let otTimeStr = '';
       const wEnd = worker.shiftEnd || '16:00';
       const wStart = worker.shiftStart || '07:00';
-      if (clockOut > wEnd) {
-        otTimeStr = ` ${wEnd}-${clockOut}`;
-      } else if (clockIn < wStart) {
-        otTimeStr = ` ${clockIn}-${wStart}`;
+
+      let morningOtMins = 0;
+      let eveningOtMins = 0;
+
+      if (clockIn < wStart) {
+        const inTime = clockIn.split(':').map(Number);
+        const startTime = wStart.split(':').map(Number);
+        morningOtMins = (startTime[0] * 60 + startTime[1]) - (inTime[0] * 60 + inTime[1]);
+        const mHours = Math.floor(morningOtMins / 60);
+        const mMins = morningOtMins % 60;
+        const morningPay = (morningOtMins / 60) * 100;
+        const durationStr = ` (${mHours} ชม.${mMins > 0 ? ` ${mMins} นาที` : ''})`;
+        text += `OT เช้า ${clockIn}-${wStart}${durationStr}: ฿${morningPay.toFixed(0)}\n`;
       }
-      const otHours = entry?.overtimeHours || 0;
-      const otMins = entry?.overtimeMinutes || 0;
-      const otDurationInfo = ` (${otHours} ชม.${otMins > 0 ? ` ${otMins} นาที` : ''})`;
-      text += `OT${otTimeStr}${otDurationInfo}: ฿${overtimePay}\n`;
+
+      if (clockOut > wEnd) {
+        const outTime = clockOut.split(':').map(Number);
+        const endTime = wEnd.split(':').map(Number);
+        eveningOtMins = (outTime[0] * 60 + outTime[1]) - (endTime[0] * 60 + endTime[1]);
+        const eHours = Math.floor(eveningOtMins / 60);
+        const eMins = eveningOtMins % 60;
+        const eveningPay = (eveningOtMins / 60) * 100;
+        const durationStr = ` (${eHours} ชม.${eMins > 0 ? ` ${eMins} นาที` : ''})`;
+        text += `OT เย็น ${wEnd}-${clockOut}${durationStr}: ฿${eveningPay.toFixed(0)}\n`;
+      }
+
+      if (morningOtMins === 0 && eveningOtMins === 0) {
+        const otHours = entry?.overtimeHours || 0;
+        const otMins = entry?.overtimeMinutes || 0;
+        const otDurationInfo = ` (${otHours} ชม.${otMins > 0 ? ` ${otMins} นาที` : ''})`;
+        text += `OT${otDurationInfo}: ฿${overtimePay}\n`;
+      }
     }
     if (!entry?.isLeave) {
       text += `\n`;
@@ -386,18 +408,41 @@ export function DailyEntryPage() {
         if (lateDeduction > 0) text += `หักมาสาย: -฿${lateDeduction}\n`;
       }
       if (overtimePay > 0) {
-        let otTimeStr = '';
         const wEnd = worker.shiftEnd || '16:00';
         const wStart = worker.shiftStart || '07:00';
-        if (clockOut > wEnd) {
-          otTimeStr = ` ${wEnd}-${clockOut}`;
-        } else if (clockIn < wStart) {
-          otTimeStr = ` ${clockIn}-${wStart}`;
+
+        let morningOtMins = 0;
+        let eveningOtMins = 0;
+
+        if (clockIn < wStart) {
+          const inTime = clockIn.split(':').map(Number);
+          const startTime = wStart.split(':').map(Number);
+          morningOtMins = (startTime[0] * 60 + startTime[1]) - (inTime[0] * 60 + inTime[1]);
+          const mHours = Math.floor(morningOtMins / 60);
+          const mMins = morningOtMins % 60;
+          const morningPay = (morningOtMins / 60) * 100;
+          const durationStr = ` (${mHours} ชม.${mMins > 0 ? ` ${mMins} นาที` : ''})`;
+          text += `OT เช้า ${clockIn}-${wStart}${durationStr}: ฿${morningPay.toFixed(0)}\n`;
         }
-        const otHours = entry?.overtimeHours || 0;
-        const otMins = entry?.overtimeMinutes || 0;
-        const otDurationInfo = ` (${otHours} ชม.${otMins > 0 ? ` ${otMins} นาที` : ''})`;
-        text += `OT${otTimeStr}${otDurationInfo}: ฿${overtimePay}\n`;
+
+        if (clockOut > wEnd) {
+          const outTime = clockOut.split(':').map(Number);
+          const endTime = wEnd.split(':').map(Number);
+          eveningOtMins = (outTime[0] * 60 + outTime[1]) - (endTime[0] * 60 + endTime[1]);
+          const eHours = Math.floor(eveningOtMins / 60);
+          const eMins = eveningOtMins % 60;
+          const eveningPay = (eveningOtMins / 60) * 100;
+          const durationStr = ` (${eHours} ชม.${eMins > 0 ? ` ${eMins} นาที` : ''})`;
+          text += `OT เย็น ${wEnd}-${clockOut}${durationStr}: ฿${eveningPay.toFixed(0)}\n`;
+        }
+
+        // Handle case where overtimePay is overridden manually but format doesn't match
+        if (morningOtMins === 0 && eveningOtMins === 0) {
+          const otHours = entry?.overtimeHours || 0;
+          const otMins = entry?.overtimeMinutes || 0;
+          const otDurationInfo = ` (${otHours} ชม.${otMins > 0 ? ` ${otMins} นาที` : ''})`;
+          text += `OT${otDurationInfo}: ฿${overtimePay}\n`;
+        }
       }
       if (!entry?.isLeave) {
         text += `- ค่าแรง: ฿${baseWage}\n`;
