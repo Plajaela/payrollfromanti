@@ -51,6 +51,8 @@ export function DailyEntryPage() {
     transferSlipUrl: '',
     tollReceiptUrl: '',
     isLeave: false,
+    hasGuaranteeDeduction: false,
+    guaranteeDeductionAmount: 100,
   });
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
@@ -68,7 +70,8 @@ export function DailyEntryPage() {
     const adjustmentsTotal = formData.adjustments.reduce((sum, adj) => {
       return sum + (adj.type === 'add' ? Number(adj.amount) : -Number(adj.amount));
     }, 0);
-    return formData.baseWage + formData.travelAllowance + formData.tollFee + otPay + adjustmentsTotal - formData.lateDeduction;
+    const guaranteeDed = formData.hasGuaranteeDeduction ? formData.guaranteeDeductionAmount : 0;
+    return formData.baseWage + formData.travelAllowance + formData.tollFee + otPay + adjustmentsTotal - formData.lateDeduction - guaranteeDed;
   };
 
   // Auto-calculate late deduction and overtime when times change
@@ -158,6 +161,8 @@ export function DailyEntryPage() {
         transferSlipUrl: existingEntry.transferSlipUrl || '',
         tollReceiptUrl: existingEntry.tollReceiptUrl || '',
         isLeave: existingEntry.isLeave || false,
+        hasGuaranteeDeduction: (existingEntry.guaranteeDeduction || 0) > 0,
+        guaranteeDeductionAmount: existingEntry.guaranteeDeduction || 100,
       });
       setEditingId(existingEntry.id);
     } else {
@@ -179,6 +184,8 @@ export function DailyEntryPage() {
         transferSlipUrl: '',
         tollReceiptUrl: '',
         isLeave: false,
+        hasGuaranteeDeduction: false,
+        guaranteeDeductionAmount: 100,
       });
       setEditingId(null);
     }
@@ -265,6 +272,7 @@ export function DailyEntryPage() {
       isLeave: formData.isLeave,
       transferSlipUrl: formData.transferSlipUrl,
       tollReceiptUrl: formData.tollReceiptUrl,
+      guaranteeDeduction: formData.hasGuaranteeDeduction ? formData.guaranteeDeductionAmount : 0,
     };
 
     if (editingId) {
@@ -329,6 +337,7 @@ export function DailyEntryPage() {
       text += `- ค่าแรง: ฿${baseWage}\n`;
       if (travelAllowance > 0) text += `- ค่ารถ: ฿${travelAllowance}\n`;
       if (tollFee > 0) text += `- ทางด่วน: ฿${tollFee}\n`;
+      if (entry?.guaranteeDeduction && entry.guaranteeDeduction > 0) text += `- หักเงินประกันสะสม: -฿${entry.guaranteeDeduction}\n`;
     } else {
       text += `\n`;
     }
@@ -393,6 +402,7 @@ export function DailyEntryPage() {
         text += `- ค่าแรง: ฿${baseWage}\n`;
         if (travelAllowance > 0) text += `- ค่ารถ: ฿${travelAllowance}\n`;
         if (tollFee > 0) text += `- ทางด่วน: ฿${tollFee}\n`;
+        if (entry?.guaranteeDeduction && entry.guaranteeDeduction > 0) text += `- หักเงินประกันสะสม: -฿${entry.guaranteeDeduction}\n`;
       }
 
       if (adjustments && adjustments.length > 0) {
@@ -832,6 +842,25 @@ export function DailyEntryPage() {
                       <input disabled={isUploading} type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'tollReceiptUrl')} />
                     </label>
                   </div>
+                </div>
+              </div>
+
+              {/* Guarantee Deduction */}
+              <div className="bg-orange-50/50 p-4 rounded-3xl border border-orange-100 flex items-center justify-between gap-4">
+                <div className="flex flex-col">
+                  <span className="font-semibold text-orange-800 flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-orange-500" /> หักเงินประกันสะสม</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  {formData.hasGuaranteeDeduction && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm font-semibold text-orange-700">฿</span>
+                      <Input type="number" min="0" value={formData.guaranteeDeductionAmount || ''} onChange={(e) => setFormData(p => ({ ...p, guaranteeDeductionAmount: Number(e.target.value) }))} className="w-20 font-semibold h-9 text-sm px-2 text-right border-orange-200" />
+                    </div>
+                  )}
+                  <label className="relative inline-flex items-center cursor-pointer ml-auto">
+                    <input type="checkbox" className="sr-only peer" checked={formData.hasGuaranteeDeduction} onChange={(e) => setFormData(p => ({ ...p, hasGuaranteeDeduction: e.target.checked }))} />
+                    <div className="w-11 h-6 bg-orange-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+                  </label>
                 </div>
               </div>
 
