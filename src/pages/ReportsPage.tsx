@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { useStore } from '../useStore';
 import { Button, Input, Card, Label } from '../components/ui';
-import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
-import { FileSpreadsheet, Copy, Check } from 'lucide-react';
+import { parseISO, startOfMonth, endOfMonth, isWithinInterval, format } from 'date-fns';
+import { FileSpreadsheet, Copy, Check, Table2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import Papa from 'papaparse';
 
 export function ReportsPage() {
   const { workers, entries } = useStore();
@@ -305,6 +306,177 @@ export function ReportsPage() {
     XLSX.writeFile(wb, `Payroll_Report_${startDate}_to_${endDate}.xlsx`);
   };
 
+  const handleExportCSV = () => {
+    const PRESETS = [
+      'ค่ารถไปงานที่ 1',
+      'ค่ารถไปงานที่ 2',
+      'ค่ารถไปงานที่ 3',
+      'ค่ารถไปงานที่ 4',
+      'เบี้ยเลี้ยง',
+      'โบนัสพิเศษ'
+    ];
+
+    const filteredEntries = entries.filter(entry => {
+      const entryDate = parseISO(entry.date);
+      return isWithinInterval(entryDate, {
+        start: parseISO(startDate),
+        end: parseISO(endDate)
+      });
+    });
+
+    const csvData: any[] = [];
+
+    // --- SUMMARY PART ---
+    csvData.push({ 'ชื่อช่าง': '--- สรุปยอดรวม ---', 'วันที่': '', 'เวลาทำงาน': '', 'ค่าแรง': '', 'ค่ารถ': '' });
+
+    // Header for Summary
+    const summaryHeader: any = {
+      'ชื่อช่าง': 'ชื่อช่าง',
+      'วันที่': 'จำนวนวันทำงาน',
+      'เวลาทำงาน': 'รวมค่าแรง',
+      'ค่าแรง': 'รวมค่ารถ',
+      'ค่ารถ': 'รวมค่าทางด่วน',
+      'ทางด่วน': 'รวมหักมาสาย',
+      'หักสาย': 'รวมโอที',
+      'โอที': 'รวมอื่นๆ (สุทธิ)',
+      'รวมอื่นๆ': 'ยอดสุทธิ'
+    };
+    PRESETS.forEach(p => summaryHeader[p] = p);
+    csvData.push(summaryHeader);
+
+    reportData.forEach(row => {
+      const workerEntries = filteredEntries.filter(e => e.workerId === row.worker.id);
+      const presetSums: Record<string, number> = {};
+      PRESETS.forEach(p => presetSums[p] = 0);
+      let otherSums = 0;
+
+      workerEntries.forEach(entry => {
+        entry.adjustments?.forEach(adj => {
+          const amount = adj.type === 'add' ? Number(adj.amount) : -Number(adj.amount);
+          const note = (adj.note || '').trim();
+          if (PRESETS.includes(note)) {
+            presetSums[note] += amount;
+          } else {
+            otherSums += amount;
+          }
+        });
+      });
+
+      const summaryRow: any = {
+        'ชื่อช่าง': row.worker.name,
+        'วันที่': `${row.totalDays}${row.leaveDays > 0 ? ` (ลา ${row.leaveDays})` : ''}`,
+        'เวลาทำงาน': row.totalBaseWage,
+        'ค่าแรง': row.totalTravel,
+        'ค่ารถ': row.totalToll,
+        'ทางด่วน': row.totalLate,
+        'หักสาย': row.totalOT,
+        'โอที': otherSums,
+        'รวมอื่นๆ': row.grandTotal
+      };
+      PRESETS.forEach(p => summaryRow[p] = presetSums[p]);
+      csvData.push(summaryRow);
+    });
+
+    csvData.push({});
+    csvData.push({});
+
+    // --- DETAILS PART ---
+    csvData.push({ 'ชื่อช่าง': '--- รายละเอียดรายบุคคล ---', 'วันที่': '', 'เวลาทำงาน': '', 'ค่าแรง': '', 'ค่ารถ': '' });
+
+    const detailsHeader: any = {
+      'ชื่อช่าง': 'ชื่อช่าง',
+      'วันที่': 'วันที่',
+      'เวลาทำงาน': 'เวลาทำงาน',
+      'ค่าแรง': 'ค่าแรง',
+      'ค่ารถ': 'ค่ารถ',
+      'ทางด่วน': 'ทางด่วน',
+      'หักสาย': 'หักสาย',
+      'โอที': 'โอที',
+      'รวมอื่นๆ': 'รวมอื่นๆ',
+      'ยอดสุทธิประจำวัน': 'ยอดสุทธิประจำวัน',
+      'สลิปโอนเงิน': 'สลิปโอนเงิน',
+      'สลิปทางด่วน': 'สลิปทางด่วน',
+      'หมายเหตุอื่นๆ': 'หมายเหตุอื่นๆ'
+    };
+    PRESETS.forEach(p => detailsHeader[p] = p);
+    csvData.push(detailsHeader);
+
+    const groupedByWorker: Record<string, typeof entries[number][]> = {};
+    filteredEntries.forEach(entry => {
+      if (!groupedByWorker[entry.workerId]) {
+        groupedByWorker[entry.workerId] = [];
+      }
+      groupedByWorker[entry.workerId].push(entry);
+    });
+
+    const sortedWorkers = [...workers].sort((a, b) => a.name.localeCompare(b.name));
+
+    sortedWorkers.forEach(worker => {
+      const workerEntries = groupedByWorker[worker.id] || [];
+      if (workerEntries.length === 0) return;
+
+      workerEntries.sort((a, b) => a.date.localeCompare(b.date));
+      let workerTotal = 0;
+
+      workerEntries.forEach(entry => {
+        const presetSums: Record<string, number> = {};
+        PRESETS.forEach(p => presetSums[p] = 0);
+        let otherSums = 0;
+
+        entry.adjustments?.forEach(a => {
+          const amount = a.type === 'add' ? Number(a.amount) : -Number(a.amount);
+          const note = (a.note || '').trim();
+          if (PRESETS.includes(note)) {
+            presetSums[note] += amount;
+          } else {
+            otherSums += amount;
+          }
+        });
+
+        const notes = entry.adjustments?.map(a => `${a.note || 'ไม่มีหมายเหตุ'} (${a.type === 'add' ? '+' : '-'}${a.amount})`).join(', ') || '';
+
+        workerTotal += entry.totalPay;
+
+        const detailRow: any = {
+          'ชื่อช่าง': worker.name,
+          'วันที่': format(parseISO(entry.date), 'dd/MM/yyyy'),
+          'เวลาทำงาน': entry.isLeave ? 'ลาหยุด' : `${entry.clockIn} - ${entry.clockOut}`,
+          'ค่าแรง': entry.isLeave ? '-' : entry.baseWage,
+          'ค่ารถ': entry.isLeave ? '-' : entry.travelAllowance,
+          'ทางด่วน': entry.isLeave ? '-' : entry.tollFee,
+          'หักสาย': entry.isLeave ? '-' : entry.lateDeduction,
+          'โอที': entry.isLeave ? '-' : entry.overtimePay,
+          'รวมอื่นๆ': entry.isLeave ? '-' : otherSums,
+          'ยอดสุทธิประจำวัน': entry.isLeave ? '-' : entry.totalPay,
+          'สลิปโอนเงิน': entry.isLeave ? '-' : (entry.transferSlipUrl ? 'มีสลิป' : '-'),
+          'สลิปทางด่วน': entry.isLeave || entry.tollFee === 0 ? '-' : (entry.tollReceiptUrl ? 'มีสลิป' : '-'),
+          'หมายเหตุอื่นๆ': entry.isLeave ? 'ลาหยุด' : notes,
+        };
+        PRESETS.forEach(p => detailRow[p] = entry.isLeave ? '-' : presetSums[p]);
+        csvData.push(detailRow);
+      });
+
+      const workerTotalRow: any = {
+        'ชื่อช่าง': `รวมยอด ${worker.name}`,
+        'ยอดสุทธิประจำวัน': workerTotal,
+      };
+      csvData.push(workerTotalRow);
+      csvData.push({});
+    });
+
+    const csvOutput = Papa.unparse(csvData);
+
+    // Download logic with BOM for UTF-8 Excel/Google Sheets support
+    const blob = new Blob(['\uFEFF' + csvOutput], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Payroll_GoogleSheets_${startDate}_to_${endDate}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-6 pb-20">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -313,9 +485,14 @@ export function ReportsPage() {
             {copiedId === 'all' ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
             {copiedId === 'all' ? 'คัดลอกแล้ว' : 'คัดลอกสรุปทุกคน'}
           </Button>
-          <Button onClick={handleExportExcel} disabled={reportData.length === 0} className="w-full sm:w-auto gap-2 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200 text-white border-0">
-            <FileSpreadsheet className="w-5 h-5" /> Export Excel
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleExportCSV} disabled={reportData.length === 0} className="flex-1 sm:w-auto gap-2 bg-[#0F9D58] hover:bg-[#0d8a4d] shadow-green-200 text-white border-0 px-4">
+              <Table2 className="w-5 h-5" /> Export Google Sheets (CSV)
+            </Button>
+            <Button onClick={handleExportExcel} disabled={reportData.length === 0} className="flex-1 sm:w-auto gap-2 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200 text-white border-0 px-4">
+              <FileSpreadsheet className="w-5 h-5" /> Export Excel
+            </Button>
+          </div>
         </div>
       </div>
 
