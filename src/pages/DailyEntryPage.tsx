@@ -25,6 +25,7 @@ export function DailyEntryPage() {
   const [showLalamoveCalc, setShowLalamoveCalc] = useState(false);
   const [lalamoveDist, setLalamoveDist] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
   // Set default tab when workers change or active tab is not set
   useEffect(() => {
@@ -826,7 +827,7 @@ export function DailyEntryPage() {
                   <Label className="text-xs flex justify-between items-center mb-1">
                     <span>ทางด่วน</span>
                     {formData.tollReceiptUrl && (
-                      <a href={formData.tollReceiptUrl} target="_blank" rel="noreferrer" className="text-[10px] text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded flex items-center gap-0.5 hover:bg-emerald-100 transition-colors" title="คลิกเพื่อดูรูป"><Check className="w-3 h-3" /> ดูใบเสร็จ</a>
+                      <button type="button" onClick={() => setPreviewImageUrl(formData.tollReceiptUrl)} className="text-[10px] text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded flex items-center gap-0.5 hover:bg-emerald-100 transition-colors" title="คลิกเพื่อดูรูป"><Check className="w-3 h-3" /> ดูใบเสร็จ</button>
                     )}
                   </Label>
                   <div className="relative">
@@ -976,9 +977,9 @@ export function DailyEntryPage() {
                           className={`h-10 text-sm bg-white w-full ${adj.receiptUrl ? 'pr-16' : 'pr-8'}`}
                         />
                         {adj.receiptUrl && (
-                          <a href={adj.receiptUrl} target="_blank" rel="noreferrer" className="absolute right-8 top-1/2 -translate-y-1/2 text-emerald-600 hover:text-emerald-700 bg-white p-1 rounded-md shadow-sm border border-emerald-100" title="ดูรูปที่แนบ">
+                          <button type="button" onClick={() => setPreviewImageUrl(adj.receiptUrl!)} className="absolute right-8 top-1/2 -translate-y-1/2 text-emerald-600 hover:text-emerald-700 bg-white p-1 rounded-md shadow-sm border border-emerald-100" title="ดูรูปที่แนบ">
                             <ImagePlus className="w-3.5 h-3.5" />
-                          </a>
+                          </button>
                         )}
                         <label className={`absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer transition-colors text-gray-400 hover:text-sky-500 ${adj.receiptUrl ? 'bg-white p-1 rounded-md' : ''}`} title={adj.receiptUrl ? 'อัพโหลดรูปใหม่' : 'แนบสลิป/ใบเสร็จ'}>
                           <ImagePlus className="w-4 h-4" />
@@ -1022,12 +1023,12 @@ export function DailyEntryPage() {
               <div className="flex flex-col items-end gap-2">
                 <div className="flex items-center gap-2">
                   {formData.transferSlipUrl && (
-                    <a href={formData.transferSlipUrl} target="_blank" rel="noreferrer" className="shrink-0 group relative rounded-lg overflow-hidden border border-emerald-200 shadow-sm" title="คลิกเพื่อดูสลิปโอนเงิน">
+                    <button type="button" onClick={() => setPreviewImageUrl(formData.transferSlipUrl)} className="shrink-0 group relative rounded-lg overflow-hidden border border-emerald-200 shadow-sm" title="คลิกเพื่อดูสลิปโอนเงิน">
                       <img src={formData.transferSlipUrl} alt="slip" className="w-10 h-10 object-cover group-hover:scale-110 transition-transform duration-300" />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
                         <span className="text-[9px] text-white font-bold tracking-wide">ดูสลิป</span>
                       </div>
-                    </a>
+                    </button>
                   )}
                   <label className={`flex items-center gap-2 px-3 py-1.5 rounded-xl cursor-pointer transition-all border ${isUploading ? 'bg-amber-50 border-amber-200 text-amber-700 cursor-not-allowed' : formData.transferSlipUrl ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-sky-50 hover:border-sky-200 hover:text-sky-600'}`}>
                     {isUploading ? (
@@ -1087,6 +1088,25 @@ export function DailyEntryPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Image Preview Modal */}
+      {previewImageUrl && (
+        <Modal
+          isOpen={true}
+          onClose={() => setPreviewImageUrl(null)}
+          title="ดูรูปภาพ"
+        >
+          <div className="flex flex-col items-center justify-center p-2">
+            <img src={previewImageUrl} alt="Preview" className="max-w-full max-h-[70vh] object-contain rounded-xl border border-gray-200 shadow-sm" />
+            <Button
+              onClick={() => setPreviewImageUrl(null)}
+              className="mt-6 w-full py-3 rounded-2xl shadow-sm bg-gray-100 hover:bg-gray-200 text-gray-700"
+            >
+              ปิดหน้าต่าง
+            </Button>
+          </div>
+        </Modal>
+      )}
     </div >
   );
 }
