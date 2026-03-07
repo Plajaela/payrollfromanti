@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { WorkersPage } from './pages/WorkersPage';
 import { DailyEntryPage } from './pages/DailyEntryPage';
 import { ReportsPage } from './pages/ReportsPage';
-import { Users, CalendarDays, FileText } from 'lucide-react';
+import { WalletPage } from './pages/WalletPage';
+import { Users, CalendarDays, FileText, Wallet } from 'lucide-react';
 import { cn } from './components/ui';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'daily' | 'workers' | 'reports'>('daily');
+  const [activeTab, setActiveTab] = useState<'daily' | 'workers' | 'reports' | 'wallet'>('daily');
 
   return (
     <div className="min-h-screen bg-gray-50/50 font-sans text-gray-900 pb-24">
@@ -16,6 +17,7 @@ export default function App() {
           <h1 className="text-xl font-bold tracking-tight text-gray-900">
             {activeTab === 'daily' && 'บันทึกรายวัน'}
             {activeTab === 'workers' && 'จัดการช่าง'}
+            {activeTab === 'wallet' && 'บัญชีสะสม'}
             {activeTab === 'reports' && 'รายงาน'}
           </h1>
         </div>
@@ -25,6 +27,7 @@ export default function App() {
       <main className="max-w-5xl mx-auto px-4 py-6">
         {activeTab === 'daily' && <DailyEntryPage />}
         {activeTab === 'workers' && <WorkersPage />}
+        {activeTab === 'wallet' && <WalletPage />}
         {activeTab === 'reports' && <ReportsPage />}
       </main>
 
@@ -54,6 +57,18 @@ export default function App() {
               <Users className="w-6 h-6" />
             </div>
             <span className="text-[10px] font-semibold">ช่าง</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('wallet')}
+            className={cn(
+              "flex flex-col items-center p-2 rounded-2xl w-20 transition-all",
+              activeTab === 'wallet' ? "text-red-600" : "text-gray-400 hover:text-gray-600"
+            )}
+          >
+            <div className={cn("p-1.5 rounded-xl mb-1 transition-colors", activeTab === 'wallet' ? "bg-sky-50" : "")}>
+              <Wallet className="w-6 h-6" />
+            </div>
+            <span className="text-[10px] font-semibold">บัญชีสะสม</span>
           </button>
           <button
             onClick={() => setActiveTab('reports')}

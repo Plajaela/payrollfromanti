@@ -38,3 +38,12 @@ export interface DailyEntry {
   tollReceiptUrl?: string;
   guaranteeDeduction?: number;
 }
+
+export interface AdvancePayment {
+  id: string;
+  workerId: string;
+  date: string;
+  amount: number;
+  type: 'borrow' | 'repay';
+  note: string;
+}

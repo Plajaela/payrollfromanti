@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Worker, DailyEntry } from './types';
+import { Worker, DailyEntry, AdvancePayment } from './types';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from './lib/supabase';
 
@@ -18,6 +18,8 @@ export function useStore() {
     const saved = localStorage.getItem(STORAGE_KEY_ENTRIES);
     return saved ? JSON.parse(saved) : [];
   });
+
+  const [advances, setAdvances] = useState<AdvancePayment[]>([]);
 
   // Fetch workers from Supabase on mount and subscribe to changes
   useEffect(() => {
@@ -242,6 +244,54 @@ export function useStore() {
     };
   }, []);
 
+  // Fetch advances from Supabase
+  useEffect(() => {
+    const fetchAdvances = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('advance_payments')
+          .select('*')
+          .order('date', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching advances:', error);
+          return;
+        }
+
+        if (data) {
+          const formattedAdvances: AdvancePayment[] = data.map(a => ({
+            id: a.id,
+            workerId: a.worker_id,
+            date: a.date,
+            amount: Number(a.amount),
+            type: a.type,
+            note: a.note || ''
+          }));
+          setAdvances(formattedAdvances);
+        }
+      } catch (err) {
+        console.error('Failed to fetch advances:', err);
+      }
+    };
+
+    fetchAdvances();
+
+    const subscription = supabase
+      .channel('advances_channel')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'advance_payments' },
+        () => {
+          fetchAdvances();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, []);
+
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_WORKERS, JSON.stringify(workers));
   }, [workers]);
@@ -409,6 +459,42 @@ export function useStore() {
     }
   };
 
+  const addAdvance = async (advance: Omit<AdvancePayment, 'id'>) => {
+    const newId = uuidv4();
+    const newAdvance = { ...advance, id: newId };
+    setAdvances((prev) => [...prev, newAdvance]);
+
+    try {
+      const { error } = await supabase.from('advance_payments').insert([{
+        id: newId,
+        worker_id: advance.workerId,
+        date: advance.date,
+        amount: advance.amount,
+        type: advance.type,
+        note: advance.note
+      }]);
+
+      if (error) throw error;
+    } catch (err) {
+      console.error('Failed to add advance to Supabase:', err);
+    }
+  };
+
+  const deleteAdvance = async (id: string) => {
+    setAdvances((prev) => prev.filter((a) => a.id !== id));
+
+    try {
+      const { error } = await supabase
+        .from('advance_payments')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (err) {
+      console.error('Failed to delete advance from Supabase:', err);
+    }
+  };
+
   return {
     workers,
     isWorkersLoading,
@@ -420,5 +506,8 @@ export function useStore() {
     addEntry,
     updateEntry,
     deleteEntry,
+    advances,
+    addAdvance,
+    deleteAdvance,
   };
 }
