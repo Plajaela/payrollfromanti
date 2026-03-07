@@ -3,7 +3,7 @@ import { useStore } from '../useStore';
 import { Button, Input, Label, Card, Modal } from '../components/ui';
 import { format, addDays, subDays } from 'date-fns';
 import { th } from 'date-fns/locale';
-import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Settings2, RefreshCw, Copy, Check, Paperclip, ImagePlus } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Settings2, RefreshCw, Copy, Check, Paperclip, ImagePlus, X } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Adjustment } from '../types';
 import { supabase } from '../lib/supabase';
@@ -827,7 +827,10 @@ export function DailyEntryPage() {
                   <Label className="text-xs flex justify-between items-center mb-1">
                     <span>ทางด่วน</span>
                     {formData.tollReceiptUrl && (
-                      <button type="button" onClick={() => setPreviewImageUrl(formData.tollReceiptUrl)} className="text-[10px] text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded flex items-center gap-0.5 hover:bg-emerald-100 transition-colors" title="คลิกเพื่อดูรูป"><Check className="w-3 h-3" /> ดูใบเสร็จ</button>
+                      <div className="flex items-center gap-1">
+                        <button type="button" onClick={() => setPreviewImageUrl(formData.tollReceiptUrl)} className="text-[10px] text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded flex items-center gap-0.5 hover:bg-emerald-100 transition-colors" title="คลิกเพื่อดูรูป"><Check className="w-3 h-3" /> ดูใบเสร็จ</button>
+                        <button type="button" onClick={() => setFormData(p => ({ ...p, tollReceiptUrl: '' }))} className="text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100 p-0.5 rounded transition-colors" title="ลบใบเสร็จ"><X className="w-3 h-3" /></button>
+                      </div>
                     )}
                   </Label>
                   <div className="relative">
@@ -974,14 +977,23 @@ export function DailyEntryPage() {
                             newAdjs[idx].note = e.target.value;
                             setFormData(p => ({ ...p, adjustments: newAdjs }));
                           }}
-                          className={`h-10 text-sm bg-white w-full ${adj.receiptUrl ? 'pr-16' : 'pr-8'}`}
+                          className={`h-10 text-sm bg-white w-full ${adj.receiptUrl ? 'pr-20' : 'pr-8'}`}
                         />
                         {adj.receiptUrl && (
-                          <button type="button" onClick={() => setPreviewImageUrl(adj.receiptUrl!)} className="absolute right-8 top-1/2 -translate-y-1/2 text-emerald-600 hover:text-emerald-700 bg-white p-1 rounded-md shadow-sm border border-emerald-100" title="ดูรูปที่แนบ">
-                            <ImagePlus className="w-3.5 h-3.5" />
-                          </button>
+                          <div className="absolute right-8 top-1/2 -translate-y-1/2 flex items-center gap-0.5 bg-white p-0.5 rounded-md shadow-sm border border-emerald-100 transition-colors z-10">
+                            <button type="button" onClick={() => setPreviewImageUrl(adj.receiptUrl!)} className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 p-1 rounded transition-colors" title="ดูรูปที่แนบ">
+                              <ImagePlus className="w-3.5 h-3.5" />
+                            </button>
+                            <button type="button" onClick={() => {
+                              const newAdjs = [...formData.adjustments];
+                              newAdjs[idx].receiptUrl = '';
+                              setFormData(p => ({ ...p, adjustments: newAdjs }));
+                            }} className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors" title="ลบรูป">
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         )}
-                        <label className={`absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer transition-colors text-gray-400 hover:text-sky-500 ${adj.receiptUrl ? 'bg-white p-1 rounded-md' : ''}`} title={adj.receiptUrl ? 'อัพโหลดรูปใหม่' : 'แนบสลิป/ใบเสร็จ'}>
+                        <label className={`absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer transition-colors text-gray-400 hover:text-sky-500 ${adj.receiptUrl ? 'bg-white p-1 rounded-md' : ''} z-0`} title={adj.receiptUrl ? 'อัพโหลดรูปใหม่' : 'แนบสลิป/ใบเสร็จ'}>
                           <ImagePlus className="w-4 h-4" />
                           <input disabled={isUploading} type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'adjustments', adj.id)} />
                         </label>
@@ -1023,12 +1035,17 @@ export function DailyEntryPage() {
               <div className="flex flex-col items-end gap-2">
                 <div className="flex items-center gap-2">
                   {formData.transferSlipUrl && (
-                    <button type="button" onClick={() => setPreviewImageUrl(formData.transferSlipUrl)} className="shrink-0 group relative rounded-lg overflow-hidden border border-emerald-200 shadow-sm" title="คลิกเพื่อดูสลิปโอนเงิน">
-                      <img src={formData.transferSlipUrl} alt="slip" className="w-10 h-10 object-cover group-hover:scale-110 transition-transform duration-300" />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
-                        <span className="text-[9px] text-white font-bold tracking-wide">ดูสลิป</span>
-                      </div>
-                    </button>
+                    <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-emerald-100 shadow-sm">
+                      <button type="button" onClick={() => setPreviewImageUrl(formData.transferSlipUrl)} className="shrink-0 group relative rounded-lg overflow-hidden border border-emerald-200" title="คลิกเพื่อดูสลิปโอนเงิน">
+                        <img src={formData.transferSlipUrl} alt="slip" className="w-10 h-10 object-cover group-hover:scale-110 transition-transform duration-300" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
+                          <span className="text-[9px] text-white font-bold tracking-wide">ดูสลิป</span>
+                        </div>
+                      </button>
+                      <button type="button" onClick={() => setFormData(p => ({ ...p, transferSlipUrl: '' }))} className="shrink-0 flex items-center justify-center w-8 h-10 rounded-lg text-red-500 bg-red-50 hover:bg-red-100 border border-red-100 transition-colors" title="ลบสลิปโอนเงิน">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
                   )}
                   <label className={`flex items-center gap-2 px-3 py-1.5 rounded-xl cursor-pointer transition-all border ${isUploading ? 'bg-amber-50 border-amber-200 text-amber-700 cursor-not-allowed' : formData.transferSlipUrl ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-sky-50 hover:border-sky-200 hover:text-sky-600'}`}>
                     {isUploading ? (
