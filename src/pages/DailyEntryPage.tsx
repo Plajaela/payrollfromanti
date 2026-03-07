@@ -623,6 +623,39 @@ export function DailyEntryPage() {
                     >
                       {copiedId === activeWorker.id ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5" />}
                     </Button>
+                    <Button
+                      variant="danger"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // 1. Create a dummy event to submit immediately as leave
+                        const entryData = {
+                          workerId: activeWorker.id,
+                          date: dateStr,
+                          clockIn: activeWorker.shiftStart || '07:00',
+                          clockOut: activeWorker.shiftEnd || '16:00',
+                          baseWage: activeWorker.baseWage,
+                          travelAllowance: activeWorker.defaultTravelAllowance,
+                          tollFee: 0,
+                          lateDeduction: 0,
+                          overtimeHours: 0,
+                          overtimeMinutes: 0,
+                          overtimePay: 0,
+                          adjustments: [],
+                          totalPay: 0,
+                          note: '',
+                          isDraft: false,
+                          isLeave: true,
+                          transferSlipUrl: '',
+                          tollReceiptUrl: '',
+                          guaranteeDeduction: 0, // No deduction on leave day
+                        };
+                        addEntry(entryData);
+                      }}
+                      className="p-3 h-auto rounded-xl bg-amber-50 text-amber-600 hover:bg-amber-100 border border-amber-100 font-medium text-sm flex items-center gap-1.5"
+                      title="บันทึกว่าลาหยุดทันที"
+                    >
+                      <span className="text-lg leading-none">🏖️</span> ลาหยุด
+                    </Button>
                   </>
                 )}
               </div>
