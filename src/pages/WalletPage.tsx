@@ -123,9 +123,14 @@ export function WalletPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {workers.map(worker => {
-                    const stats = getWorkerStats(worker.id);
-                    return (
+                {workers
+                    .map(worker => ({ worker, stats: getWorkerStats(worker.id) }))
+                    .sort((a, b) => {
+                        const aActive = (a.stats.guaranteeTotal > 0 || a.stats.advanceTotal > 0) ? 1 : 0;
+                        const bActive = (b.stats.guaranteeTotal > 0 || b.stats.advanceTotal > 0) ? 1 : 0;
+                        return bActive - aActive; // 1 (Active) comes before 0 (Inactive)
+                    })
+                    .map(({ worker, stats }) => (
                         <Card
                             key={worker.id}
                             className="p-5 cursor-pointer hover:border-sky-200 transition-colors active:scale-[0.98]"
@@ -149,8 +154,7 @@ export function WalletPage() {
                                 </div>
                             </div>
                         </Card>
-                    );
-                })}
+                    ))}
             </div>
 
             <Modal
