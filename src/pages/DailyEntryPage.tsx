@@ -185,7 +185,7 @@ export function DailyEntryPage() {
         transferSlipUrl: '',
         tollReceiptUrl: '',
         isLeave: false,
-        hasGuaranteeDeduction: false,
+        hasGuaranteeDeduction: worker.hasGuarantee || false,
         guaranteeDeductionAmount: 100,
       });
       setEditingId(null);
