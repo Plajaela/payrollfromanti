@@ -178,7 +178,8 @@ export function useStore() {
                   is_draft: e.isDraft || false,
                   is_leave: e.isLeave || false,
                   transfer_slip_url: e.transferSlipUrl,
-                  toll_receipt_url: e.tollReceiptUrl
+                  toll_receipt_url: e.tollReceiptUrl,
+                  guarantee_deduction: e.guaranteeDeduction || 0
                 }))
               );
 
@@ -211,7 +212,8 @@ export function useStore() {
             isDraft: e.is_draft,
             isLeave: e.is_leave,
             transferSlipUrl: e.transfer_slip_url,
-            tollReceiptUrl: e.toll_receipt_url
+            tollReceiptUrl: e.toll_receipt_url,
+            guaranteeDeduction: Number(e.guarantee_deduction) || 0
           }));
           setEntries(formattedEntries);
         }
@@ -344,7 +346,8 @@ export function useStore() {
         is_draft: entry.isDraft || false,
         is_leave: entry.isLeave || false,
         transfer_slip_url: entry.transferSlipUrl,
-        toll_receipt_url: entry.tollReceiptUrl
+        toll_receipt_url: entry.tollReceiptUrl,
+        guarantee_deduction: entry.guaranteeDeduction || 0
       }]);
 
       if (error) throw error;
@@ -378,6 +381,7 @@ export function useStore() {
       if (updated.isLeave !== undefined) updateData.is_leave = updated.isLeave;
       if (updated.transferSlipUrl !== undefined) updateData.transfer_slip_url = updated.transferSlipUrl;
       if (updated.tollReceiptUrl !== undefined) updateData.toll_receipt_url = updated.tollReceiptUrl;
+      if (updated.guaranteeDeduction !== undefined) updateData.guarantee_deduction = updated.guaranteeDeduction;
 
       const { error } = await supabase
         .from('daily_entries')
