@@ -131,14 +131,26 @@ export function WalletPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {workers
-                    .map(worker => ({ worker, stats: getWorkerStats(worker.id) }))
-                    .sort((a, b) => {
-                        const aActive = (a.stats.guaranteeTotal > 0 || a.stats.advanceTotal > 0) ? 1 : 0;
-                        const bActive = (b.stats.guaranteeTotal > 0 || b.stats.advanceTotal > 0) ? 1 : 0;
-                        return bActive - aActive; // 1 (Active) comes before 0 (Inactive)
-                    })
-                    .map(({ worker, stats }) => (
+                {(() => {
+                    const filteredWorkers = workers
+                        .map(worker => ({ worker, stats: getWorkerStats(worker.id) }))
+                        .filter(({ stats }) => stats.guaranteeTotal > 0 || stats.workerAdvances.length > 0)
+                        .sort((a, b) => {
+                            // Sort by active advance debt first, then by guarantee total
+                            if (a.stats.advanceTotal > 0 && b.stats.advanceTotal <= 0) return -1;
+                            if (b.stats.advanceTotal > 0 && a.stats.advanceTotal <= 0) return 1;
+                            return b.stats.guaranteeTotal - a.stats.guaranteeTotal;
+                        });
+
+                    if (filteredWorkers.length === 0) {
+                        return (
+                            <div className="col-span-full text-center py-10 bg-white border border-dashed border-gray-200 rounded-3xl text-gray-400">
+                                ไม่มีประวัติบัญชีสะสม
+                            </div>
+                        );
+                    }
+
+                    return filteredWorkers.map(({ worker, stats }) => (
                         <Card
                             key={worker.id}
                             className="p-5 cursor-pointer hover:border-sky-200 transition-colors active:scale-[0.98]"
@@ -162,7 +174,8 @@ export function WalletPage() {
                                 </div>
                             </div>
                         </Card>
-                    ))}
+                    ));
+                })()}
             </div>
 
             <Modal
