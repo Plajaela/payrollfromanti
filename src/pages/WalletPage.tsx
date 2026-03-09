@@ -7,10 +7,12 @@ import { Wallet, History, ArrowDownCircle, ArrowUpCircle, Plus, Trash2 } from 'l
 import { Worker, AdvancePayment } from '../types';
 
 export function WalletPage() {
-    const { workers, entries, advances, addAdvance, deleteAdvance } = useStore();
+    const { workers, entries, advances, addAdvance, deleteAdvance, updateWorker } = useStore();
     const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isAddMode, setIsAddMode] = useState(false);
+    const [isEditingGuarantee, setIsEditingGuarantee] = useState(false);
+    const [editGuaranteeAmount, setEditGuaranteeAmount] = useState('');
 
     const [formData, setFormData] = useState({
         date: format(new Date(), 'yyyy-MM-dd'),
@@ -20,10 +22,14 @@ export function WalletPage() {
     });
 
     const getWorkerStats = (workerId: string) => {
+        const worker = workers.find(w => w.id === workerId);
+
         // Calculate Guarantee Deduction
-        const guaranteeTotal = entries
+        const entriesSum = entries
             .filter(e => e.workerId === workerId && !e.isDraft)
             .reduce((sum, e) => sum + (e.guaranteeDeduction || 0), 0);
+
+        const guaranteeTotal = (worker?.historicalGuarantee || 0) + entriesSum;
 
         // Calculate Advance Balance
         const workerAdvances = advances.filter(a => a.workerId === workerId);
@@ -32,6 +38,7 @@ export function WalletPage() {
         }, 0);
 
         return {
+            entriesSum,
             guaranteeTotal,
             advanceTotal,
             workerAdvances
@@ -42,6 +49,7 @@ export function WalletPage() {
         setSelectedWorker(worker);
         setIsModalOpen(true);
         setIsAddMode(false);
+        setIsEditingGuarantee(false);
     };
 
     const handleAddSubmit = (e: React.FormEvent) => {
@@ -170,9 +178,47 @@ export function WalletPage() {
                         <div className="space-y-6">
                             {/* Summary Cards */}
                             <div className="grid grid-cols-2 gap-3">
-                                <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 flex flex-col items-center justify-center">
-                                    <div className="text-xs text-gray-500 mb-1">หักประกันสะสมรวม</div>
-                                    <div className="text-2xl font-bold text-gray-900">฿{stats.guaranteeTotal.toLocaleString()}</div>
+                                <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 flex flex-col items-center justify-center relative group">
+                                    <div className="text-xs text-gray-500 mb-1 flex items-center justify-center gap-1">
+                                        หักประกันสะสมรวม
+                                        {!isEditingGuarantee && (
+                                            <button
+                                                onClick={() => {
+                                                    setEditGuaranteeAmount(stats.guaranteeTotal.toString());
+                                                    setIsEditingGuarantee(true);
+                                                }}
+                                                className="text-sky-500 hover:text-sky-700 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                title="แก้ไขเงินประกันสะสม"
+                                            >
+                                                ✎
+                                            </button>
+                                        )}
+                                    </div>
+                                    {isEditingGuarantee ? (
+                                        <div className="flex flex-col items-center gap-2 w-full mt-1">
+                                            <Input
+                                                type="number"
+                                                min="0"
+                                                value={editGuaranteeAmount}
+                                                onChange={(e) => setEditGuaranteeAmount(e.target.value)}
+                                                className="w-full text-center text-lg py-1 h-auto font-bold"
+                                                autoFocus
+                                            />
+                                            <div className="flex gap-1 w-full">
+                                                <Button size="sm" variant="secondary" className="flex-1 py-1 text-xs" onClick={() => setIsEditingGuarantee(false)}>ยกเลิก</Button>
+                                                <Button size="sm" className="flex-1 py-1 text-xs bg-sky-500 hover:bg-sky-600 border-none text-white" onClick={() => {
+                                                    const newTotal = Number(editGuaranteeAmount);
+                                                    if (!isNaN(newTotal)) {
+                                                        const newHistorical = newTotal - stats.entriesSum;
+                                                        updateWorker(selectedWorker.id, { historicalGuarantee: newHistorical });
+                                                    }
+                                                    setIsEditingGuarantee(false);
+                                                }}>บันทึก</Button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="text-2xl font-bold text-gray-900">฿{stats.guaranteeTotal.toLocaleString()}</div>
+                                    )}
                                 </div>
                                 <div className={`rounded-xl p-3 border flex flex-col items-center justify-center ${stats.advanceTotal > 0 ? 'bg-orange-50 border-orange-100' : 'bg-emerald-50 border-emerald-100'}`}>
                                     <div className={`text-xs mb-1 ${stats.advanceTotal > 0 ? 'text-orange-600' : 'text-emerald-600'}`}>ยอดหนี้คงค้าง</div>

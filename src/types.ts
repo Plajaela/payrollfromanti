@@ -15,6 +15,7 @@ export interface Worker {
   shiftEnd: string;
   paymentType?: 'half-month' | 'month' | 'day';
   hasGuarantee?: boolean;
+  historicalGuarantee?: number;
 }
 
 export interface DailyEntry {

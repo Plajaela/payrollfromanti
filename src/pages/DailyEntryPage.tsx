@@ -143,6 +143,14 @@ export function DailyEntryPage() {
 
   const openModal = (worker: any, existingEntry?: any) => {
     setShowShiftSettings(false);
+
+    // Calculate current guarantee total
+    const guaranteeTotal = (worker.historicalGuarantee || 0) + entries
+      .filter(e => e.workerId === worker.id && !e.isDraft && (!existingEntry || e.id !== existingEntry.id))
+      .reduce((sum, e) => sum + (e.guaranteeDeduction || 0), 0);
+
+    const capRemaining = Math.max(0, 10000 - guaranteeTotal);
+
     if (existingEntry) {
       setFormData({
         workerId: existingEntry.workerId,
@@ -163,7 +171,7 @@ export function DailyEntryPage() {
         tollReceiptUrl: existingEntry.tollReceiptUrl || '',
         isLeave: existingEntry.isLeave || false,
         hasGuaranteeDeduction: (existingEntry.guaranteeDeduction || 0) > 0,
-        guaranteeDeductionAmount: existingEntry.guaranteeDeduction || 100,
+        guaranteeDeductionAmount: existingEntry.guaranteeDeduction || Math.min(100, capRemaining),
       });
       setEditingId(existingEntry.id);
     } else {
@@ -185,8 +193,8 @@ export function DailyEntryPage() {
         transferSlipUrl: '',
         tollReceiptUrl: '',
         isLeave: false,
-        hasGuaranteeDeduction: worker.hasGuarantee || false,
-        guaranteeDeductionAmount: 100,
+        hasGuaranteeDeduction: (worker.hasGuarantee || false) && capRemaining > 0,
+        guaranteeDeductionAmount: Math.min(100, capRemaining),
       });
       setEditingId(null);
     }

@@ -71,7 +71,8 @@ export function useStore() {
                   shift_start: w.shiftStart || '07:00',
                   shift_end: w.shiftEnd || '16:00',
                   payment_type: w.paymentType || 'month',
-                  has_guarantee: w.hasGuarantee || false
+                  has_guarantee: w.hasGuarantee || false,
+                  historical_guarantee: w.historicalGuarantee || 0
                 }))
               );
 
@@ -93,7 +94,8 @@ export function useStore() {
             shiftStart: w.shift_start,
             shiftEnd: w.shift_end,
             paymentType: w.payment_type,
-            hasGuarantee: w.has_guarantee || false
+            hasGuarantee: w.has_guarantee || false,
+            historicalGuarantee: Number(w.historical_guarantee) || 0
           }));
           setWorkers(formattedWorkers);
         }
@@ -320,7 +322,8 @@ export function useStore() {
         shift_start: worker.shiftStart || '07:00',
         shift_end: worker.shiftEnd || '16:00',
         payment_type: worker.paymentType || 'month',
-        has_guarantee: worker.hasGuarantee || false
+        has_guarantee: worker.hasGuarantee || false,
+        historical_guarantee: worker.historicalGuarantee || 0
       }]);
 
       if (error) throw error;
@@ -346,6 +349,7 @@ export function useStore() {
       if (updated.shiftEnd !== undefined) updateData.shift_end = updated.shiftEnd;
       if (updated.paymentType !== undefined) updateData.payment_type = updated.paymentType;
       if (updated.hasGuarantee !== undefined) updateData.has_guarantee = updated.hasGuarantee;
+      if (updated.historicalGuarantee !== undefined) updateData.historical_guarantee = updated.historicalGuarantee;
 
       const { error } = await supabase
         .from('workers')
