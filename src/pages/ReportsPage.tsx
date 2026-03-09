@@ -109,7 +109,7 @@ export function ReportsPage() {
   };
 
   const handleExportExcel = () => {
-    const PRESETS = [
+    const ALL_PRESETS = [
       'ค่ารถไปงานที่ 1',
       'ค่ารถไปงานที่ 2',
       'ค่ารถไปงานที่ 3',
@@ -125,6 +125,12 @@ export function ReportsPage() {
         end: parseISO(endDate)
       });
     });
+
+    const PRESETS = ALL_PRESETS.filter(preset =>
+      filteredEntries.some(entry =>
+        entry.adjustments?.some(a => (a.note || '').trim() === preset)
+      )
+    );
 
     // 1. Summary Sheet
     const summaryRows = reportData.map(row => {
@@ -322,7 +328,7 @@ export function ReportsPage() {
   };
 
   const handleExportCSV = () => {
-    const PRESETS = [
+    const ALL_PRESETS = [
       'ค่ารถไปงานที่ 1',
       'ค่ารถไปงานที่ 2',
       'ค่ารถไปงานที่ 3',
@@ -338,6 +344,12 @@ export function ReportsPage() {
         end: parseISO(endDate)
       });
     });
+
+    const PRESETS = ALL_PRESETS.filter(preset =>
+      filteredEntries.some(entry =>
+        entry.adjustments?.some(a => (a.note || '').trim() === preset)
+      )
+    );
 
     const csvData: any[] = [];
 
