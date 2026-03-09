@@ -44,6 +44,13 @@ export function ReportsPage() {
 
       const grandTotal = workerEntries.reduce((sum, e) => sum + e.totalPay, 0);
 
+      const guaranteeTotal = (worker.historicalGuarantee || 0) + entries
+        .filter(e => e.workerId === worker.id && !e.isDraft)
+        .reduce((sum, e) => sum + (e.guaranteeDeduction || 0), 0);
+
+      // Extract guarantee deduction specifically within current range (just for reference if needed, though they want accumulated)
+      const rangeGuaranteeDeduction = workerEntries.reduce((sum, e) => sum + (e.guaranteeDeduction || 0), 0);
+
       return {
         worker,
         totalDays,
@@ -54,7 +61,9 @@ export function ReportsPage() {
         totalOT,
         netAdjustments,
         grandTotal,
-        leaveDays
+        leaveDays,
+        guaranteeTotal,
+        rangeGuaranteeDeduction
       };
     });
 
@@ -152,7 +161,9 @@ export function ReportsPage() {
       baseRow['รวมหักมาสาย'] = row.totalLate;
       baseRow['รวมโอที'] = row.totalOT;
       baseRow['รวมอื่นๆ (สุทธิ)'] = otherSums;
-      baseRow['ยอดสุทธิ'] = row.grandTotal;
+      baseRow['ยอดสุทธิ(ในรอบ)'] = row.grandTotal;
+      baseRow['หักประกันสะสม(ในรอบ)'] = row.rangeGuaranteeDeduction;
+      baseRow['ยอดประกันสะสมรวมทั้งหมด'] = row.guaranteeTotal || 0;
 
       return baseRow;
     });
@@ -175,7 +186,9 @@ export function ReportsPage() {
     grandTotalRow['รวมหักมาสาย'] = reportData.reduce((sum, r) => sum + r.totalLate, 0);
     grandTotalRow['รวมโอที'] = reportData.reduce((sum, r) => sum + r.totalOT, 0);
     grandTotalRow['รวมอื่นๆ (สุทธิ)'] = summaryRows.reduce((sum, r) => sum + (r['รวมอื่นๆ (สุทธิ)'] || 0), 0);
-    grandTotalRow['ยอดสุทธิ'] = reportData.reduce((sum, r) => sum + r.grandTotal, 0);
+    grandTotalRow['ยอดสุทธิ(ในรอบ)'] = reportData.reduce((sum, r) => sum + r.grandTotal, 0);
+    grandTotalRow['หักประกันสะสม(ในรอบ)'] = reportData.reduce((sum, r) => sum + r.rangeGuaranteeDeduction, 0);
+    grandTotalRow['ยอดประกันสะสมรวมทั้งหมด'] = reportData.reduce((sum, r) => sum + r.guaranteeTotal, 0);
 
     XLSX.utils.sheet_add_json(wsSummary, [grandTotalRow], { skipHeader: true, origin: -1 });
 
@@ -338,10 +351,11 @@ export function ReportsPage() {
       'เวลาทำงาน': 'รวมค่าแรง',
       'ค่าแรง': 'รวมค่ารถ',
       'ค่ารถ': 'รวมค่าทางด่วน',
-      'ทางด่วน': 'รวมหักมาสาย',
-      'หักสาย': 'รวมโอที',
-      'โอที': 'รวมอื่นๆ (สุทธิ)',
-      'รวมอื่นๆ': 'ยอดสุทธิ'
+      'โอที': 'รวมโอที',
+      'หักสาย': 'รวมหักมาสาย',
+      'หักประกันสะสม': 'รวมอื่นๆ (สุทธิ)',
+      'รวมอื่นๆ': 'ยอดสุทธิ',
+      'ยอดสุทธิประจำวัน': 'ยอดประกันสะสมรวมทั้งหมด'
     };
     PRESETS.forEach(p => summaryHeader[p] = p);
     csvData.push(summaryHeader);
@@ -370,10 +384,12 @@ export function ReportsPage() {
         'เวลาทำงาน': row.totalBaseWage,
         'ค่าแรง': row.totalTravel,
         'ค่ารถ': row.totalToll,
-        'ทางด่วน': row.totalLate,
-        'หักสาย': row.totalOT,
-        'โอที': otherSums,
-        'รวมอื่นๆ': row.grandTotal
+        'ทางด่วน': row.totalOT,
+        'โอที': row.totalOT, // just shifting columns for alignment
+        'หักสาย': row.totalLate,
+        'หักประกันสะสม': otherSums,
+        'รวมอื่นๆ': row.grandTotal,
+        'ยอดสุทธิประจำวัน': row.guaranteeTotal || 0
       };
       PRESETS.forEach(p => summaryRow[p] = presetSums[p]);
       csvData.push(summaryRow);
@@ -544,6 +560,7 @@ export function ReportsPage() {
                     <th scope="col" className="px-3 py-3.5 text-right text-[13px] font-semibold text-zinc-900 uppercase tracking-wide">โอที</th>
                     <th scope="col" className="px-3 py-3.5 text-right text-[13px] font-semibold text-red-600 uppercase tracking-wide">หักสาย</th>
                     <th scope="col" className="px-3 py-3.5 text-right text-[13px] font-semibold text-zinc-900 uppercase tracking-wide">อื่นๆ</th>
+                    <th scope="col" className="py-3.5 px-3 text-right text-[13px] font-semibold text-orange-600 uppercase tracking-wide">ประกันสะสมรวม</th>
                     <th scope="col" className="py-3.5 px-3 text-right text-[13px] font-semibold text-blue-600 uppercase tracking-wide">ยอดสุทธิ</th>
                     <th scope="col" className="py-3.5 pl-3 pr-4 sm:pr-6"><span className="sr-only">คัดลอก</span></th>
                   </tr>
@@ -564,6 +581,9 @@ export function ReportsPage() {
                         <span className={row.netAdjustments > 0 ? 'text-emerald-600' : row.netAdjustments < 0 ? 'text-red-600' : ''}>
                           {row.netAdjustments > 0 ? '+' : ''}{row.netAdjustments !== 0 ? `฿${row.netAdjustments}` : '-'}
                         </span>
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm font-bold text-orange-600 text-right">
+                        {row.guaranteeTotal > 0 ? `฿${row.guaranteeTotal}` : '-'}
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm font-bold text-blue-600 text-right">฿{row.grandTotal}</td>
                       <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
@@ -587,6 +607,7 @@ export function ReportsPage() {
                     <td className="px-3 py-3 text-sm font-bold text-blue-900 text-right">฿{reportData.reduce((sum, r) => sum + r.totalOT, 0)}</td>
                     <td className="px-3 py-3 text-sm font-bold text-red-600 text-right">-฿{reportData.reduce((sum, r) => sum + r.totalLate, 0)}</td>
                     <td className="px-3 py-3 text-sm font-bold text-blue-900 text-right">฿{reportData.reduce((sum, r) => sum + r.netAdjustments, 0)}</td>
+                    <td className="px-3 py-3 text-sm font-bold text-orange-600 text-right">฿{reportData.reduce((sum, r) => sum + r.guaranteeTotal, 0)}</td>
                     <td className="px-3 py-3 text-sm font-bold text-blue-700 text-right">฿{reportData.reduce((sum, r) => sum + r.grandTotal, 0)}</td>
                     <td className="py-3 pl-3 pr-4 sm:pr-6"></td>
                   </tr>
