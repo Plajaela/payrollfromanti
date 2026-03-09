@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useStore } from '../useStore';
 import { Button, Input, Card, Label } from '../components/ui';
-import { parseISO, startOfMonth, endOfMonth, isWithinInterval, format, isSunday } from 'date-fns';
+import { parseISO, startOfMonth, endOfMonth, isWithinInterval, format, isSunday, eachDayOfInterval } from 'date-fns';
 import { FileSpreadsheet, Copy, Check } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -225,28 +225,43 @@ export function ReportsPage() {
 
     const sortedWorkers = [...workers].sort((a, b) => a.name.localeCompare(b.name));
 
+    const intervalDays = eachDayOfInterval({ start: parseISO(startDate), end: parseISO(endDate) });
+
     sortedWorkers.forEach(worker => {
       const summaryData = reportData.find(r => r.worker.id === worker.id);
       if (!summaryData) return;
 
       const workerEntries = groupedByWorker[worker.id] || [];
 
-      if (workerEntries.length === 0) {
-        detailRows.push({
-          'วันที่': '-',
-          'ชื่อช่าง': worker.name,
-          'เวลาทำงาน': 'ไม่มีบันทึกเวลาทำงานในรอบนี้',
-          'หักประกันสะสม': summaryData.guaranteeTotal > 0 ? `ยอดสะสม: ฿${summaryData.guaranteeTotal}` : ''
-        });
-        detailRows.push({});
-        return;
-      }
-
-      workerEntries.sort((a, b) => a.date.localeCompare(b.date));
-
       let workerTotal = 0;
 
-      workerEntries.forEach(entry => {
+      intervalDays.forEach(dateObj => {
+        const dateStr = format(dateObj, 'yyyy-MM-dd');
+        const entry = workerEntries.find(e => e.date === dateStr);
+        const isSun = isSunday(dateObj);
+        const displayDate = format(dateObj, 'dd/MM/yyyy') + (isSun ? ' (อาทิตย์)' : '');
+
+        if (!entry) {
+          const detailRow: any = {
+            'วันที่': displayDate,
+            'ชื่อช่าง': worker.name,
+            'เวลาทำงาน': isSun ? 'หยุดวันอาทิตย์' : 'ไม่มีบันทึกเวลาทำงาน',
+            'ค่าแรง': '',
+            'ค่ารถ': '',
+          };
+          PRESETS.forEach(p => detailRow[p] = '');
+          detailRow['ทางด่วน'] = '';
+          detailRow['โอที'] = '';
+          detailRow['หักสาย'] = '';
+          detailRow['หักประกันสะสม'] = '';
+          detailRow['รวมอื่นๆ'] = '';
+          detailRow['ยอดสุทธิประจำวัน'] = '';
+          detailRow['หมายเหตุอื่นๆ'] = '';
+          detailRow['สลิปโอนเงิน'] = '';
+          detailRow['สลิปทางด่วน'] = '';
+          detailRows.push(detailRow);
+          return;
+        }
         const presetSums: Record<string, number> = {};
         PRESETS.forEach(p => presetSums[p] = 0);
         let otherSums = 0;
@@ -280,9 +295,8 @@ export function ReportsPage() {
 
         workerTotal += entry.totalPay;
 
-        const entryDateObj = parseISO(entry.date);
         const detailRow: any = {
-          'วันที่': format(entryDateObj, 'dd/MM/yyyy') + (isSunday(entryDateObj) ? ' (อาทิตย์)' : ''),
+          'วันที่': displayDate,
           'ชื่อช่าง': worker.name,
           'เวลาทำงาน': entry.isLeave ? 'ลาหยุด' : `${entry.clockIn} - ${entry.clockOut}`,
           'ค่าแรง': entry.isLeave ? '' : (entry.baseWage || ''),
