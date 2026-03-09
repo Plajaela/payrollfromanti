@@ -181,9 +181,9 @@ export function ReportsPage() {
       baseRow['รวมหักมาสาย'] = row.totalLate;
       baseRow['รวมโอที'] = row.totalOT;
       baseRow['รวมอื่นๆ (สุทธิ)'] = otherSums;
-      baseRow['ยอดสุทธิ(ในรอบ)'] = row.grandTotal;
       baseRow['หักประกันสะสม(ในรอบ)'] = row.rangeGuaranteeDeduction;
       baseRow['ยอดประกันสะสมรวมทั้งหมด'] = row.guaranteeTotal || 0;
+      baseRow['ยอดสุทธิ(ในรอบ)'] = row.grandTotal;
 
       return baseRow;
     });
@@ -206,9 +206,9 @@ export function ReportsPage() {
     grandTotalRow['รวมหักมาสาย'] = reportData.reduce((sum, r) => sum + r.totalLate, 0);
     grandTotalRow['รวมโอที'] = reportData.reduce((sum, r) => sum + r.totalOT, 0);
     grandTotalRow['รวมอื่นๆ (สุทธิ)'] = summaryRows.reduce((sum, r) => sum + (r['รวมอื่นๆ (สุทธิ)'] || 0), 0);
-    grandTotalRow['ยอดสุทธิ(ในรอบ)'] = reportData.reduce((sum, r) => sum + r.grandTotal, 0);
     grandTotalRow['หักประกันสะสม(ในรอบ)'] = reportData.reduce((sum, r) => sum + r.rangeGuaranteeDeduction, 0);
     grandTotalRow['ยอดประกันสะสมรวมทั้งหมด'] = reportData.reduce((sum, r) => sum + r.guaranteeTotal, 0);
+    grandTotalRow['ยอดสุทธิ(ในรอบ)'] = reportData.reduce((sum, r) => sum + r.grandTotal, 0);
 
     XLSX.utils.sheet_add_json(wsSummary, [grandTotalRow], { skipHeader: true, origin: -1 });
 
