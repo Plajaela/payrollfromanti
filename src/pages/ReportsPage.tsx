@@ -212,9 +212,7 @@ export function ReportsPage() {
 
     XLSX.utils.sheet_add_json(wsSummary, [grandTotalRow], { skipHeader: true, origin: -1 });
 
-    // 2. Details Sheet
-    const detailRows: any[] = [];
-
+    // 2. Individual Worker Sheets
     const groupedByWorker: Record<string, typeof entries[number][]> = {};
     filteredEntries.forEach(entry => {
       if (!groupedByWorker[entry.workerId]) {
@@ -224,15 +222,18 @@ export function ReportsPage() {
     });
 
     const sortedWorkers = [...workers].sort((a, b) => a.name.localeCompare(b.name));
-
     const intervalDays = eachDayOfInterval({ start: parseISO(startDate), end: parseISO(endDate) });
+
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, wsSummary, "สรุปยอดรวม");
 
     sortedWorkers.forEach(worker => {
       const summaryData = reportData.find(r => r.worker.id === worker.id);
       if (!summaryData) return;
 
       const workerEntries = groupedByWorker[worker.id] || [];
-
+      const workerRows: any[] = [];
       let workerTotal = 0;
 
       intervalDays.forEach(dateObj => {
@@ -242,26 +243,27 @@ export function ReportsPage() {
         const displayDate = format(dateObj, 'dd/MM/yyyy') + (isSun ? ' (อาทิตย์)' : '');
 
         if (!entry) {
-          const detailRow: any = {
+          const row: any = {
             'วันที่': displayDate,
             'ชื่อช่าง': worker.name,
             'เวลาทำงาน': isSun ? 'หยุดวันอาทิตย์' : 'ไม่มีบันทึกเวลาทำงาน',
             'ค่าแรง': '',
             'ค่ารถ': '',
           };
-          PRESETS.forEach(p => detailRow[p] = '');
-          detailRow['ทางด่วน'] = '';
-          detailRow['โอที'] = '';
-          detailRow['หักสาย'] = '';
-          detailRow['หักประกันสะสม'] = '';
-          detailRow['รวมอื่นๆ'] = '';
-          detailRow['ยอดสุทธิประจำวัน'] = '';
-          detailRow['หมายเหตุอื่นๆ'] = '';
-          detailRow['สลิปโอนเงิน'] = '';
-          detailRow['สลิปทางด่วน'] = '';
-          detailRows.push(detailRow);
+          PRESETS.forEach(p => row[p] = '');
+          row['ทางด่วน'] = '';
+          row['โอที'] = '';
+          row['หักสาย'] = '';
+          row['หักประกันสะสม'] = '';
+          row['รวมอื่นๆ'] = '';
+          row['ยอดสุทธิประจำวัน'] = '';
+          row['หมายเหตุอื่นๆ'] = '';
+          row['สลิปโอนเงิน'] = '';
+          row['สลิปทางด่วน'] = '';
+          workerRows.push(row);
           return;
         }
+
         const presetSums: Record<string, number> = {};
         PRESETS.forEach(p => presetSums[p] = 0);
         let otherSums = 0;
@@ -295,7 +297,7 @@ export function ReportsPage() {
 
         workerTotal += entry.totalPay;
 
-        const detailRow: any = {
+        const row: any = {
           'วันที่': displayDate,
           'ชื่อช่าง': worker.name,
           'เวลาทำงาน': entry.isLeave ? 'ลาหยุด' : `${entry.clockIn} - ${entry.clockOut}`,
@@ -304,20 +306,20 @@ export function ReportsPage() {
         };
 
         PRESETS.forEach(p => {
-          detailRow[p] = entry.isLeave || !presetSums[p] ? '' : presetSums[p];
+          row[p] = entry.isLeave || !presetSums[p] ? '' : presetSums[p];
         });
 
-        detailRow['ทางด่วน'] = entry.isLeave || !entry.tollFee ? '' : entry.tollFee;
-        detailRow['โอที'] = entry.isLeave || !entry.overtimePay ? '' : entry.overtimePay;
-        detailRow['หักสาย'] = entry.isLeave || !entry.lateDeduction ? '' : -entry.lateDeduction; // Show as negative
-        detailRow['หักประกันสะสม'] = entry.isLeave || !entry.guaranteeDeduction ? '' : -(entry.guaranteeDeduction || 0);
-        detailRow['รวมอื่นๆ'] = entry.isLeave || !otherSums ? '' : otherSums;
-        detailRow['ยอดสุทธิประจำวัน'] = entry.isLeave ? '' : entry.totalPay;
-        detailRow['หมายเหตุอื่นๆ'] = entry.isLeave ? 'ลาหยุด' : notes;
-        detailRow['สลิปโอนเงิน'] = entry.isLeave || !entry.transferSlipUrl ? '' : formatSlipUrl(entry.transferSlipUrl);
-        detailRow['สลิปทางด่วน'] = entry.isLeave || !entry.tollFee || !entry.tollReceiptUrl ? '' : formatSlipUrl(entry.tollReceiptUrl);
+        row['ทางด่วน'] = entry.isLeave || !entry.tollFee ? '' : entry.tollFee;
+        row['โอที'] = entry.isLeave || !entry.overtimePay ? '' : entry.overtimePay;
+        row['หักสาย'] = entry.isLeave || !entry.lateDeduction ? '' : -entry.lateDeduction;
+        row['หักประกันสะสม'] = entry.isLeave || !entry.guaranteeDeduction ? '' : -(entry.guaranteeDeduction || 0);
+        row['รวมอื่นๆ'] = entry.isLeave || !otherSums ? '' : otherSums;
+        row['ยอดสุทธิประจำวัน'] = entry.isLeave ? '' : entry.totalPay;
+        row['หมายเหตุอื่นๆ'] = entry.isLeave ? 'ลาหยุด' : notes;
+        row['สลิปโอนเงิน'] = entry.isLeave || !entry.transferSlipUrl ? '' : formatSlipUrl(entry.transferSlipUrl);
+        row['สลิปทางด่วน'] = entry.isLeave || !entry.tollFee || !entry.tollReceiptUrl ? '' : formatSlipUrl(entry.tollReceiptUrl);
 
-        detailRows.push(detailRow);
+        workerRows.push(row);
       });
 
       const workerTotalRow: any = {
@@ -342,23 +344,20 @@ export function ReportsPage() {
       workerTotalRow['สลิปโอนเงิน'] = '';
       workerTotalRow['สลิปทางด่วน'] = '';
 
-      detailRows.push(workerTotalRow);
+      workerRows.push(workerTotalRow);
 
-      detailRows.push({});
+      const wsWorker = XLSX.utils.json_to_sheet(workerRows);
+
+      // Adjust column widths
+      const detailCols = [{ wpx: 110 }, { wpx: 100 }, { wpx: 100 }, { wpx: 80 }, { wpx: 60 }];
+      PRESETS.forEach(() => detailCols.push({ wpx: 90 }));
+      detailCols.push({ wpx: 60 }, { wpx: 60 }, { wpx: 60 }, { wpx: 90 }, { wpx: 80 }, { wpx: 100 }, { wpx: 180 }, { wpx: 100 }, { wpx: 100 });
+      wsWorker['!cols'] = detailCols;
+
+      // Ensure tab name doesn't exceed 31 limits and doesn't contain forbidden chars \ / ? * [ ] :
+      const safeSheetName = worker.name.replace(/[\\/?*[\]:]/g, ' ').substring(0, 31).trim() || 'ช่าง';
+      XLSX.utils.book_append_sheet(wb, wsWorker, safeSheetName);
     });
-
-    const wsDetails = XLSX.utils.json_to_sheet(detailRows);
-
-    // Create workbook
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, wsSummary, "สรุปยอดรวม");
-    XLSX.utils.book_append_sheet(wb, wsDetails, "รายละเอียดรายบุคคล");
-
-    // Adjust column widths basic
-    const detailCols = [{ wpx: 90 }, { wpx: 120 }, { wpx: 100 }, { wpx: 80 }, { wpx: 60 }];
-    PRESETS.forEach(() => detailCols.push({ wpx: 90 }));
-    detailCols.push({ wpx: 60 }, { wpx: 60 }, { wpx: 60 }, { wpx: 90 }, { wpx: 80 }, { wpx: 100 }, { wpx: 180 }, { wpx: 100 }, { wpx: 100 });
-    wsDetails['!cols'] = detailCols;
 
     const summaryCols = [{ wpx: 150 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }];
     PRESETS.forEach(() => summaryCols.push({ wpx: 90 }));
