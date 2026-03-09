@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useStore } from '../useStore';
 import { Button, Input, Label, Card, Modal } from '../components/ui';
-import { format, addDays, subDays } from 'date-fns';
+import { format, addDays, subDays, isSunday } from 'date-fns';
 import { th } from 'date-fns/locale';
-import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Settings2, RefreshCw, Copy, Check, Paperclip, ImagePlus, X } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Settings2, RefreshCw, Copy, Check, Paperclip, ImagePlus, X, AlertTriangle } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Adjustment } from '../types';
 import { supabase } from '../lib/supabase';
@@ -497,6 +497,16 @@ export function DailyEntryPage() {
           <ChevronRight className="w-6 h-6 text-gray-600" />
         </button>
       </div>
+
+      {isSunday(selectedDate) && (
+        <div className="bg-orange-50 border border-orange-200 text-orange-700 p-4 rounded-3xl shadow-sm flex items-start gap-3 text-sm">
+          <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-bold text-base mb-0.5">วันนี้คือวันอาทิตย์ (วันหยุดประจำสัปดาห์)</p>
+            <p className="text-orange-600/90 leading-relaxed">ปกติแล้วไม่ต้องบันทึกเวลาทำงาน แต่หากมีการเข้ามาทำงาน สามารถบันทึกเวลาที่นี่ และบวก "โบนัสพิเศษ" หรือ "ค่าแรงวันหยุด" ในช่อง <span className="font-semibold underline">รายการปรับปรุง</span> ได้เลยครับ</p>
+          </div>
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-4">

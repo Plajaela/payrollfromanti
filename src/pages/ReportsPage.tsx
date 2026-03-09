@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useStore } from '../useStore';
 import { Button, Input, Card, Label } from '../components/ui';
-import { parseISO, startOfMonth, endOfMonth, isWithinInterval, format } from 'date-fns';
+import { parseISO, startOfMonth, endOfMonth, isWithinInterval, format, isSunday } from 'date-fns';
 import { FileSpreadsheet, Copy, Check } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -280,8 +280,9 @@ export function ReportsPage() {
 
         workerTotal += entry.totalPay;
 
+        const entryDateObj = parseISO(entry.date);
         const detailRow: any = {
-          'วันที่': format(parseISO(entry.date), 'dd/MM/yyyy'),
+          'วันที่': format(entryDateObj, 'dd/MM/yyyy') + (isSunday(entryDateObj) ? ' (อาทิตย์)' : ''),
           'ชื่อช่าง': worker.name,
           'เวลาทำงาน': entry.isLeave ? 'ลาหยุด' : `${entry.clockIn} - ${entry.clockOut}`,
           'ค่าแรง': entry.isLeave ? '' : (entry.baseWage || ''),
