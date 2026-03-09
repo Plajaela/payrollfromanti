@@ -82,14 +82,24 @@ export function ReportsPage() {
 
   const handleCopySingle = (row: typeof reportData[0]) => {
     const dateRangeStr = startDate === endDate ? startDate : `${startDate} ถึง ${endDate}`;
-    const text = `สรุปยอด ${row.worker.name} (วันที่ ${dateRangeStr})\n` +
+
+    let text = `สรุปยอด ${row.worker.name} (วันที่ ${dateRangeStr})\n` +
       `- วันทำงาน: ${row.totalDays} วัน${row.leaveDays > 0 ? ` (ลาหยุด ${row.leaveDays} วัน)` : ''}\n` +
       `- ค่าแรง: ฿${row.totalBaseWage}\n` +
       `- ค่ารถ: ฿${row.totalTravel}\n` +
       `- โอที: ฿${row.totalOT}\n` +
-      `- หักสาย: -฿${row.totalLate}\n` +
-      `- อื่นๆ: ฿${row.netAdjustments}\n` +
+      `- หักสาย: -฿${row.totalLate}\n`;
+
+    if (row.rangeGuaranteeDeduction > 0) {
+      text += `- หักประกันสะสมรอบนี้: -฿${row.rangeGuaranteeDeduction}\n`;
+    }
+
+    text += `- อื่นๆ: ฿${row.netAdjustments}\n` +
       `📌 ยอดสุทธิ: ฿${row.grandTotal}`;
+
+    if (row.guaranteeTotal > 0) {
+      text += `\n(🔒 มีเงินประกันสะสมรวมทั้งหมด: ฿${row.guaranteeTotal})`;
+    }
 
     handleCopy(text, row.worker.id);
   };
@@ -99,7 +109,11 @@ export function ReportsPage() {
     let text = `📋 สรุปยอดช่างทุกคน (วันที่ ${dateRangeStr})\n\n`;
 
     reportData.forEach((row, index) => {
-      text += `${index + 1}. ช่าง${row.worker.name}: ทำงาน ${row.totalDays} วัน${row.leaveDays > 0 ? ` (+ ลาหยุด ${row.leaveDays} วัน)` : ''} | สุทธิ ฿${row.grandTotal}\n`;
+      let workerText = `${index + 1}. ช่าง${row.worker.name}: ทำงาน ${row.totalDays} วัน${row.leaveDays > 0 ? ` (+ ลาหยุด ${row.leaveDays} วัน)` : ''} | สุทธิ ฿${row.grandTotal}`;
+      if (row.guaranteeTotal > 0) {
+        workerText += ` (ประกันสะสมรวม ฿${row.guaranteeTotal})`;
+      }
+      text += workerText + '\n';
     });
 
     const grandTotal = reportData.reduce((sum, r) => sum + r.grandTotal, 0);
