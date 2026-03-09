@@ -235,32 +235,33 @@ export function ReportsPage() {
         workerTotal += entry.totalPay;
 
         const detailRow: any = {
-          'ชื่อช่าง': worker.name,
           'วันที่': format(parseISO(entry.date), 'dd/MM/yyyy'),
+          'ชื่อช่าง': worker.name,
           'เวลาทำงาน': entry.isLeave ? 'ลาหยุด' : `${entry.clockIn} - ${entry.clockOut}`,
-          'ค่าแรง': entry.isLeave ? '-' : entry.baseWage,
-          'ค่ารถ': entry.isLeave ? '-' : entry.travelAllowance,
+          'ค่าแรง': entry.isLeave ? '' : (entry.baseWage || ''),
+          'ค่ารถ': entry.isLeave ? '' : (entry.travelAllowance || ''),
         };
 
         PRESETS.forEach(p => {
-          detailRow[p] = entry.isLeave ? '-' : presetSums[p];
+          detailRow[p] = entry.isLeave || !presetSums[p] ? '' : presetSums[p];
         });
 
-        detailRow['ทางด่วน'] = entry.isLeave ? '-' : entry.tollFee;
-        detailRow['หักสาย'] = entry.isLeave ? '-' : entry.lateDeduction;
-        detailRow['โอที'] = entry.isLeave ? '-' : entry.overtimePay;
-        detailRow['รวมอื่นๆ'] = entry.isLeave ? '-' : otherSums;
-        detailRow['ยอดสุทธิประจำวัน'] = entry.isLeave ? '-' : entry.totalPay;
-        detailRow['สลิปโอนเงิน'] = entry.isLeave ? '-' : formatSlipUrl(entry.transferSlipUrl);
-        detailRow['สลิปทางด่วน'] = entry.isLeave || entry.tollFee === 0 ? '-' : formatSlipUrl(entry.tollReceiptUrl);
+        detailRow['ทางด่วน'] = entry.isLeave || !entry.tollFee ? '' : entry.tollFee;
+        detailRow['โอที'] = entry.isLeave || !entry.overtimePay ? '' : entry.overtimePay;
+        detailRow['หักสาย'] = entry.isLeave || !entry.lateDeduction ? '' : -entry.lateDeduction; // Show as negative
+        detailRow['หักประกันสะสม'] = entry.isLeave || !entry.guaranteeDeduction ? '' : -(entry.guaranteeDeduction || 0);
+        detailRow['รวมอื่นๆ'] = entry.isLeave || !otherSums ? '' : otherSums;
+        detailRow['ยอดสุทธิประจำวัน'] = entry.isLeave ? '' : entry.totalPay;
         detailRow['หมายเหตุอื่นๆ'] = entry.isLeave ? 'ลาหยุด' : notes;
+        detailRow['สลิปโอนเงิน'] = entry.isLeave || !entry.transferSlipUrl ? '' : formatSlipUrl(entry.transferSlipUrl);
+        detailRow['สลิปทางด่วน'] = entry.isLeave || !entry.tollFee || !entry.tollReceiptUrl ? '' : formatSlipUrl(entry.tollReceiptUrl);
 
         detailRows.push(detailRow);
       });
 
       const workerTotalRow: any = {
-        'ชื่อช่าง': `รวมยอด ${worker.name}`,
         'วันที่': '',
+        'ชื่อช่าง': `รวมยอด ${worker.name}`,
         'เวลาทำงาน': '',
         'ค่าแรง': '',
         'ค่ารถ': '',
@@ -271,13 +272,14 @@ export function ReportsPage() {
       });
 
       workerTotalRow['ทางด่วน'] = '';
-      workerTotalRow['หักสาย'] = '';
       workerTotalRow['โอที'] = '';
+      workerTotalRow['หักสาย'] = '';
+      workerTotalRow['หักประกันสะสม'] = '';
       workerTotalRow['รวมอื่นๆ'] = '';
       workerTotalRow['ยอดสุทธิประจำวัน'] = workerTotal;
+      workerTotalRow['หมายเหตุอื่นๆ'] = '';
       workerTotalRow['สลิปโอนเงิน'] = '';
       workerTotalRow['สลิปทางด่วน'] = '';
-      workerTotalRow['หมายเหตุอื่นๆ'] = '';
 
       detailRows.push(workerTotalRow);
 
@@ -292,9 +294,9 @@ export function ReportsPage() {
     XLSX.utils.book_append_sheet(wb, wsDetails, "รายละเอียดรายบุคคล");
 
     // Adjust column widths basic
-    const detailCols = [{ wpx: 120 }, { wpx: 100 }, { wpx: 100 }, { wpx: 80 }, { wpx: 60 }];
+    const detailCols = [{ wpx: 90 }, { wpx: 120 }, { wpx: 100 }, { wpx: 80 }, { wpx: 60 }];
     PRESETS.forEach(() => detailCols.push({ wpx: 90 }));
-    detailCols.push({ wpx: 60 }, { wpx: 60 }, { wpx: 60 }, { wpx: 80 }, { wpx: 80 }, { wpx: 120 }, { wpx: 120 }, { wpx: 250 });
+    detailCols.push({ wpx: 60 }, { wpx: 60 }, { wpx: 60 }, { wpx: 90 }, { wpx: 80 }, { wpx: 100 }, { wpx: 180 }, { wpx: 100 }, { wpx: 100 });
     wsDetails['!cols'] = detailCols;
 
     const summaryCols = [{ wpx: 150 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }];
@@ -383,22 +385,26 @@ export function ReportsPage() {
     // --- DETAILS PART ---
     csvData.push({ 'ชื่อช่าง': '--- รายละเอียดรายบุคคล ---', 'วันที่': '', 'เวลาทำงาน': '', 'ค่าแรง': '', 'ค่ารถ': '' });
 
-    const detailsHeader: any = {
-      'ชื่อช่าง': 'ชื่อช่าง',
+    const detailsHeader: Record<string, string> = {
       'วันที่': 'วันที่',
+      'ชื่อช่าง': 'ชื่อช่าง',
       'เวลาทำงาน': 'เวลาทำงาน',
       'ค่าแรง': 'ค่าแรง',
       'ค่ารถ': 'ค่ารถ',
-      'ทางด่วน': 'ทางด่วน',
-      'หักสาย': 'หักสาย',
-      'โอที': 'โอที',
-      'รวมอื่นๆ': 'รวมอื่นๆ',
-      'ยอดสุทธิประจำวัน': 'ยอดสุทธิประจำวัน',
-      'สลิปโอนเงิน': 'สลิปโอนเงิน',
-      'สลิปทางด่วน': 'สลิปทางด่วน',
-      'หมายเหตุอื่นๆ': 'หมายเหตุอื่นๆ'
     };
     PRESETS.forEach(p => detailsHeader[p] = p);
+
+    Object.assign(detailsHeader, {
+      'ทางด่วน': 'ทางด่วน',
+      'โอที': 'โอที',
+      'หักสาย': 'หักสาย',
+      'หักประกันสะสม': 'หักประกันสะสม',
+      'รวมอื่นๆ': 'รวมอื่นๆ',
+      'ยอดสุทธิประจำวัน': 'ยอดสุทธิประจำวัน',
+      'หมายเหตุอื่นๆ': 'หมายเหตุอื่นๆ',
+      'สลิปโอนเงิน': 'สลิปโอนเงิน',
+      'สลิปทางด่วน': 'สลิปทางด่วน'
+    });
     csvData.push(detailsHeader);
 
     const groupedByWorker: Record<string, typeof entries[number][]> = {};
@@ -437,26 +443,31 @@ export function ReportsPage() {
 
         workerTotal += entry.totalPay;
 
-        const detailRow: any = {
-          'ชื่อช่าง': worker.name,
+        const detailRow: Record<string, any> = {
           'วันที่': format(parseISO(entry.date), 'dd/MM/yyyy'),
+          'ชื่อช่าง': worker.name,
           'เวลาทำงาน': entry.isLeave ? 'ลาหยุด' : `${entry.clockIn} - ${entry.clockOut}`,
-          'ค่าแรง': entry.isLeave ? '-' : entry.baseWage,
-          'ค่ารถ': entry.isLeave ? '-' : entry.travelAllowance,
-          'ทางด่วน': entry.isLeave ? '-' : entry.tollFee,
-          'หักสาย': entry.isLeave ? '-' : entry.lateDeduction,
-          'โอที': entry.isLeave ? '-' : entry.overtimePay,
-          'รวมอื่นๆ': entry.isLeave ? '-' : otherSums,
-          'ยอดสุทธิประจำวัน': entry.isLeave ? '-' : entry.totalPay,
-          'สลิปโอนเงิน': entry.isLeave ? '-' : (entry.transferSlipUrl ? 'มีสลิป' : '-'),
-          'สลิปทางด่วน': entry.isLeave || entry.tollFee === 0 ? '-' : (entry.tollReceiptUrl ? 'มีสลิป' : '-'),
-          'หมายเหตุอื่นๆ': entry.isLeave ? 'ลาหยุด' : notes,
+          'ค่าแรง': entry.isLeave ? '' : (entry.baseWage || ''),
+          'ค่ารถ': entry.isLeave ? '' : (entry.travelAllowance || ''),
         };
-        PRESETS.forEach(p => detailRow[p] = entry.isLeave ? '-' : presetSums[p]);
+        PRESETS.forEach(p => detailRow[p] = entry.isLeave || !presetSums[p] ? '' : presetSums[p]);
+
+        Object.assign(detailRow, {
+          'ทางด่วน': entry.isLeave || !entry.tollFee ? '' : entry.tollFee,
+          'โอที': entry.isLeave || !entry.overtimePay ? '' : entry.overtimePay,
+          'หักสาย': entry.isLeave || !entry.lateDeduction ? '' : -entry.lateDeduction,
+          'หักประกันสะสม': entry.isLeave || !entry.guaranteeDeduction ? '' : -(entry.guaranteeDeduction || 0),
+          'รวมอื่นๆ': entry.isLeave || !otherSums ? '' : otherSums,
+          'ยอดสุทธิประจำวัน': entry.isLeave ? '' : entry.totalPay,
+          'หมายเหตุอื่นๆ': entry.isLeave ? 'ลาหยุด' : notes,
+          'สลิปโอนเงิน': entry.isLeave || !entry.transferSlipUrl ? '' : (entry.transferSlipUrl.startsWith('http') ? entry.transferSlipUrl : 'มีสลิป'),
+          'สลิปทางด่วน': entry.isLeave || !entry.tollFee || !entry.tollReceiptUrl ? '' : (entry.tollReceiptUrl.startsWith('http') ? entry.tollReceiptUrl : 'มีสลิป')
+        });
         csvData.push(detailRow);
       });
 
       const workerTotalRow: any = {
+        'วันที่': '',
         'ชื่อช่าง': `รวมยอด ${worker.name}`,
         'ยอดสุทธิประจำวัน': workerTotal,
       };
