@@ -226,8 +226,21 @@ export function ReportsPage() {
     const sortedWorkers = [...workers].sort((a, b) => a.name.localeCompare(b.name));
 
     sortedWorkers.forEach(worker => {
+      const summaryData = reportData.find(r => r.worker.id === worker.id);
+      if (!summaryData) return;
+
       const workerEntries = groupedByWorker[worker.id] || [];
-      if (workerEntries.length === 0) return;
+
+      if (workerEntries.length === 0) {
+        detailRows.push({
+          'วันที่': '-',
+          'ชื่อช่าง': worker.name,
+          'เวลาทำงาน': 'ไม่มีบันทึกเวลาทำงานในรอบนี้',
+          'หักประกันสะสม': summaryData.guaranteeTotal > 0 ? `ยอดสะสม: ฿${summaryData.guaranteeTotal}` : ''
+        });
+        detailRows.push({});
+        return;
+      }
 
       workerEntries.sort((a, b) => a.date.localeCompare(b.date));
 
@@ -307,7 +320,7 @@ export function ReportsPage() {
       workerTotalRow['ทางด่วน'] = '';
       workerTotalRow['โอที'] = '';
       workerTotalRow['หักสาย'] = '';
-      workerTotalRow['หักประกันสะสม'] = '';
+      workerTotalRow['หักประกันสะสม'] = summaryData.guaranteeTotal > 0 ? `สะสมรวม: ฿${summaryData.guaranteeTotal}` : '';
       workerTotalRow['รวมอื่นๆ'] = '';
       workerTotalRow['ยอดสุทธิประจำวัน'] = workerTotal;
       workerTotalRow['หมายเหตุอื่นๆ'] = '';
