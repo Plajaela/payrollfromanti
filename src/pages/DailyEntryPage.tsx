@@ -631,15 +631,17 @@ export function DailyEntryPage() {
                   <button
                     key={worker.id}
                     onClick={() => setActiveTabWorkerId(worker.id)}
-                    className={`flex items-center justify-between p-3.5 md:p-3 rounded-2xl md:rounded-xl text-left transition-all duration-300 flex-shrink-0 border hover:scale-[1.02] active:scale-[0.98] ${isActive ? (isDraft ? 'bg-gradient-to-r from-amber-500 to-amber-600 border-amber-500 text-white shadow-md shadow-amber-200' : 'bg-gradient-to-r from-sky-500 to-sky-600 border-sky-500 text-white shadow-md shadow-sky-200') : (isDraft ? 'bg-amber-50 border-amber-200 text-amber-900 hover:bg-amber-100 shadow-sm' : 'bg-white border-gray-100 text-gray-700 hover:bg-sky-50 hover:border-sky-200')}`}
+                    className={`flex items-center justify-between p-3.5 md:p-3 rounded-2xl md:rounded-xl text-left transition-all duration-300 flex-shrink-0 border hover:scale-[1.02] active:scale-[0.98] ${isActive ? (entry?.isLeave ? 'bg-gradient-to-r from-red-500 to-red-600 border-red-500 text-white shadow-md shadow-red-200' : isDraft ? 'bg-gradient-to-r from-amber-500 to-amber-600 border-amber-500 text-white shadow-md shadow-amber-200' : 'bg-gradient-to-r from-sky-500 to-sky-600 border-sky-500 text-white shadow-md shadow-sky-200') : (entry?.isLeave ? 'bg-red-50 border-red-200 text-red-900 hover:bg-red-100 shadow-sm' : isDraft ? 'bg-amber-50 border-amber-200 text-amber-900 hover:bg-amber-100 shadow-sm' : 'bg-white border-gray-100 text-gray-700 hover:bg-sky-50 hover:border-sky-200')}`}
                   >
                     <span className="font-semibold text-[15px]">{worker.name}</span>
                     {entry && (
                       <div className="flex items-center gap-1.5 ml-2">
                         {entry.transferSlipUrl && <Paperclip className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-white/80' : 'text-sky-400'}`} />}
-                        {isDraft ?
-                          <Clock className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-amber-100' : 'text-amber-500'}`} /> :
-                          <CheckCircle2 className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-sky-100' : 'text-emerald-500'}`} />
+                        {entry.isLeave ?
+                          <X className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-red-100' : 'text-red-500'}`} /> :
+                          isDraft ?
+                            <Clock className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-amber-100' : 'text-amber-500'}`} /> :
+                            <CheckCircle2 className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-sky-100' : 'text-emerald-500'}`} />
                         }
                       </div>
                     )}
@@ -679,7 +681,11 @@ export function DailyEntryPage() {
                         <div className="font-bold text-gray-900 group-hover:text-sky-700 transition-colors">{worker.name}</div>
                         <div className="text-sm mt-0.5">
                           {entry ? (
-                            entry.isDraft ? (
+                            entry.isLeave ? (
+                              <span className="text-red-600 flex items-center gap-1.5 font-medium bg-red-50 px-2 py-0.5 rounded-lg inline-flex border border-red-200/50">
+                                <X className="w-3.5 h-3.5" /> {entry.leaveType || 'ลากิจ'}
+                              </span>
+                            ) : entry.isDraft ? (
                               <span className="text-amber-600 flex items-center gap-1.5 font-medium bg-amber-50 px-2 py-0.5 rounded-lg inline-flex border border-amber-200/50">
                                 <Clock className="w-3.5 h-3.5" /> ฉบับร่าง (ยังไม่เสร็จ)
                               </span>
@@ -705,17 +711,17 @@ export function DailyEntryPage() {
             <Card
               key={activeWorker.id}
               onClick={() => openModal(activeWorker, activeEntry)}
-              className={`p-6 md:p-8 flex flex-col items-center justify-center min-h-[200px] text-center active:scale-[0.99] transition-all duration-300 cursor-pointer hover:-translate-y-1 hover:shadow-xl ${activeEntry ? (activeEntry.isDraft ? 'border-amber-200 bg-gradient-to-b from-amber-50/50 to-white shadow-amber-100' : 'border-sky-200 bg-gradient-to-b from-sky-50/50 to-white shadow-sky-100') : 'bg-white border-gray-100 hover:border-sky-300 shadow-sm'}`}
+              className={`p-6 md:p-8 flex flex-col items-center justify-center min-h-[200px] text-center active:scale-[0.99] transition-all duration-300 cursor-pointer hover:-translate-y-1 hover:shadow-xl ${activeEntry ? (activeEntry.isLeave ? 'border-red-200 bg-gradient-to-b from-red-50/50 to-white shadow-red-100' : activeEntry.isDraft ? 'border-amber-200 bg-gradient-to-b from-amber-50/50 to-white shadow-amber-100' : 'border-sky-200 bg-gradient-to-b from-sky-50/50 to-white shadow-sky-100') : 'bg-white border-gray-100 hover:border-sky-300 shadow-sm'}`}
             >
               <div className="mb-4">
                 <div className="font-bold text-gray-900 text-2xl mb-2">{activeWorker.name}</div>
                 {activeEntry ? (
-                  <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-sm font-semibold shadow-sm ${activeEntry.isDraft ? 'bg-amber-100 text-amber-700' : 'bg-sky-100 text-sky-700'}`}>
-                    {activeEntry.isDraft ? <Clock className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
-                    {activeEntry.isDraft ? 'ฉบับร่าง' : 'บันทึกแล้ว'}
-                    <span className={`${activeEntry.isDraft ? 'text-amber-800' : 'text-sky-800'} ml-1`}>฿{activeEntry.totalPay}</span>
-                    <span className={`${activeEntry.isDraft ? 'text-amber-600/70 border-amber-200' : 'text-sky-600/70 border-sky-200'} font-normal ml-1 border-l pl-2`}>
-                      {activeEntry.clockIn} - {activeEntry.clockOut}
+                  <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-sm font-semibold shadow-sm ${activeEntry.isLeave ? 'bg-red-100 text-red-700' : activeEntry.isDraft ? 'bg-amber-100 text-amber-700' : 'bg-sky-100 text-sky-700'}`}>
+                    {activeEntry.isLeave ? <X className="w-4 h-4" /> : activeEntry.isDraft ? <Clock className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                    {activeEntry.isLeave ? (activeEntry.leaveType || 'ลากิจ') : activeEntry.isDraft ? 'ฉบับร่าง' : 'บันทึกแล้ว'}
+                    <span className={`${activeEntry.isLeave ? 'text-red-800' : activeEntry.isDraft ? 'text-amber-800' : 'text-sky-800'} ml-1`}>฿{activeEntry.totalPay}</span>
+                    <span className={`${activeEntry.isLeave ? 'text-red-600/70 border-red-200' : activeEntry.isDraft ? 'text-amber-600/70 border-amber-200' : 'text-sky-600/70 border-sky-200'} font-normal ml-1 border-l pl-2`}>
+                      {activeEntry.isLeave ? 'ลาหยุด' : `${activeEntry.clockIn} - ${activeEntry.clockOut}`}
                     </span>
                   </div>
                 ) : (
