@@ -529,6 +529,34 @@ export function DailyEntryPage() {
   const activeWorker = workers.find(w => w.id === activeTabWorkerId) || workers[0];
   const activeEntry = activeWorker ? entriesForDate.find(e => e.workerId === activeWorker.id) : undefined;
 
+  const handleQuickLeaveInfo = (e: React.MouseEvent, leaveType: 'ลาพักผ่อน' | 'ลาป่วย' | 'ลากิจ' | 'ขาดงาน') => {
+    e.stopPropagation();
+    if (!activeWorker) return;
+    const entryData = {
+      workerId: activeWorker.id,
+      date: dateStr,
+      clockIn: activeWorker.shiftStart || '07:00',
+      clockOut: activeWorker.shiftEnd || '16:00',
+      baseWage: activeWorker.baseWage,
+      travelAllowance: activeWorker.defaultTravelAllowance,
+      tollFee: 0,
+      lateDeduction: 0,
+      overtimeHours: 0,
+      overtimeMinutes: 0,
+      overtimePay: 0,
+      adjustments: [],
+      totalPay: 0,
+      note: '',
+      isDraft: false,
+      isLeave: true,
+      leaveType: leaveType,
+      transferSlipUrl: '',
+      tollReceiptUrl: '',
+      guaranteeDeduction: 0, // No deduction on leave day
+    };
+    addEntry(entryData);
+  };
+
   return (
     <div className="space-y-6 pb-20">
       {/* Date Selector */}
@@ -739,40 +767,40 @@ export function DailyEntryPage() {
                     >
                       {copiedId === activeWorker.id ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5" />}
                     </Button>
-                    <Button
-                      variant="danger"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // 1. Create a dummy event to submit immediately as leave
-                        const entryData = {
-                          workerId: activeWorker.id,
-                          date: dateStr,
-                          clockIn: activeWorker.shiftStart || '07:00',
-                          clockOut: activeWorker.shiftEnd || '16:00',
-                          baseWage: activeWorker.baseWage,
-                          travelAllowance: activeWorker.defaultTravelAllowance,
-                          tollFee: 0,
-                          lateDeduction: 0,
-                          overtimeHours: 0,
-                          overtimeMinutes: 0,
-                          overtimePay: 0,
-                          adjustments: [],
-                          totalPay: 0,
-                          note: '',
-                          isDraft: false,
-                          isLeave: true,
-                          leaveType: 'ลาพักผ่อน' as const,
-                          transferSlipUrl: '',
-                          tollReceiptUrl: '',
-                          guaranteeDeduction: 0, // No deduction on leave day
-                        };
-                        addEntry(entryData);
-                      }}
-                      className="p-3 h-auto rounded-xl bg-amber-50 text-amber-600 hover:bg-amber-100 border border-amber-100 font-medium text-sm flex items-center gap-1.5"
-                      title="บันทึกว่าลาหยุดทันที"
-                    >
-                      <span className="text-lg leading-none">🏖️</span> ลาหยุด
-                    </Button>
+                    <div className="flex gap-2 flex-wrap items-center">
+                      <Button
+                        variant="danger"
+                        onClick={(e) => handleQuickLeaveInfo(e, 'ลาพักผ่อน')}
+                        className="p-3 text-xs h-auto rounded-xl bg-amber-50 text-amber-600 hover:bg-amber-100 border border-amber-100 font-medium whitespace-nowrap"
+                        title="พักผ่อน"
+                      >
+                        ลาพักผ่อน
+                      </Button>
+                      <Button
+                        variant="danger"
+                        onClick={(e) => handleQuickLeaveInfo(e, 'ลาป่วย')}
+                        className="p-3 text-xs h-auto rounded-xl bg-orange-50 text-orange-600 hover:bg-orange-100 border border-orange-100 font-medium whitespace-nowrap"
+                        title="ป่วย"
+                      >
+                        ลาป่วย
+                      </Button>
+                      <Button
+                        variant="danger"
+                        onClick={(e) => handleQuickLeaveInfo(e, 'ลากิจ')}
+                        className="p-3 text-xs h-auto rounded-xl bg-yellow-50 text-yellow-600 hover:bg-yellow-100 border border-yellow-100 font-medium whitespace-nowrap"
+                        title="ลากิจ"
+                      >
+                        ลากิจ
+                      </Button>
+                      <Button
+                        variant="danger"
+                        onClick={(e) => handleQuickLeaveInfo(e, 'ขาดงาน')}
+                        className="p-3 text-xs h-auto rounded-xl bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 font-medium whitespace-nowrap"
+                        title="ขาดงาน"
+                      >
+                        ขาดงาน
+                      </Button>
+                    </div>
                   </>
                 )}
               </div>
