@@ -343,16 +343,19 @@ export function DailyEntryPage() {
     const clockOut = entry ? entry.clockOut : worker.shiftEnd || '16:00';
     const idToUse = entry ? entry.id : worker.id;
 
+    const wStart = worker.shiftStart || '07:00';
+    const wEnd = worker.shiftEnd || '16:00';
+
     let text = `📝 แจ้งยอดรายวัน ${worker.name} (วันที่ ${formattedDate})\n`;
     if (entry?.isLeave) {
       text += `ลาหยุดพักผ่อน\n`;
     } else {
-      text += `เวลาทำงาน: ${clockIn} - ${clockOut}\n`;
+      const actualStart = clockIn > wStart ? clockIn : wStart;
+      const actualEnd = clockOut < wEnd ? clockOut : wEnd;
+      text += `เวลาทำงาน: ${actualStart} - ${actualEnd}\n`;
       if (lateDeduction > 0) text += `หักมาสาย: -฿${lateDeduction}\n`;
     }
     if (overtimePay > 0) {
-      const wEnd = worker.shiftEnd || '16:00';
-      const wStart = worker.shiftStart || '07:00';
 
       let morningOtMins = 0;
       let eveningOtMins = 0;
@@ -437,16 +440,19 @@ export function DailyEntryPage() {
       const clockIn = entry ? entry.clockIn : worker.shiftStart || '07:00';
       const clockOut = entry ? entry.clockOut : worker.shiftEnd || '16:00';
 
+      const wStart = worker.shiftStart || '07:00';
+      const wEnd = worker.shiftEnd || '16:00';
+
       text += `👤 ${worker.name.startsWith('ช่าง') ? worker.name : `ช่าง${worker.name}`}\n`;
       if (entry?.isLeave) {
         text += `ลาหยุดพักผ่อน\n`;
       } else {
-        text += `เวลาทำงาน: ${clockIn} - ${clockOut}\n`;
+        const actualStart = clockIn > wStart ? clockIn : wStart;
+        const actualEnd = clockOut < wEnd ? clockOut : wEnd;
+        text += `เวลาทำงาน: ${actualStart} - ${actualEnd}\n`;
         if (lateDeduction > 0) text += `หักมาสาย: -฿${lateDeduction}\n`;
       }
       if (overtimePay > 0) {
-        const wEnd = worker.shiftEnd || '16:00';
-        const wStart = worker.shiftStart || '07:00';
 
         let morningOtMins = 0;
         let eveningOtMins = 0;
