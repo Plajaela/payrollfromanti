@@ -3,7 +3,7 @@ import { WorkersPage } from './pages/WorkersPage';
 import { DailyEntryPage } from './pages/DailyEntryPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { WalletPage } from './pages/WalletPage';
-import { Users, CalendarDays, FileText, Wallet, Moon, Sun, Snowflake } from 'lucide-react';
+import { Users, CalendarDays, FileText, Wallet, Moon, Sun, Snowflake, RefreshCw } from 'lucide-react';
 import Snowfall from 'react-snowfall';
 import { cn } from './components/ui';
 
@@ -74,6 +74,13 @@ export default function App() {
             {activeTab === 'reports' && 'รายงาน'}
           </h1>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => window.location.reload()}
+              className="p-2 rounded-xl bg-emerald-100/50 text-emerald-600 hover:bg-emerald-200/50 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-800/50 transition-colors"
+              title="Refresh / อัปเดตข้อมูล"
+            >
+              <RefreshCw className="w-5 h-5" />
+            </button>
             <button
               onClick={() => setIsSnowing(!isSnowing)}
               className={cn("p-2 rounded-xl transition-all duration-300", isSnowing ? "bg-sky-100 text-sky-600 dark:bg-sky-900/50 dark:text-sky-400 rotate-12 scale-110" : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700")}
