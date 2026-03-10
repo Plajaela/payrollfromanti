@@ -164,11 +164,14 @@ export function WalletPage() {
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
-                                <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-                                    <div className="text-[10px] text-gray-500 font-medium mb-1">หักเงินประกันสะสมแล้ว</div>
+                                <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 flex flex-col justify-center">
+                                    <div className="text-[10px] text-gray-500 font-medium mb-1">เงินประกันสะสมรวม</div>
                                     <div className="text-xl font-bold text-gray-900">฿{stats.guaranteeTotal.toLocaleString()}</div>
+                                    {stats.entriesSum > 0 && (
+                                        <div className="text-[10px] text-gray-400 mt-1 truncate">เดิม: ฿{(worker.historicalGuarantee || 0).toLocaleString()} + ใหม่: ฿{stats.entriesSum.toLocaleString()}</div>
+                                    )}
                                 </div>
-                                <div className={`rounded-xl p-3 border ${stats.advanceTotal > 0 ? 'bg-orange-50 border-orange-100' : 'bg-emerald-50 border-emerald-100'}`}>
+                                <div className={`rounded-xl p-3 border flex flex-col justify-center ${stats.advanceTotal > 0 ? 'bg-orange-50 border-orange-100' : 'bg-emerald-50 border-emerald-100'}`}>
                                     <div className={`text-[10px] font-medium mb-1 ${stats.advanceTotal > 0 ? 'text-orange-600' : 'text-emerald-600'}`}>ยอดหนี้เบิกล่วงหน้า</div>
                                     <div className={`text-xl font-bold ${stats.advanceTotal > 0 ? 'text-orange-600' : 'text-emerald-600'}`}>฿{stats.advanceTotal.toLocaleString()}</div>
                                 </div>
@@ -190,39 +193,38 @@ export function WalletPage() {
                     return (
                         <div className="space-y-6">
                             {/* Summary Cards */}
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 flex flex-col items-center justify-center relative group">
-                                    <div className="text-xs text-gray-500 mb-1 flex items-center justify-center gap-1">
-                                        หักประกันสะสมรวม
+                            <div className="grid grid-cols-2 gap-3 mb-2">
+                                <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 flex flex-col relative group">
+                                    <div className="text-[11px] text-gray-500 mb-1 flex items-center gap-1 font-medium">
+                                        ยอดยกมา (แก้ไขได้)
                                         {!isEditingGuarantee && (
                                             <button
                                                 onClick={() => {
-                                                    setEditGuaranteeAmount(stats.guaranteeTotal.toString());
+                                                    setEditGuaranteeAmount((selectedWorker.historicalGuarantee || 0).toString());
                                                     setIsEditingGuarantee(true);
                                                 }}
-                                                className="text-sky-500 hover:text-sky-700 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                title="แก้ไขเงินประกันสะสม"
+                                                className="text-sky-500 hover:text-sky-700 px-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity"
+                                                title="แก้ไขเงินประกันสะสมเดิม"
                                             >
                                                 ✎
                                             </button>
                                         )}
                                     </div>
                                     {isEditingGuarantee ? (
-                                        <div className="flex flex-col items-center gap-2 w-full mt-1">
+                                        <div className="flex flex-col gap-2 w-full mt-1">
                                             <Input
                                                 type="number"
                                                 min="0"
                                                 value={editGuaranteeAmount}
                                                 onChange={(e) => setEditGuaranteeAmount(e.target.value)}
-                                                className="w-full text-center text-lg py-1 h-auto font-bold"
+                                                className="w-full text-center text-sm py-1.5 h-auto font-bold"
                                                 autoFocus
                                             />
                                             <div className="flex gap-1 w-full">
                                                 <Button size="sm" variant="secondary" className="flex-1 py-1 text-xs" onClick={() => setIsEditingGuarantee(false)}>ยกเลิก</Button>
                                                 <Button size="sm" className="flex-1 py-1 text-xs bg-sky-500 hover:bg-sky-600 border-none text-white" onClick={() => {
-                                                    const newTotal = Number(editGuaranteeAmount);
-                                                    if (!isNaN(newTotal)) {
-                                                        const newHistorical = newTotal - stats.entriesSum;
+                                                    const newHistorical = Number(editGuaranteeAmount);
+                                                    if (!isNaN(newHistorical)) {
                                                         updateWorker(selectedWorker.id, { historicalGuarantee: newHistorical });
                                                     }
                                                     setIsEditingGuarantee(false);
@@ -230,13 +232,27 @@ export function WalletPage() {
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="text-2xl font-bold text-gray-900">฿{stats.guaranteeTotal.toLocaleString()}</div>
+                                        <div className="text-xl font-bold text-gray-900">฿{(selectedWorker.historicalGuarantee || 0).toLocaleString()}</div>
                                     )}
                                 </div>
-                                <div className={`rounded-xl p-3 border flex flex-col items-center justify-center ${stats.advanceTotal > 0 ? 'bg-orange-50 border-orange-100' : 'bg-emerald-50 border-emerald-100'}`}>
-                                    <div className={`text-xs mb-1 ${stats.advanceTotal > 0 ? 'text-orange-600' : 'text-emerald-600'}`}>ยอดหนี้คงค้าง</div>
-                                    <div className={`text-2xl font-bold ${stats.advanceTotal > 0 ? 'text-orange-600' : 'text-emerald-600'}`}>฿{stats.advanceTotal.toLocaleString()}</div>
+                                <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-100 flex flex-col justify-center">
+                                    <div className="text-[11px] text-emerald-600 mb-1 font-medium">หักเพิ่มจากบันทึกรายวัน</div>
+                                    <div className="text-xl font-bold text-emerald-700">+ ฿{stats.entriesSum.toLocaleString()}</div>
                                 </div>
+                            </div>
+
+                            <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-4 flex justify-between items-center text-white mb-2 shadow-lg">
+                                <div>
+                                    <div className="text-sm text-gray-300 font-medium">เงินประกันสะสมรวมทั้งหมด</div>
+                                </div>
+                                <div className="text-2xl font-bold text-orange-400">฿{stats.guaranteeTotal.toLocaleString()}</div>
+                            </div>
+
+                            <div className={`rounded-xl p-4 border flex justify-between items-center ${stats.advanceTotal > 0 ? 'bg-orange-50 border-orange-100' : 'bg-sky-50 border-sky-100'}`}>
+                                <div>
+                                    <div className={`text-sm font-medium ${stats.advanceTotal > 0 ? 'text-orange-600' : 'text-sky-600'}`}>หนี้เบิกล่วงหน้าคงค้าง</div>
+                                </div>
+                                <div className={`text-2xl font-bold ${stats.advanceTotal > 0 ? 'text-orange-600' : 'text-sky-600'}`}>฿{stats.advanceTotal.toLocaleString()}</div>
                             </div>
 
                             {/* Transactions Area */}
