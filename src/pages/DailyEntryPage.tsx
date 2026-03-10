@@ -52,6 +52,8 @@ export function DailyEntryPage() {
     transferSlipUrl: '',
     tolls: [] as { id: string; amount: number; receiptUrl?: string; date?: string; }[],
     isLeave: false,
+    leaveType: 'ลาพักผ่อน' as 'ลาพักผ่อน' | 'ลาป่วย' | 'ลากิจ' | 'ขาดงาน',
+    leaveNote: '',
     hasGuaranteeDeduction: false,
     guaranteeDeductionAmount: 100,
   });
@@ -183,6 +185,8 @@ export function DailyEntryPage() {
         tollDate: existingEntry.tollDate || dateStr,
         tolls: editTolls,
         isLeave: existingEntry.isLeave || false,
+        leaveType: existingEntry.leaveType || 'ลาพักผ่อน',
+        leaveNote: existingEntry.leaveNote || '',
         hasGuaranteeDeduction: (existingEntry.guaranteeDeduction || 0) > 0,
         guaranteeDeductionAmount: existingEntry.guaranteeDeduction || Math.min(100, capRemaining),
       });
@@ -208,6 +212,8 @@ export function DailyEntryPage() {
         tollDate: dateStr,
         tolls: [],
         isLeave: false,
+        leaveType: 'ลาพักผ่อน',
+        leaveNote: '',
         hasGuaranteeDeduction: (worker.hasGuarantee || false) && capRemaining > 0,
         guaranteeDeductionAmount: Math.min(100, capRemaining),
       });
@@ -301,6 +307,8 @@ export function DailyEntryPage() {
       note: formData.note,
       isDraft,
       isLeave: formData.isLeave,
+      leaveType: formData.isLeave ? formData.leaveType : undefined,
+      leaveNote: formData.isLeave ? formData.leaveNote : undefined,
       transferSlipUrl: formData.transferSlipUrl,
       tollReceiptUrl: formData.tollReceiptUrl,
       tollDate: formData.tollDate,
@@ -348,7 +356,9 @@ export function DailyEntryPage() {
 
     let text = `📝 แจ้งยอดรายวัน ${worker.name} (วันที่ ${formattedDate})\n`;
     if (entry?.isLeave) {
-      text += `ลาหยุดพักผ่อน\n`;
+      let leaveStr = entry.leaveType || 'ลาพักผ่อน';
+      if (entry.leaveNote) leaveStr += ` (${entry.leaveNote})`;
+      text += `${leaveStr}\n`;
     } else {
       const actualStart = clockIn > wStart ? clockIn : wStart;
       const actualEnd = clockOut < wEnd ? clockOut : wEnd;
@@ -445,7 +455,9 @@ export function DailyEntryPage() {
 
       text += `👤 ${worker.name.startsWith('ช่าง') ? worker.name : `ช่าง${worker.name}`}\n`;
       if (entry?.isLeave) {
-        text += `ลาหยุดพักผ่อน\n`;
+        let leaveStr = entry.leaveType || 'ลาพักผ่อน';
+        if (entry.leaveNote) leaveStr += ` (${entry.leaveNote})`;
+        text += `${leaveStr}\n`;
       } else {
         const actualStart = clockIn > wStart ? clockIn : wStart;
         const actualEnd = clockOut < wEnd ? clockOut : wEnd;
@@ -749,6 +761,7 @@ export function DailyEntryPage() {
                           note: '',
                           isDraft: false,
                           isLeave: true,
+                          leaveType: 'ลาพักผ่อน' as const,
                           transferSlipUrl: '',
                           tollReceiptUrl: '',
                           guaranteeDeduction: 0, // No deduction on leave day
@@ -775,20 +788,57 @@ export function DailyEntryPage() {
         title={formData.workerName}
       >
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="flex items-center justify-between bg-red-50 p-4 rounded-2xl border border-red-100">
-            <div className="flex flex-col">
-              <span className="font-semibold text-red-700">ช่างลาหยุด (Day off)</span>
-              <span className="text-xs text-red-500">ติ๊กเพื่อบันทึกว่าช่างลางานในวันนี้</span>
+          <div className="flex flex-col gap-3 bg-red-50 p-4 rounded-2xl border border-red-100">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col">
+                <span className="font-semibold text-red-700">ลางาน / ขาดงาน</span>
+                <span className="text-xs text-red-500">ติ๊กเพื่อบันทึกว่าช่างไม่ได้มาทำงานในวันนี้</span>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={formData.isLeave}
+                  onChange={(e) => setFormData(p => ({ ...p, isLeave: e.target.checked }))}
+                />
+                <div className="w-11 h-6 bg-red-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+              </label>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                className="sr-only peer"
-                checked={formData.isLeave}
-                onChange={(e) => setFormData(p => ({ ...p, isLeave: e.target.checked }))}
-              />
-              <div className="w-11 h-6 bg-red-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
-            </label>
+
+            {formData.isLeave && (
+              <div className="animate-in fade-in slide-in-from-top-2 pt-3 border-t border-red-200 border-dashed space-y-3">
+                <div>
+                  <Label className="text-xs text-red-800">ประเภท</Label>
+                  <div className="flex gap-2">
+                    {[
+                      { id: 'ลาพักผ่อน', label: 'ลาพักผ่อน' },
+                      { id: 'ลาป่วย', label: 'ลาป่วย' },
+                      { id: 'ลากิจ', label: 'ลากิจ' },
+                      { id: 'ขาดงาน', label: 'ขาดงาน' }
+                    ].map(type => (
+                      <button
+                        key={type.id}
+                        type="button"
+                        onClick={() => setFormData(p => ({ ...p, leaveType: type.id as any }))}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors border flex-1 ${formData.leaveType === type.id ? 'bg-red-600 text-white border-red-600 shadow-sm' : 'bg-white text-red-700 border-red-200 hover:bg-red-100'}`}
+                      >
+                        {type.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs text-red-800">หมายเหตุ (ถ้ามี)</Label>
+                  <Input
+                    type="text"
+                    value={formData.leaveNote}
+                    onChange={(e) => setFormData(p => ({ ...p, leaveNote: e.target.value }))}
+                    className="bg-white border-red-200 focus:ring-red-500 h-9 text-sm text-red-900 placeholder:text-red-300"
+                    placeholder="เช่น ไปหาหมอ, รถเสีย, ติดธุระ..."
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {!formData.isLeave && (

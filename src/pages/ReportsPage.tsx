@@ -301,10 +301,21 @@ export function ReportsPage() {
 
         workerTotal += entry.totalPay;
 
+        const getLeaveText = (e: typeof entry) => {
+          let str = e.leaveType || 'ลาพักผ่อน';
+          if (e.leaveNote) str += ` (${e.leaveNote})`;
+          return str;
+        };
+
+        const wStart = worker.shiftStart || '07:00';
+        const wEnd = worker.shiftEnd || '16:00';
+        const actualStart = entry.clockIn > wStart ? entry.clockIn : wStart;
+        const actualEnd = entry.clockOut < wEnd ? entry.clockOut : wEnd;
+
         const row: any = {
           'วันที่': displayDate,
           'ชื่อช่าง': worker.name,
-          'เวลาทำงาน': entry.isLeave ? 'ลาหยุด' : `${entry.clockIn} - ${entry.clockOut}`,
+          'เวลาทำงาน': entry.isLeave ? getLeaveText(entry) : `${actualStart} - ${actualEnd}`,
           'ค่าแรง': entry.isLeave ? '' : (entry.baseWage || ''),
           'ค่ารถ': entry.isLeave ? '' : (entry.travelAllowance || ''),
         };
@@ -319,7 +330,7 @@ export function ReportsPage() {
         row['หักประกันสะสม'] = entry.isLeave || !entry.guaranteeDeduction ? '' : -(entry.guaranteeDeduction || 0);
         row['รวมอื่นๆ'] = entry.isLeave || !otherSums ? '' : otherSums;
         row['ยอดสุทธิประจำวัน'] = entry.isLeave ? '' : entry.totalPay;
-        row['หมายเหตุอื่นๆ'] = entry.isLeave ? 'ลาหยุด' : notes;
+        row['หมายเหตุอื่นๆ'] = entry.isLeave ? getLeaveText(entry) : notes;
         row['สลิปโอนเงิน'] = entry.isLeave || !entry.transferSlipUrl ? '' : formatSlipUrl(entry.transferSlipUrl);
         row['สลิปทางด่วน'] = entry.isLeave || !entry.tollFee || !entry.tollReceiptUrl ? '' : formatSlipUrl(entry.tollReceiptUrl);
 
