@@ -285,7 +285,7 @@ export function ReportsPage() {
           return '-';
         };
 
-        const notes = entry.adjustments?.map(a => {
+        let notes = entry.adjustments?.map(a => {
           let s = `${a.note || 'ไม่มีหมายเหตุ'} (${a.type === 'add' ? '+' : '-'}${a.amount})`;
           if (a.receiptUrl && a.receiptUrl.startsWith('http')) {
             s += ` ${a.receiptUrl}`;
@@ -294,6 +294,10 @@ export function ReportsPage() {
           }
           return s;
         }).join(', ') || '';
+
+        if (entry.tollFee > 0 && entry.tollDate && entry.tollDate !== entry.date) {
+          notes += (notes ? ', ' : '') + `ทางด่วนวันที่ ${format(parseISO(entry.tollDate), 'dd/MM/yyyy')}`;
+        }
 
         workerTotal += entry.totalPay;
 

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useStore } from '../useStore';
 import { Button, Input, Label, Card, Modal } from '../components/ui';
-import { format, addDays, subDays, isSunday } from 'date-fns';
+import { format, addDays, subDays, isSunday, parseISO } from 'date-fns';
 import { th } from 'date-fns/locale';
 import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Settings2, RefreshCw, Copy, Check, Paperclip, ImagePlus, X, AlertTriangle } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
@@ -51,6 +51,7 @@ export function DailyEntryPage() {
     note: '',
     transferSlipUrl: '',
     tollReceiptUrl: '',
+    tollDate: '',
     isLeave: false,
     hasGuaranteeDeduction: false,
     guaranteeDeductionAmount: 100,
@@ -169,6 +170,7 @@ export function DailyEntryPage() {
         note: existingEntry.note || '',
         transferSlipUrl: existingEntry.transferSlipUrl || '',
         tollReceiptUrl: existingEntry.tollReceiptUrl || '',
+        tollDate: existingEntry.tollDate || dateStr,
         isLeave: existingEntry.isLeave || false,
         hasGuaranteeDeduction: (existingEntry.guaranteeDeduction || 0) > 0,
         guaranteeDeductionAmount: existingEntry.guaranteeDeduction || Math.min(100, capRemaining),
@@ -192,6 +194,7 @@ export function DailyEntryPage() {
         note: '',
         transferSlipUrl: '',
         tollReceiptUrl: '',
+        tollDate: dateStr,
         isLeave: false,
         hasGuaranteeDeduction: (worker.hasGuarantee || false) && capRemaining > 0,
         guaranteeDeductionAmount: Math.min(100, capRemaining),
@@ -281,6 +284,7 @@ export function DailyEntryPage() {
       isLeave: formData.isLeave,
       transferSlipUrl: formData.transferSlipUrl,
       tollReceiptUrl: formData.tollReceiptUrl,
+      tollDate: formData.tollDate,
       guaranteeDeduction: formData.hasGuaranteeDeduction ? formData.guaranteeDeductionAmount : 0,
     };
 
@@ -367,7 +371,13 @@ export function DailyEntryPage() {
       text += `\n`;
       text += `- ค่าแรง: ฿${baseWage}\n`;
       if (travelAllowance > 0) text += `- ค่ารถ: ฿${travelAllowance}\n`;
-      if (tollFee > 0) text += `- ทางด่วน: ฿${tollFee}\n`;
+      if (tollFee > 0) {
+        text += `- ทางด่วน`;
+        if (entry?.tollDate && entry.tollDate !== entry.date) {
+          text += ` (บิลลงวันที่ ${format(parseISO(entry.tollDate), 'dd/MM/yy')})`;
+        }
+        text += `: ฿${tollFee}\n`;
+      }
       if (entry?.guaranteeDeduction && entry.guaranteeDeduction > 0) text += `- หักเงินประกันสะสม: -฿${entry.guaranteeDeduction}\n`;
     } else {
       text += `\n`;
@@ -455,7 +465,13 @@ export function DailyEntryPage() {
       if (!entry?.isLeave) {
         text += `- ค่าแรง: ฿${baseWage}\n`;
         if (travelAllowance > 0) text += `- ค่ารถ: ฿${travelAllowance}\n`;
-        if (tollFee > 0) text += `- ทางด่วน: ฿${tollFee}\n`;
+        if (tollFee > 0) {
+          text += `- ทางด่วน`;
+          if (entry?.tollDate && entry.tollDate !== entry.date) {
+            text += ` (บิลลงวันที่ ${format(parseISO(entry.tollDate), 'dd/MM/yy')})`;
+          }
+          text += `: ฿${tollFee}\n`;
+        }
         if (entry?.guaranteeDeduction && entry.guaranteeDeduction > 0) text += `- หักเงินประกันสะสม: -฿${entry.guaranteeDeduction}\n`;
       }
 
@@ -942,6 +958,17 @@ export function DailyEntryPage() {
                       <input disabled={isUploading} type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'tollReceiptUrl')} />
                     </label>
                   </div>
+                  {formData.tollFee > 0 && (
+                    <div className="mt-1 flex items-center gap-1 bg-sky-50 px-1 py-1 rounded border border-sky-100">
+                      <span className="text-[10px] text-sky-700 whitespace-nowrap">วันที่บิล:</span>
+                      <input
+                        type="date"
+                        value={formData.tollDate}
+                        onChange={(e) => setFormData(p => ({ ...p, tollDate: e.target.value }))}
+                        className="text-[10px] bg-transparent border-none text-sky-800 p-0 m-0 focus:ring-0 outline-none w-full"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 

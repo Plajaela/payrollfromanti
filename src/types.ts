@@ -38,6 +38,7 @@ export interface DailyEntry {
   isLeave?: boolean;
   transferSlipUrl?: string;
   tollReceiptUrl?: string;
+  tollDate?: string;
   guaranteeDeduction?: number;
 }
 
