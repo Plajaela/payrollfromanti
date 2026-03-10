@@ -346,13 +346,32 @@ export function ReportsPage() {
 
       workerRows.push(workerTotalRow);
 
+      // Dynamically remove empty columns
+      const alwaysShow = ['วันที่', 'ชื่อช่าง', 'เวลาทำงาน', 'ค่าแรง', 'ยอดสุทธิประจำวัน'];
+      const allKeys = Object.keys(workerRows[0] || {});
+
+      allKeys.forEach(key => {
+        if (alwaysShow.includes(key)) return;
+
+        const isEmpty = workerRows.every(row => row[key] === '' || row[key] === '-' || row[key] === undefined);
+        if (isEmpty) {
+          workerRows.forEach(row => delete row[key]);
+        }
+      });
+
       const wsWorker = XLSX.utils.json_to_sheet(workerRows);
 
-      // Adjust column widths
-      const detailCols = [{ wpx: 110 }, { wpx: 100 }, { wpx: 100 }, { wpx: 80 }, { wpx: 60 }];
-      PRESETS.forEach(() => detailCols.push({ wpx: 90 }));
-      detailCols.push({ wpx: 60 }, { wpx: 60 }, { wpx: 60 }, { wpx: 90 }, { wpx: 80 }, { wpx: 100 }, { wpx: 180 }, { wpx: 100 }, { wpx: 100 });
-      wsWorker['!cols'] = detailCols;
+      // Adjust column widths dynamically based on remaining keys
+      if (workerRows.length > 0) {
+        const remainingKeys = Object.keys(workerRows[0]);
+        const customWidths: Record<string, number> = {
+          'วันที่': 110, 'ชื่อช่าง': 100, 'เวลาทำงาน': 100, 'ค่าแรง': 80, 'ค่ารถ': 60,
+          'ทางด่วน': 60, 'โอที': 60, 'หักสาย': 60, 'หักประกันสะสม': 90, 'รวมอื่นๆ': 80,
+          'ยอดสุทธิประจำวัน': 100, 'หมายเหตุอื่นๆ': 180, 'สลิปโอนเงิน': 100, 'สลิปทางด่วน': 100
+        };
+        const detailCols = remainingKeys.map(key => ({ wpx: customWidths[key] || 90 }));
+        wsWorker['!cols'] = detailCols;
+      }
 
       // Ensure tab name doesn't exceed 31 limits and doesn't contain forbidden chars \ / ? * [ ] :
       const safeSheetName = worker.name.replace(/[\\/?*[\]:]/g, ' ').substring(0, 31).trim() || 'ช่าง';
