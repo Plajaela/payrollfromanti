@@ -50,9 +50,11 @@ export function DailyEntryPage() {
     adjustments: [] as Adjustment[],
     note: '',
     transferSlipUrl: '',
+    tollReceiptUrl: '',
+    tollDate: '',
     tolls: [] as { id: string; amount: number; receiptUrl?: string; date?: string; }[],
     isLeave: false,
-    leaveType: 'ลาพักผ่อน' as 'ลาพักผ่อน' | 'ลาป่วย' | 'ลากิจ' | 'ขาดงาน',
+    leaveType: 'ลากิจ' as 'ลาป่วย' | 'ลากิจ' | 'ขาดงาน',
     leaveNote: '',
     hasGuaranteeDeduction: false,
     guaranteeDeductionAmount: 100,
@@ -185,7 +187,7 @@ export function DailyEntryPage() {
         tollDate: existingEntry.tollDate || dateStr,
         tolls: editTolls,
         isLeave: existingEntry.isLeave || false,
-        leaveType: existingEntry.leaveType || 'ลาพักผ่อน',
+        leaveType: (existingEntry.leaveType === 'ลาพักผ่อน' as any) ? 'ลากิจ' : (existingEntry.leaveType || 'ลากิจ'),
         leaveNote: existingEntry.leaveNote || '',
         hasGuaranteeDeduction: (existingEntry.guaranteeDeduction || 0) > 0,
         guaranteeDeductionAmount: existingEntry.guaranteeDeduction || Math.min(100, capRemaining),
@@ -212,7 +214,7 @@ export function DailyEntryPage() {
         tollDate: dateStr,
         tolls: [],
         isLeave: false,
-        leaveType: 'ลาพักผ่อน',
+        leaveType: 'ลากิจ',
         leaveNote: '',
         hasGuaranteeDeduction: (worker.hasGuarantee || false) && capRemaining > 0,
         guaranteeDeductionAmount: Math.min(100, capRemaining),
@@ -356,7 +358,8 @@ export function DailyEntryPage() {
 
     let text = `📝 แจ้งยอดรายวัน ${worker.name} (วันที่ ${formattedDate})\n`;
     if (entry?.isLeave) {
-      let leaveStr = entry.leaveType || 'ลาพักผ่อน';
+      // Fallback for older data that had 'ลาพักผ่อน'
+      let leaveStr = (entry.leaveType as any) === 'ลาพักผ่อน' ? 'ลากิจ' : (entry.leaveType || 'ลากิจ');
       if (entry.leaveNote) leaveStr += ` (${entry.leaveNote})`;
       text += `${leaveStr}\n`;
     } else {
@@ -455,7 +458,7 @@ export function DailyEntryPage() {
 
       text += `👤 ${worker.name.startsWith('ช่าง') ? worker.name : `ช่าง${worker.name}`}\n`;
       if (entry?.isLeave) {
-        let leaveStr = entry.leaveType || 'ลาพักผ่อน';
+        let leaveStr = (entry.leaveType as any) === 'ลาพักผ่อน' ? 'ลากิจ' : (entry.leaveType || 'ลากิจ');
         if (entry.leaveNote) leaveStr += ` (${entry.leaveNote})`;
         text += `${leaveStr}\n`;
       } else {
@@ -529,7 +532,7 @@ export function DailyEntryPage() {
   const activeWorker = workers.find(w => w.id === activeTabWorkerId) || workers[0];
   const activeEntry = activeWorker ? entriesForDate.find(e => e.workerId === activeWorker.id) : undefined;
 
-  const handleQuickLeaveInfo = (e: React.MouseEvent, leaveType: 'ลาพักผ่อน' | 'ลาป่วย' | 'ลากิจ' | 'ขาดงาน') => {
+  const handleQuickLeaveInfo = (e: React.MouseEvent, leaveType: 'ลาป่วย' | 'ลากิจ' | 'ขาดงาน') => {
     e.stopPropagation();
     if (!activeWorker) return;
     const entryData = {
@@ -770,14 +773,6 @@ export function DailyEntryPage() {
                     <div className="flex gap-2 flex-wrap items-center">
                       <Button
                         variant="danger"
-                        onClick={(e) => handleQuickLeaveInfo(e, 'ลาพักผ่อน')}
-                        className="p-3 text-xs h-auto rounded-xl bg-amber-50 text-amber-600 hover:bg-amber-100 border border-amber-100 font-medium whitespace-nowrap"
-                        title="พักผ่อน"
-                      >
-                        ลาพักผ่อน
-                      </Button>
-                      <Button
-                        variant="danger"
                         onClick={(e) => handleQuickLeaveInfo(e, 'ลาป่วย')}
                         className="p-3 text-xs h-auto rounded-xl bg-orange-50 text-orange-600 hover:bg-orange-100 border border-orange-100 font-medium whitespace-nowrap"
                         title="ป่วย"
@@ -839,7 +834,6 @@ export function DailyEntryPage() {
                   <Label className="text-xs text-red-800">ประเภท</Label>
                   <div className="flex gap-2">
                     {[
-                      { id: 'ลาพักผ่อน', label: 'ลาพักผ่อน' },
                       { id: 'ลาป่วย', label: 'ลาป่วย' },
                       { id: 'ลากิจ', label: 'ลากิจ' },
                       { id: 'ขาดงาน', label: 'ขาดงาน' }

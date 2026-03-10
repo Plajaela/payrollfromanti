@@ -43,7 +43,7 @@ export interface DailyEntry {
   note: string;
   isDraft?: boolean;
   isLeave?: boolean;
-  leaveType?: 'ลาพักผ่อน' | 'ลาป่วย' | 'ลากิจ' | 'ขาดงาน';
+  leaveType?: 'ลาป่วย' | 'ลากิจ' | 'ขาดงาน';
   leaveNote?: string;
   transferSlipUrl?: string;
   tollReceiptUrl?: string;
