@@ -33,10 +33,16 @@ Button.displayName = 'Button';
 export const Input = React.forwardRef<
   HTMLInputElement,
   React.InputHTMLAttributes<HTMLInputElement>
->(({ className, ...props }, ref) => {
+>(({ className, onWheel, ...props }, ref) => {
   return (
     <input
       ref={ref}
+      onWheel={(e) => {
+        if (props.type === 'number') {
+          (e.target as HTMLInputElement).blur();
+        }
+        if (onWheel) onWheel(e);
+      }}
       className={cn(
         'block w-full rounded-2xl border-0 bg-gray-100/80 px-4 py-3 text-base text-gray-900 placeholder:text-gray-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 transition-all',
         className
