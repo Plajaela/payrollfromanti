@@ -6,6 +6,13 @@ export interface Adjustment {
   receiptUrl?: string;
 }
 
+export interface TollEntry {
+  id: string;
+  amount: number;
+  receiptUrl?: string;
+  date?: string;
+}
+
 export interface Worker {
   id: string;
   name: string;
@@ -39,6 +46,7 @@ export interface DailyEntry {
   transferSlipUrl?: string;
   tollReceiptUrl?: string;
   tollDate?: string;
+  tolls?: TollEntry[];
   guaranteeDeduction?: number;
 }
 

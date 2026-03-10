@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { WorkersPage } from './pages/WorkersPage';
 import { DailyEntryPage } from './pages/DailyEntryPage';
 import { ReportsPage } from './pages/ReportsPage';
@@ -8,6 +8,22 @@ import { cn } from './components/ui';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'daily' | 'workers' | 'reports' | 'wallet'>('daily');
+
+  // Prevent scroll wheel from changing number input values globally
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' && (target as HTMLInputElement).type === 'number') {
+        e.preventDefault();
+      }
+    };
+
+    // { passive: false } is required to allow e.preventDefault()
+    document.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      document.removeEventListener('wheel', handleWheel);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50/50 font-sans text-gray-900 pb-24">

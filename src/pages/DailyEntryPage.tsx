@@ -50,8 +50,7 @@ export function DailyEntryPage() {
     adjustments: [] as Adjustment[],
     note: '',
     transferSlipUrl: '',
-    tollReceiptUrl: '',
-    tollDate: '',
+    tolls: [] as { id: string; amount: number; receiptUrl?: string; date?: string; }[],
     isLeave: false,
     hasGuaranteeDeduction: false,
     guaranteeDeductionAmount: 100,
@@ -72,8 +71,9 @@ export function DailyEntryPage() {
     const adjustmentsTotal = formData.adjustments.reduce((sum, adj) => {
       return sum + (adj.type === 'add' ? Number(adj.amount) : -Number(adj.amount));
     }, 0);
+    const tollTotal = formData.tolls.reduce((sum, t) => sum + Number(t.amount || 0), 0);
     const guaranteeDed = formData.hasGuaranteeDeduction ? formData.guaranteeDeductionAmount : 0;
-    return formData.baseWage + formData.travelAllowance + formData.tollFee + otPay + adjustmentsTotal - formData.lateDeduction - guaranteeDed;
+    return formData.baseWage + formData.travelAllowance + tollTotal + otPay + adjustmentsTotal - formData.lateDeduction - guaranteeDed;
   };
 
   // Auto-calculate late deduction and overtime when times change
@@ -153,6 +153,16 @@ export function DailyEntryPage() {
     const capRemaining = Math.max(0, 10000 - guaranteeTotal);
 
     if (existingEntry) {
+      let editTolls = existingEntry.tolls || [];
+      if (editTolls.length === 0 && existingEntry.tollFee > 0) {
+        editTolls = [{
+          id: uuidv4(),
+          amount: existingEntry.tollFee,
+          receiptUrl: existingEntry.tollReceiptUrl,
+          date: existingEntry.tollDate || dateStr,
+        }];
+      }
+
       setFormData({
         workerId: existingEntry.workerId,
         workerName: worker.name,
@@ -171,6 +181,7 @@ export function DailyEntryPage() {
         transferSlipUrl: existingEntry.transferSlipUrl || '',
         tollReceiptUrl: existingEntry.tollReceiptUrl || '',
         tollDate: existingEntry.tollDate || dateStr,
+        tolls: editTolls,
         isLeave: existingEntry.isLeave || false,
         hasGuaranteeDeduction: (existingEntry.guaranteeDeduction || 0) > 0,
         guaranteeDeductionAmount: existingEntry.guaranteeDeduction || Math.min(100, capRemaining),
@@ -195,6 +206,7 @@ export function DailyEntryPage() {
         transferSlipUrl: '',
         tollReceiptUrl: '',
         tollDate: dateStr,
+        tolls: [],
         isLeave: false,
         hasGuaranteeDeduction: (worker.hasGuarantee || false) && capRemaining > 0,
         guaranteeDeductionAmount: Math.min(100, capRemaining),
@@ -209,7 +221,7 @@ export function DailyEntryPage() {
     handleSave(false);
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'transferSlipUrl' | 'tollReceiptUrl' | 'adjustments', adjId?: string) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'transferSlipUrl' | 'tollReceiptUrl' | 'adjustments' | 'tolls', adjId?: string) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -247,6 +259,11 @@ export function DailyEntryPage() {
           ...prev,
           adjustments: prev.adjustments.map(a => a.id === adjId ? { ...a, receiptUrl: publicUrl } : a)
         }));
+      } else if (field === 'tolls' && adjId) {
+        setFormData(prev => ({
+          ...prev,
+          tolls: prev.tolls.map(t => t.id === adjId ? { ...t, receiptUrl: publicUrl } : t)
+        }));
       }
     } catch (error) {
       console.error('Error uploading image:', error);
@@ -265,6 +282,7 @@ export function DailyEntryPage() {
     const otPay = (formData.overtimeHours * otRatePerHour) + (formData.overtimeMinutes / 60 * otRatePerHour);
     const totalPay = calculateTotal();
 
+    const tollTotal = formData.tolls.reduce((sum, t) => sum + Number(t.amount || 0), 0);
     const entryData = {
       workerId: formData.workerId,
       date: dateStr,
@@ -272,7 +290,8 @@ export function DailyEntryPage() {
       clockOut: formData.clockOut,
       baseWage: formData.baseWage,
       travelAllowance: formData.travelAllowance,
-      tollFee: formData.tollFee,
+      tollFee: tollTotal,
+      tolls: formData.tolls,
       lateDeduction: formData.lateDeduction,
       overtimeHours: formData.overtimeHours,
       overtimeMinutes: formData.overtimeMinutes,
@@ -914,7 +933,7 @@ export function DailyEntryPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs">ค่าแรง</Label>
                   <Input
@@ -935,40 +954,69 @@ export function DailyEntryPage() {
                     className="font-semibold px-2"
                   />
                 </div>
-                <div>
-                  <Label className="text-xs flex justify-between items-center mb-1">
-                    <span>ทางด่วน</span>
-                    {formData.tollReceiptUrl && (
-                      <div className="flex items-center gap-1">
-                        <button type="button" onClick={() => setPreviewImageUrl(formData.tollReceiptUrl)} className="text-[10px] text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded flex items-center gap-0.5 hover:bg-emerald-100 transition-colors" title="คลิกเพื่อดูรูป"><Check className="w-3 h-3" /> ดูใบเสร็จ</button>
-                        <button type="button" onClick={() => setFormData(p => ({ ...p, tollReceiptUrl: '' }))} className="text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100 p-0.5 rounded transition-colors" title="ลบใบเสร็จ"><X className="w-3 h-3" /></button>
+              </div>
+
+              {/* Tolls section */}
+              <div className="bg-sky-50/30 p-3 rounded-2xl border border-sky-100">
+                <div className="flex justify-between items-center mb-2">
+                  <Label className="text-xs mb-0">ทางด่วน</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="text-sky-600 px-2 py-1 h-auto text-[10px] bg-sky-100 rounded-lg hover:bg-sky-200"
+                    onClick={() => setFormData(p => ({
+                      ...p,
+                      tolls: [...p.tolls, { id: uuidv4(), amount: 0, date: dateStr }]
+                    }))}
+                  >
+                    <Plus className="w-3 h-3 mr-1" /> เพิ่มบิล
+                  </Button>
+                </div>
+                {formData.tolls.length === 0 && (
+                  <div className="text-[10px] text-gray-500 text-center py-2 bg-white rounded-xl border border-dashed border-sky-200">ไม่มีรายการทางด่วน</div>
+                )}
+                <div className="space-y-2">
+                  {formData.tolls.map((toll) => (
+                    <div key={toll.id} className="flex gap-2 items-center bg-white p-2 text-sm rounded-xl border border-sky-100 shadow-sm animate-in fade-in slide-in-from-top-1">
+                      <div className="flex-1 relative">
+                        <Input
+                          type="number"
+                          min="0"
+                          value={toll.amount || ''}
+                          onChange={(e) => setFormData(p => ({
+                            ...p,
+                            tolls: p.tolls.map(t => t.id === toll.id ? { ...t, amount: Number(e.target.value) } : t)
+                          }))}
+                          className="font-semibold text-sm h-9 px-2"
+                          placeholder="ค่าทางด่วน (บาท)"
+                        />
+                        <label className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400 hover:text-sky-500 transition-colors" title="แนบใบเสร็จ">
+                          <ImagePlus className="w-5 h-5" />
+                          <input disabled={isUploading} type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'tolls', toll.id)} />
+                        </label>
                       </div>
-                    )}
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      type="number"
-                      min="0"
-                      value={formData.tollFee || ''}
-                      onChange={(e) => setFormData(p => ({ ...p, tollFee: Number(e.target.value) }))}
-                      className="font-semibold px-2 pr-8"
-                    />
-                    <label className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400 hover:text-sky-500 transition-colors" title="แนบใบเสร็จทางด่วน">
-                      <ImagePlus className="w-5 h-5" />
-                      <input disabled={isUploading} type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'tollReceiptUrl')} />
-                    </label>
-                  </div>
-                  {formData.tollFee > 0 && (
-                    <div className="mt-1 flex items-center gap-1 bg-sky-50 px-1 py-1 rounded border border-sky-100">
-                      <span className="text-[10px] text-sky-700 whitespace-nowrap">วันที่บิล:</span>
-                      <input
-                        type="date"
-                        value={formData.tollDate}
-                        onChange={(e) => setFormData(p => ({ ...p, tollDate: e.target.value }))}
-                        className="text-[10px] bg-transparent border-none text-sky-800 p-0 m-0 focus:ring-0 outline-none w-full"
-                      />
+                      <div className="shrink-0 w-[110px]">
+                        <input
+                          type="date"
+                          value={toll.date || dateStr}
+                          onChange={(e) => setFormData(p => ({
+                            ...p,
+                            tolls: p.tolls.map(t => t.id === toll.id ? { ...t, date: e.target.value } : t)
+                          }))}
+                          className="bg-sky-50/80 px-2 py-1.5 h-9 rounded-lg border border-sky-100 text-sky-800 outline-none w-full text-[11px] box-border transition-colors hover:bg-sky-100"
+                          title="วันที่ในบิล"
+                        />
+                      </div>
+                      <div className="flex items-center shrink-0 w-8 justify-center">
+                        {toll.receiptUrl && (
+                          <button type="button" onClick={() => setPreviewImageUrl(toll.receiptUrl || '')} className="text-emerald-600 bg-emerald-50 p-1.5 rounded-lg hover:bg-emerald-100 transition-colors border border-emerald-100" title="ดูใบเสร็จ"><Check className="w-4 h-4" /></button>
+                        )}
+                      </div>
+                      <button type="button" onClick={() => setFormData(p => ({ ...p, tolls: p.tolls.filter(t => t.id !== toll.id) }))} className="text-red-500 hover:text-white bg-red-50 hover:bg-red-500 p-1.5 rounded-lg shrink-0 transition-colors">
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
-                  )}
+                  ))}
                 </div>
               </div>
 
