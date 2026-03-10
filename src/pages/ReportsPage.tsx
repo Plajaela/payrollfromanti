@@ -28,6 +28,9 @@ export function ReportsPage() {
 
       const totalDays = workerEntries.filter(e => !e.isLeave).length;
       const leaveDays = workerEntries.filter(e => e.isLeave).length;
+      const sickDays = workerEntries.filter(e => e.isLeave && e.leaveType === 'ลาป่วย').length;
+      const personalDays = workerEntries.filter(e => e.isLeave && (e.leaveType === 'ลากิจ' || !e.leaveType || (e.leaveType as any) === 'ลาพักผ่อน')).length;
+      const absentDays = workerEntries.filter(e => e.isLeave && e.leaveType === 'ขาดงาน').length;
       const totalBaseWage = workerEntries.reduce((sum, e) => sum + e.baseWage, 0);
       const totalTravel = workerEntries.reduce((sum, e) => sum + e.travelAllowance, 0);
       const totalToll = workerEntries.reduce((sum, e) => sum + e.tollFee, 0);
@@ -62,6 +65,9 @@ export function ReportsPage() {
         netAdjustments,
         grandTotal,
         leaveDays,
+        sickDays,
+        personalDays,
+        absentDays,
         guaranteeTotal,
         rangeGuaranteeDeduction
       };
@@ -168,7 +174,10 @@ export function ReportsPage() {
 
       const baseRow: any = {
         'ชื่อช่าง': row.worker.name,
-        'จำนวนวันทำงาน': `${row.totalDays}${row.leaveDays > 0 ? ` (ลา ${row.leaveDays})` : ''}`,
+        'จำนวนวันทำงาน': `${row.totalDays}`,
+        'ลาป่วย (วัน)': row.sickDays,
+        'ลากิจ (วัน)': row.personalDays,
+        'ขาดงาน (วัน)': row.absentDays,
         'รวมค่าแรง': row.totalBaseWage,
         'รวมค่ารถ': row.totalTravel,
       };
@@ -194,6 +203,9 @@ export function ReportsPage() {
     const grandTotalRow: any = {
       'ชื่อช่าง': 'รวมทั้งหมด',
       'จำนวนวันทำงาน': reportData.reduce((sum, r) => sum + r.totalDays, 0),
+      'ลาป่วย (วัน)': reportData.reduce((sum, r) => sum + r.sickDays, 0),
+      'ลากิจ (วัน)': reportData.reduce((sum, r) => sum + r.personalDays, 0),
+      'ขาดงาน (วัน)': reportData.reduce((sum, r) => sum + r.absentDays, 0),
       'รวมค่าแรง': reportData.reduce((sum, r) => sum + r.totalBaseWage, 0),
       'รวมค่ารถ': reportData.reduce((sum, r) => sum + r.totalTravel, 0),
     };
@@ -247,6 +259,7 @@ export function ReportsPage() {
             'วันที่': displayDate,
             'ชื่อช่าง': worker.name,
             'เวลาทำงาน': isSun ? 'หยุดวันอาทิตย์' : 'ไม่มีบันทึกเวลาทำงาน',
+            'ประเภทการลา': '',
             'ค่าแรง': '',
             'ค่ารถ': '',
           };
@@ -315,7 +328,8 @@ export function ReportsPage() {
         const row: any = {
           'วันที่': displayDate,
           'ชื่อช่าง': worker.name,
-          'เวลาทำงาน': entry.isLeave ? getLeaveText(entry) : `${actualStart} - ${actualEnd}`,
+          'เวลาทำงาน': entry.isLeave ? 'ลาหยุด' : `${actualStart} - ${actualEnd}`,
+          'ประเภทการลา': entry.isLeave ? getLeaveText(entry) : '',
           'ค่าแรง': entry.isLeave ? '' : (entry.baseWage || ''),
           'ค่ารถ': entry.isLeave ? '' : (entry.travelAllowance || ''),
         };
@@ -341,6 +355,7 @@ export function ReportsPage() {
         'วันที่': '',
         'ชื่อช่าง': `รวมยอด ${worker.name}`,
         'เวลาทำงาน': '',
+        'ประเภทการลา': '',
         'ค่าแรง': '',
         'ค่ารถ': '',
       };
@@ -362,7 +377,7 @@ export function ReportsPage() {
       workerRows.push(workerTotalRow);
 
       // Dynamically remove empty columns
-      const alwaysShow = ['วันที่', 'ชื่อช่าง', 'เวลาทำงาน', 'ค่าแรง', 'ยอดสุทธิประจำวัน'];
+      const alwaysShow = ['วันที่', 'ชื่อช่าง', 'เวลาทำงาน', 'ประเภทการลา', 'ค่าแรง', 'ยอดสุทธิประจำวัน'];
       const allKeys = Object.keys(workerRows[0] || {});
 
       allKeys.forEach(key => {
@@ -380,7 +395,7 @@ export function ReportsPage() {
       if (workerRows.length > 0) {
         const remainingKeys = Object.keys(workerRows[0]);
         const customWidths: Record<string, number> = {
-          'วันที่': 110, 'ชื่อช่าง': 100, 'เวลาทำงาน': 100, 'ค่าแรง': 80, 'ค่ารถ': 60,
+          'วันที่': 110, 'ชื่อช่าง': 100, 'เวลาทำงาน': 100, 'ประเภทการลา': 120, 'ค่าแรง': 80, 'ค่ารถ': 60,
           'ทางด่วน': 60, 'โอที': 60, 'หักสาย': 60, 'หักประกันสะสม': 90, 'รวมอื่นๆ': 80,
           'ยอดสุทธิประจำวัน': 100, 'หมายเหตุอื่นๆ': 180, 'สลิปโอนเงิน': 100, 'สลิปทางด่วน': 100
         };
@@ -393,9 +408,25 @@ export function ReportsPage() {
       XLSX.utils.book_append_sheet(wb, wsWorker, safeSheetName);
     });
 
-    const summaryCols = [{ wpx: 150 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }];
-    PRESETS.forEach(() => summaryCols.push({ wpx: 90 }));
-    summaryCols.push({ wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 100 }, { wpx: 150 });
+    const summaryCols = [
+      { wpx: 150 }, // ชื่อช่าง
+      { wpx: 100 }, // จำนวนวันทำงาน
+      { wpx: 80 },  // ลาป่วย
+      { wpx: 80 },  // ลากิจ
+      { wpx: 80 },  // ขาดงาน
+      { wpx: 100 }, // รวมค่าแรง
+      { wpx: 100 }, // รวมค่ารถ
+    ];
+    PRESETS.forEach(() => summaryCols.push({ wpx: 90 })); // Preset Adjustments
+    summaryCols.push(
+      { wpx: 100 }, // รวมค่าทางด่วน
+      { wpx: 100 }, // รวมหักมาสาย
+      { wpx: 100 }, // รวมโอที
+      { wpx: 100 }, // รวมอื่นๆ
+      { wpx: 150 }, // หักประกันสะสม
+      { wpx: 150 }, // ยอดประกันสะสมรวม
+      { wpx: 150 }  // ยอดสุทธิ
+    );
     wsSummary['!cols'] = summaryCols;
 
     // Save File
