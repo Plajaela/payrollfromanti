@@ -269,6 +269,7 @@ export function ReportsPage() {
           PRESETS.forEach(p => row[p] = '');
           row['ทางด่วน'] = '';
           row['โอที'] = '';
+          row['ทำโอทีถึงเวลา'] = '';
           row['หักสาย'] = '';
           row['หักประกันสะสม'] = '';
           row['รวมอื่นๆ'] = '';
@@ -343,6 +344,7 @@ export function ReportsPage() {
 
         row['ทางด่วน'] = entry.isLeave || !entry.tollFee ? '' : entry.tollFee;
         row['โอที'] = entry.isLeave || !entry.overtimePay ? '' : entry.overtimePay;
+        row['ทำโอทีถึงเวลา'] = entry.isLeave || !entry.overtimePay ? '' : entry.clockOut;
         row['หักสาย'] = entry.isLeave || !entry.lateDeduction ? '' : -entry.lateDeduction;
         row['หักประกันสะสม'] = entry.isLeave || !entry.guaranteeDeduction ? '' : -(entry.guaranteeDeduction || 0);
         row['รวมอื่นๆ'] = entry.isLeave || !otherSums ? '' : otherSums;
@@ -369,6 +371,7 @@ export function ReportsPage() {
 
       workerTotalRow['ทางด่วน'] = '';
       workerTotalRow['โอที'] = '';
+      workerTotalRow['ทำโอทีถึงเวลา'] = '';
       workerTotalRow['หักสาย'] = '';
       workerTotalRow['หักประกันสะสม'] = summaryData.guaranteeTotal > 0 ? `สะสมรวม: ฿${summaryData.guaranteeTotal}` : '';
       workerTotalRow['รวมอื่นๆ'] = '';
@@ -399,7 +402,7 @@ export function ReportsPage() {
         const remainingKeys = Object.keys(workerRows[0]);
         const customWidths: Record<string, number> = {
           'วันที่': 110, 'ชื่อช่าง': 100, 'เวลาทำงาน': 100, 'ประเภทการลา': 120, 'ค่าแรง': 80, 'ค่ารถ': 60,
-          'ทางด่วน': 60, 'โอที': 60, 'หักสาย': 60, 'หักประกันสะสม': 90, 'รวมอื่นๆ': 80,
+          'ทางด่วน': 60, 'โอที': 60, 'ทำโอทีถึงเวลา': 100, 'หักสาย': 60, 'หักประกันสะสม': 90, 'รวมอื่นๆ': 80,
           'ยอดสุทธิประจำวัน': 100, 'หมายเหตุอื่นๆ': 180, 'สลิปโอนเงิน': 100, 'สลิปทางด่วน': 100
         };
         const detailCols = remainingKeys.map(key => ({ wpx: customWidths[key] || 90 }));
