@@ -2,8 +2,9 @@ import React, { useState, useMemo } from 'react';
 import { useStore } from '../useStore';
 import { Button, Input, Card, Label } from '../components/ui';
 import { parseISO, startOfMonth, endOfMonth, isWithinInterval, format, isSunday, eachDayOfInterval } from 'date-fns';
-import { FileSpreadsheet, Copy, Check } from 'lucide-react';
+import { FileSpreadsheet, Copy, Check, Image as ImageIcon } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { SlipModal } from '../components/SlipModal';
 
 
 export function ReportsPage() {
@@ -13,6 +14,8 @@ export function ReportsPage() {
   const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [selectedSlipData, setSelectedSlipData] = useState<any>(null);
+  const [isSlipModalOpen, setIsSlipModalOpen] = useState(false);
 
   const reportData = useMemo(() => {
     const filteredEntries = entries.filter(entry => {
@@ -515,13 +518,25 @@ export function ReportsPage() {
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm font-bold text-blue-600 text-right">฿{row.grandTotal}</td>
                       <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                        <button
-                          onClick={() => handleCopySingle(row)}
-                          className="inline-flex items-center justify-center text-red-600 hover:text-gray-900 bg-sky-50 p-2 rounded-xl transition-colors min-w-[36px] min-h-[36px]"
-                          title="คัดลอกสรุป"
-                        >
-                          {copiedId === row.worker.id ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                        </button>
+                        <div className="flex justify-end gap-1">
+                          <button
+                            onClick={() => {
+                              setSelectedSlipData(row);
+                              setIsSlipModalOpen(true);
+                            }}
+                            className="inline-flex items-center justify-center text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 p-2 rounded-xl transition-colors min-w-[36px] min-h-[36px]"
+                            title="สร้างรูปสลิป"
+                          >
+                            <ImageIcon className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleCopySingle(row)}
+                            className="inline-flex items-center justify-center text-red-600 hover:text-gray-900 bg-sky-50 p-2 rounded-xl transition-colors min-w-[36px] min-h-[36px]"
+                            title="คัดลอกสรุป"
+                          >
+                            {copiedId === row.worker.id ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -545,6 +560,13 @@ export function ReportsPage() {
           </div>
         )}
       </Card>
+
+      <SlipModal 
+        isOpen={isSlipModalOpen}
+        onClose={() => setIsSlipModalOpen(false)}
+        dateRangeStr={startDate === endDate ? startDate : `${startDate} ถึง ${endDate}`}
+        data={selectedSlipData}
+      />
     </div>
   );
 }
