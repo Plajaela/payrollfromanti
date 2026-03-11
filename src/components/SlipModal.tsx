@@ -38,7 +38,7 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
     try {
       setIsGenerating(true);
       const canvas = await html2canvas(slipRef.current, {
-        scale: 3, // High quality
+        scale: 2, // Safe scale for mobile
         useCORS: true,
         backgroundColor: '#ffffff'
       });
@@ -46,7 +46,9 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
       const link = document.createElement('a');
       link.href = image;
       link.download = `slip_${data.worker.name}_${dateRangeStr.replace(/ /g, '_')}.png`;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
     } catch (error) {
       console.error('Error generating slip:', error);
       alert('เกิดข้อผิดพลาดในการสร้างสลิปรูปภาพ');
