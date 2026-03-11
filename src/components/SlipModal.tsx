@@ -51,7 +51,7 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
       document.body.removeChild(link);
     } catch (error) {
       console.error('Error generating slip:', error);
-      alert('เกิดข้อผิดพลาดในการสร้างสลิปรูปภาพ');
+      alert(`เกิดข้อผิดพลาดในการสร้างสลิป: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsGenerating(false);
     }
@@ -174,8 +174,8 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
           </div>
           
           {/* Watermark / Decorative shape */}
-          <div className="absolute -bottom-16 -right-16 w-32 h-32 bg-gray-50 rounded-full blur-2xl -z-10 pointer-events-none"></div>
-          <div className="absolute -top-16 -left-16 w-32 h-32 bg-red-50 rounded-full blur-2xl -z-10 pointer-events-none"></div>
+          <div className="absolute -bottom-16 -right-16 w-40 h-40 bg-gray-100 rounded-full opacity-50 -z-10 pointer-events-none"></div>
+          <div className="absolute -top-16 -left-16 w-40 h-40 bg-red-50 rounded-full opacity-80 -z-10 pointer-events-none"></div>
 
         </div>
       </div>
