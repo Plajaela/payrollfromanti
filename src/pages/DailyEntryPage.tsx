@@ -20,6 +20,7 @@ export function DailyEntryPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [dailySlipsViewer, setDailySlipsViewer] = useState<{ workerName: string, images: string[] } | null>(null);
+  const [isCopyingImageId, setIsCopyingImageId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showShiftSettings, setShowShiftSettings] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -495,7 +496,7 @@ export function DailyEntryPage() {
     handleCopy(text, idToUse);
   };
 
-  const handleViewSlips = (worker: typeof workers[0], entry: typeof entries[0] | undefined, e: React.MouseEvent) => {
+  const handleCopySlipImage = async (worker: typeof workers[0], entry: typeof entries[0] | undefined, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!entry) {
       alert('ยังไม่มีข้อมูลการทำงานสำหรับวันนี้');
@@ -519,7 +520,45 @@ export function DailyEntryPage() {
       return;
     }
 
-    setDailySlipsViewer({ workerName: worker.name, images: uniqueImages });
+    setIsCopyingImageId(entry.id);
+
+    try {
+      // Create a canvas to convert to PNG in order to fix JPEG/HEIC cross compatibility for clipboard
+      const img = new Image();
+      img.crossOrigin = 'anonymous'; // This is essential to draw external image onto canvas and get data back
+      
+      const imgLoadPromise = new Promise<HTMLImageElement>((resolve, reject) => {
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = uniqueImages[0];
+      });
+
+      const loadedImg = await imgLoadPromise;
+      const canvas = document.createElement('canvas');
+      canvas.width = loadedImg.width;
+      canvas.height = loadedImg.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('No 2d context');
+      ctx.drawImage(loadedImg, 0, 0);
+      
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png', 1.0));
+      if (!blob) throw new Error('Could not create blob');
+      
+      if (typeof ClipboardItem !== 'undefined') {
+        const item = new ClipboardItem({ 'image/png': blob });
+        await navigator.clipboard.write([item]);
+        setCopiedId(`img_${entry.id}`);
+        setTimeout(() => setCopiedId(null), 2000);
+      } else {
+        throw new Error('ClipboardItem not supported');
+      }
+    } catch (err: any) {
+      console.warn("Could not copy directly, showing modal instead", err);
+      // Fallback to modal
+      setDailySlipsViewer({ workerName: worker.name, images: uniqueImages });
+    } finally {
+      setIsCopyingImageId(null);
+    }
   };
 
   const handleCopyAllDetailed = () => {
@@ -854,12 +893,13 @@ export function DailyEntryPage() {
                     </Button>
                     <Button
                       variant="secondary"
-                      onClick={(e) => handleViewSlips(activeWorker, activeEntry, e)}
-                      className="p-2.5 h-auto rounded-xl bg-violet-50 text-violet-600 hover:bg-violet-100 border-violet-100 min-w-[90px]"
-                      title="ดูและกดคัดลอกรูปสลิปที่แนบไว้"
+                      onClick={(e) => handleCopySlipImage(activeWorker, activeEntry, e)}
+                      disabled={isCopyingImageId === activeEntry.id}
+                      className="p-2.5 h-auto rounded-xl bg-violet-50 text-violet-600 hover:bg-violet-100 border-violet-100 min-w-[100px]"
+                      title="คัดลอกรูปสลิปภาพแรก"
                     >
-                      <ImagePlus className="w-5 h-5" />
-                      <span className="ml-1 text-sm font-semibold pr-1">สลิปที่แนบ</span>
+                      {isCopyingImageId === activeEntry.id ? <Loader2 className="w-5 h-5 animate-spin mx-auto text-violet-600" /> : copiedId === `img_${activeEntry.id}` ? <Check className="w-5 h-5 text-emerald-600" /> : <ImagePlus className="w-5 h-5" />}
+                      {isCopyingImageId !== activeEntry.id && <span className="ml-1 text-sm font-semibold pr-1">คัดลอกรูป</span>}
                     </Button>
                     <Button
                       variant="danger"
