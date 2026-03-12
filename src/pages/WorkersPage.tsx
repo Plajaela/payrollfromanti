@@ -12,6 +12,7 @@ export function WorkersPage() {
     name: '',
     baseWage: '',
     defaultTravelAllowance: '',
+    shiftStart: '07:00',
     shiftEnd: '16:00',
     paymentType: 'day' as 'day' | 'month' | 'half-month',
     hasGuarantee: false,
