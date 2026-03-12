@@ -497,7 +497,7 @@ export function DailyEntryPage() {
     try {
       // 1. Create a hidden element
       const container = document.createElement('div');
-      container.style.position = 'fixed';
+      container.style.position = 'absolute';
       container.style.top = '-9999px';
       container.style.left = '-9999px';
       // Use standard CSS since Tailwind classes might need slightly different processing outside react root, 
@@ -615,27 +615,30 @@ export function DailyEntryPage() {
 
       document.body.removeChild(container);
 
-      // Convert to blob and write to clipboard
-      const blob = await new Promise<Blob | null>(res => canvas.toBlob(res, 'image/png', 1.0));
-      if (blob) {
-        const imageUrl = URL.createObjectURL(blob);
-        setDailySlipPreview({ workerName: worker.name, imageUrl });
+      // Use toDataURL which is synchronous and identical to SlipModal
+      const imageUrl = canvas.toDataURL('image/png', 1.0);
+      setDailySlipPreview({ workerName: worker.name, imageUrl });
 
-        try {
+      try {
+        // Fallback to fetch blob from data URL
+        const res = await fetch(imageUrl);
+        const blob = await res.blob();
+        
+        if (typeof ClipboardItem !== 'undefined') {
           const item = new ClipboardItem({ 'image/png': blob });
           await navigator.clipboard.write([item]);
           setCopiedId(idToUse);
           setTimeout(() => setCopiedId(null), 2000);
-        } catch (clipErr) {
-          console.warn("Could not copy automatically", clipErr);
+        } else {
+          console.warn("ClipboardItem is not supported on this browser");
         }
-      } else {
-        throw new Error("Canvas toBlob failed");
+      } catch (clipErr) {
+        console.warn("Could not copy automatically to clipboard", clipErr);
       }
       
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error copying image:', err);
-      alert('ไม่สามารถคัดลอกรูปภาพอัตโนมัติได้ จะใช้การคัดลอกเป็นตัวหนังสือแทนครับ');
+      alert(`ไม่สามารถสร้างรูปภาพได้ (ระบบคัดลอกเป็นตัวหนังสือแทน)\n\nข้อผิดพลาด: ${err?.message || String(err)}`);
       // Fallback
       handleCopy(text, idToUse);
     } finally {
