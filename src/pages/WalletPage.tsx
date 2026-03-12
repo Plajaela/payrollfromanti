@@ -134,6 +134,13 @@ export function WalletPage() {
                 {(() => {
                     const filteredWorkers = workers
                         .map(worker => ({ worker, stats: getWorkerStats(worker.id) }))
+                        .filter(({ stats }) => {
+                            // Only show workers if they have ANY of these:
+                            // 1. A non-zero guarantee total
+                            // 2. A non-zero advance debt
+                            // 3. Any advance transaction history
+                            return stats.guaranteeTotal > 0 || stats.advanceTotal > 0 || stats.workerAdvances.length > 0;
+                        })
                         .sort((a, b) => {
                             // Sort by active advance debt first, then by guarantee total
                             if (a.stats.advanceTotal > 0 && b.stats.advanceTotal <= 0) return -1;
