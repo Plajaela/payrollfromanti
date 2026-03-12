@@ -19,6 +19,7 @@ export function DailyEntryPage() {
   const { workers, entries, addEntry, updateEntry, deleteEntry } = useStore();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [dailySlipsViewer, setDailySlipsViewer] = useState<{ workerName: string, images: string[] } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showShiftSettings, setShowShiftSettings] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -494,6 +495,33 @@ export function DailyEntryPage() {
     handleCopy(text, idToUse);
   };
 
+  const handleViewSlips = (worker: typeof workers[0], entry: typeof entries[0] | undefined, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!entry) {
+      alert('ยังไม่มีข้อมูลการทำงานสำหรับวันนี้');
+      return;
+    }
+
+    const images: string[] = [];
+    if (entry?.transferSlipUrl) images.push(entry.transferSlipUrl);
+    if (entry?.tollReceiptUrl) images.push(entry.tollReceiptUrl);
+    if (entry?.tolls) {
+      entry.tolls.forEach(t => { if (t.receiptUrl) images.push(t.receiptUrl); });
+    }
+    if (entry?.adjustments) {
+      entry.adjustments.forEach(a => { if (a.receiptUrl) images.push(a.receiptUrl); });
+    }
+
+    const uniqueImages = [...new Set(images)].filter(url => url && !url.startsWith('data:'));
+
+    if (uniqueImages.length === 0) {
+      alert('ไม่มีรูปสลิปหรือใบเสร็จแนบไว้ในรายการของวันนี้ครับ');
+      return;
+    }
+
+    setDailySlipsViewer({ workerName: worker.name, images: uniqueImages });
+  };
+
   const handleCopyAllDetailed = () => {
     const thaiYear = selectedDate.getFullYear() + 543;
     const shortThaiYear = thaiYear.toString().slice(-2);
@@ -818,11 +846,20 @@ export function DailyEntryPage() {
                     <Button
                       variant="secondary"
                       onClick={(e) => handleCopySingle(activeWorker, activeEntry, e)}
-                      className="p-2.5 h-auto rounded-xl bg-sky-50 text-red-600 hover:bg-sky-100 border-sky-100 min-w-[90px]"
-                      title="คัดลอกสรุปรายวันพร้อมสลิป"
+                      className="p-2.5 h-auto rounded-xl bg-sky-50 text-sky-600 hover:bg-sky-100 border-sky-100 min-w-[90px]"
+                      title="คัดลอกสรุปรายการเป็นข้อความ"
                     >
                       {copiedId === activeEntry.id ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5" />}
-                      <span className="ml-1 text-sm font-semibold pr-1">คัดลอก</span>
+                      <span className="ml-1 text-sm font-semibold pr-1">พิมพ์ข้อความ</span>
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={(e) => handleViewSlips(activeWorker, activeEntry, e)}
+                      className="p-2.5 h-auto rounded-xl bg-violet-50 text-violet-600 hover:bg-violet-100 border-violet-100 min-w-[90px]"
+                      title="ดูและกดคัดลอกรูปสลิปที่แนบไว้"
+                    >
+                      <ImagePlus className="w-5 h-5" />
+                      <span className="ml-1 text-sm font-semibold pr-1">สลิปที่แนบ</span>
                     </Button>
                     <Button
                       variant="danger"
@@ -1464,6 +1501,33 @@ export function DailyEntryPage() {
           </div>
         </Modal>
       )}
+
+      {/* Slip Viewer Modal for Copying */}
+      <Modal
+        isOpen={!!dailySlipsViewer}
+        onClose={() => setDailySlipsViewer(null)}
+        title={`สลิปที่แนบ - ${dailySlipsViewer?.workerName}`}
+      >
+        {dailySlipsViewer && (
+          <div className="flex flex-col items-center">
+            <div className="text-sm text-gray-600 font-medium mb-3 text-center bg-gray-50 p-3 rounded-xl w-full">
+              👉 <span className="text-gray-900 font-bold">วิธีคัดลอกรูปภาพ:</span><br/> แตะค้างที่รูปภาพด้านล่าง <br/>แล้วเลือกคำว่า <b>"คัดลอก"</b> (Copy) หรือ <b>"บันทึก"</b> (Save)
+            </div>
+            
+            <div className="max-h-[50vh] overflow-y-auto mb-4 w-full flex flex-col gap-3 border border-gray-100 bg-gray-50/50 p-2 rounded-xl shadow-inner">
+              {dailySlipsViewer.images.map((imgUrl, i) => (
+                <div key={i} className="relative rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-white flex justify-center p-1">
+                  <img src={imgUrl} alt={`Slip ${i}`} className="max-w-full h-auto object-contain max-h-[400px]" />
+                </div>
+              ))}
+            </div>
+            
+            <Button onClick={() => setDailySlipsViewer(null)} variant="primary" className="w-full py-3.5 rounded-xl">
+              ปิดหน้าต่าง
+            </Button>
+          </div>
+        )}
+      </Modal>
     </div >
   );
 }
