@@ -118,7 +118,7 @@ export function ReportsPage() {
     let text = `📋 สรุปยอดช่างทุกคน (วันที่ ${dateRangeStr})\n\n`;
 
     reportData.forEach((row, index) => {
-      let workerText = `${index + 1}. ช่าง${row.worker.name}: ทำงาน ${row.totalDays} วัน${row.leaveDays > 0 ? ` (+ ลาหยุด ${row.leaveDays} วัน)` : ''} | สุทธิ ฿${row.grandTotal}`;
+      let workerText = `${index + 1}. ${row.worker.name}: ทำงาน ${row.totalDays} วัน${row.leaveDays > 0 ? ` (+ ลาหยุด ${row.leaveDays} วัน)` : ''} | สุทธิ ฿${row.grandTotal}`;
       if (row.guaranteeTotal > 0) {
         workerText += ` (ประกันสะสมรวม ฿${row.guaranteeTotal})`;
       }

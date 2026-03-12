@@ -468,7 +468,7 @@ export function DailyEntryPage() {
       const wStart = worker.shiftStart || '07:00';
       const wEnd = worker.shiftEnd || '16:00';
 
-      text += `👤 ${worker.name.startsWith('ช่าง') ? worker.name : `ช่าง${worker.name}`}\n`;
+      text += `👤 ${worker.name}\n`;
       if (entry?.isLeave) {
         let leaveStr = (entry.leaveType as any) === 'ลาพักผ่อน' ? 'ลากิจ' : (entry.leaveType || 'ลากิจ');
         if (entry.leaveNote) leaveStr += ` (${entry.leaveNote})`;
@@ -1128,24 +1128,26 @@ export function DailyEntryPage() {
                 </div>
               </div>
 
-              {/* Guarantee Deduction */}
-              <div className="bg-orange-50/50 p-4 rounded-3xl border border-orange-100 flex items-center justify-between gap-4">
-                <div className="flex flex-col">
-                  <span className="font-semibold text-orange-800 flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-orange-500" /> หักเงินประกันสะสม</span>
+              {/* Guarantee Deduction (Only show if worker has guarantee) */}
+              {workers.find(w => w.id === formData.workerId)?.hasGuarantee && (
+                <div className="bg-orange-50/50 p-4 rounded-3xl border border-orange-100 flex items-center justify-between gap-4">
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-orange-800 flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-orange-500" /> หักเงินประกันสะสม</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {formData.hasGuaranteeDeduction && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-sm font-semibold text-orange-700">฿</span>
+                        <Input type="number" min="0" value={formData.guaranteeDeductionAmount || ''} onChange={(e) => setFormData(p => ({ ...p, guaranteeDeductionAmount: Number(e.target.value) }))} className="w-20 font-semibold h-9 text-sm px-2 text-right border-orange-200" />
+                      </div>
+                    )}
+                    <label className="relative inline-flex items-center cursor-pointer ml-auto">
+                      <input type="checkbox" className="sr-only peer" checked={formData.hasGuaranteeDeduction} onChange={(e) => setFormData(p => ({ ...p, hasGuaranteeDeduction: e.target.checked }))} />
+                      <div className="w-11 h-6 bg-orange-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+                    </label>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  {formData.hasGuaranteeDeduction && (
-                    <div className="flex items-center gap-1">
-                      <span className="text-sm font-semibold text-orange-700">฿</span>
-                      <Input type="number" min="0" value={formData.guaranteeDeductionAmount || ''} onChange={(e) => setFormData(p => ({ ...p, guaranteeDeductionAmount: Number(e.target.value) }))} className="w-20 font-semibold h-9 text-sm px-2 text-right border-orange-200" />
-                    </div>
-                  )}
-                  <label className="relative inline-flex items-center cursor-pointer ml-auto">
-                    <input type="checkbox" className="sr-only peer" checked={formData.hasGuaranteeDeduction} onChange={(e) => setFormData(p => ({ ...p, hasGuaranteeDeduction: e.target.checked }))} />
-                    <div className="w-11 h-6 bg-orange-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
-                  </label>
-                </div>
-              </div>
+              )}
 
               {/* Adjustments */}
               <div className="space-y-3">
