@@ -108,10 +108,10 @@ export function WalletPage() {
             </div>
 
             <div className="space-y-2">
-                <Label>หมายเหตุ (ถ้ามี)</Label>
+                <Label>หมายเหตุ / ช่องทางการรับเงิน</Label>
                 <Input
                     type="text"
-                    placeholder="เช่น ค่าเดินทางล่วงหน้า"
+                    placeholder="เช่น โอนเข้าบัญชีกสิกร..., เบิกค่าซ่อมรถ"
                     value={formData.note}
                     onChange={e => setFormData(p => ({ ...p, note: e.target.value }))}
                 />
@@ -277,52 +277,89 @@ export function WalletPage() {
                                 {isAddMode ? (
                                     renderAddForm()
                                 ) : (
-                                    <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                                    <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1 pb-4">
                                         {advancesList.length === 0 ? (
                                             <div className="text-center py-6 text-gray-400 text-sm border border-dashed rounded-xl">
                                                 ยังไม่มีประวัติการเบิกเงิน
                                             </div>
                                         ) : (
-                                            advancesList.map(adv => (
-                                                <div key={adv.id} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-white">
-                                                    <div className="flex items-center gap-3">
-                                                        {adv.type === 'borrow' ? (
-                                                            <div className="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center">
-                                                                <ArrowDownCircle className="w-5 h-5" />
+                                            (() => {
+                                                const groupedAdvances = advancesList.reduce((acc, adv) => {
+                                                    const dateObj = new Date(adv.date);
+                                                    const monthKey = format(dateObj, 'yyyy-MM');
+                                                    const monthName = format(dateObj, 'MMMM yyyy', { locale: th });
+                                                    if (!acc[monthKey]) {
+                                                        acc[monthKey] = { monthName, items: [], totalBorrow: 0, totalRepay: 0 };
+                                                    }
+                                                    acc[monthKey].items.push(adv);
+                                                    if (adv.type === 'borrow') {
+                                                        acc[monthKey].totalBorrow += adv.amount;
+                                                    } else {
+                                                        acc[monthKey].totalRepay += adv.amount;
+                                                    }
+                                                    return acc;
+                                                }, {} as Record<string, { monthName: string, items: typeof advancesList, totalBorrow: number, totalRepay: number }>);
+
+                                                const sortedMonths = Object.keys(groupedAdvances).sort((a, b) => b.localeCompare(a));
+
+                                                return sortedMonths.map(monthKey => {
+                                                    const group = groupedAdvances[monthKey];
+                                                    return (
+                                                        <div key={monthKey} className="space-y-2">
+                                                            <div className="flex items-center justify-between px-1 sticky top-0 bg-white/90 backdrop-blur-sm py-1 z-10">
+                                                                <h5 className="font-semibold text-gray-700 text-sm">{group.monthName}</h5>
+                                                                <div className="text-[11px] text-gray-500 font-medium">
+                                                                    เบิก: <span className="text-orange-500 font-semibold">฿{group.totalBorrow.toLocaleString()}</span>
+                                                                    {' • '}
+                                                                    คืน: <span className="text-emerald-500 font-semibold">฿{group.totalRepay.toLocaleString()}</span>
+                                                                </div>
                                                             </div>
-                                                        ) : (
-                                                            <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                                                                <ArrowUpCircle className="w-5 h-5" />
-                                                            </div>
-                                                        )}
-                                                        <div>
-                                                            <div className="text-sm font-semibold text-gray-900">
-                                                                {adv.type === 'borrow' ? 'เบิกล่วงหน้า' : 'คืนเงิน'}
-                                                            </div>
-                                                            <div className="text-[10px] text-gray-500">
-                                                                {format(new Date(adv.date), 'd MMM yyyy', { locale: th })}
-                                                                {adv.note && ` • ${adv.note}`}
+                                                            <div className="space-y-2">
+                                                                {group.items.map(adv => (
+                                                                    <div key={adv.id} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-white">
+                                                                        <div className="flex items-center gap-3">
+                                                                            {adv.type === 'borrow' ? (
+                                                                                <div className="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center">
+                                                                                    <ArrowDownCircle className="w-5 h-5" />
+                                                                                </div>
+                                                                            ) : (
+                                                                                <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                                                                                    <ArrowUpCircle className="w-5 h-5" />
+                                                                                </div>
+                                                                            )}
+                                                                            <div>
+                                                                                <div className="text-sm font-semibold text-gray-900">
+                                                                                    {adv.type === 'borrow' ? 'เบิกล่วงหน้า' : 'คืนเงิน'}
+                                                                                </div>
+                                                                                <div className="text-[10px] text-gray-500">
+                                                                                    {format(new Date(adv.date), 'd MMM yyyy', { locale: th })}
+                                                                                    {adv.note && ` • ${adv.note}`}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <div className="flex items-center gap-3">
+                                                                            <span className={`font-bold ${adv.type === 'borrow' ? 'text-orange-600' : 'text-emerald-600'}`}>
+                                                                                {adv.type === 'borrow' ? '+' : '-'}฿{adv.amount.toLocaleString()}
+                                                                            </span>
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    if (window.confirm('ต้องการลบรายการนี้ใช่หรือไม่?')) {
+                                                                                        deleteAdvance(adv.id);
+                                                                                    }
+                                                                                }}
+                                                                                className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                                                                            >
+                                                                                <Trash2 className="w-4 h-4" />
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
                                                             </div>
                                                         </div>
-                                                    </div>
-
-                                                    <div className="flex items-center gap-3">
-                                                        <span className={`font-bold ${adv.type === 'borrow' ? 'text-orange-600' : 'text-emerald-600'}`}>
-                                                            {adv.type === 'borrow' ? '+' : '-'}฿{adv.amount.toLocaleString()}
-                                                        </span>
-                                                        <button
-                                                            onClick={() => {
-                                                                if (window.confirm('ต้องการลบรายการนี้ใช่หรือไม่?')) {
-                                                                    deleteAdvance(adv.id);
-                                                                }
-                                                            }}
-                                                            className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ))
+                                                    );
+                                                });
+                                            })()
                                         )}
                                     </div>
                                 )}
