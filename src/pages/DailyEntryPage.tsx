@@ -3,10 +3,11 @@ import { useStore } from '../useStore';
 import { Button, Input, Label, Card, Modal } from '../components/ui';
 import { format, addDays, subDays, isSunday, parseISO } from 'date-fns';
 import { th } from 'date-fns/locale';
-import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Settings2, RefreshCw, Copy, Check, Paperclip, ImagePlus, X, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Settings2, RefreshCw, Copy, Check, Paperclip, ImagePlus, X, AlertTriangle, Loader2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Adjustment } from '../types';
 import { supabase } from '../lib/supabase';
+import html2canvas from 'html2canvas';
 
 const timeToMins = (time: string) => {
   if (!time) return 0;
@@ -18,6 +19,7 @@ export function DailyEntryPage() {
   const { workers, entries, addEntry, updateEntry, deleteEntry } = useStore();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isGeneratingSlipId, setIsGeneratingSlipId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showShiftSettings, setShowShiftSettings] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -334,8 +336,11 @@ export function DailyEntryPage() {
     }
   };
 
-  const handleCopySingle = (worker: typeof workers[0], entry: typeof entries[0] | undefined, e: React.MouseEvent) => {
+  const handleCopySingle = async (worker: typeof workers[0], entry: typeof entries[0] | undefined, e: React.MouseEvent) => {
     e.stopPropagation(); // prevent modal opening
+
+    const idToUse = entry ? entry.id : worker.id;
+    setIsGeneratingSlipId(idToUse);
 
     const thaiYear = selectedDate.getFullYear() + 543;
     const shortThaiYear = thaiYear.toString().slice(-2);
@@ -351,7 +356,6 @@ export function DailyEntryPage() {
     const totalPay = entry ? entry.totalPay : (baseWage + travelAllowance);
     const clockIn = entry ? entry.clockIn : worker.shiftStart || '07:00';
     const clockOut = entry ? entry.clockOut : worker.shiftEnd || '16:00';
-    const idToUse = entry ? entry.id : worker.id;
 
     const wStart = worker.shiftStart || '07:00';
     const wEnd = worker.shiftEnd || '16:00';
@@ -440,7 +444,126 @@ export function DailyEntryPage() {
 
     text += `\n✅ ยอดสุทธิวันนี้: ฿${totalPay}`;
 
-    handleCopy(text, idToUse);
+    try {
+      // 1. Create a hidden element
+      const container = document.createElement('div');
+      container.style.position = 'fixed';
+      container.style.top = '-9999px';
+      container.style.left = '-9999px';
+      // Use standard CSS since Tailwind classes might need slightly different processing outside react root, 
+      // but simple utility classes work if they are in the bundle!
+      container.className = 'bg-white p-6 w-[450px] font-sans text-gray-900 shadow-none border border-gray-100 rounded-xl overflow-hidden relative z-0';
+      
+      const header = document.createElement('div');
+      header.className = 'text-center pb-4 border-b-2 border-dashed border-gray-200 mb-4 z-10 relative';
+      header.innerHTML = `
+        <div class="mx-auto w-12 h-12 bg-red-600 rounded-2xl flex items-center justify-center text-white font-bold text-2xl mb-3 shadow-sm shadow-red-200">P</div>
+        <h2 class="text-xl font-bold text-gray-900 tracking-tight">PAYROLL</h2>
+        <p class="text-[11px] font-semibold text-gray-400 mt-1 tracking-widest uppercase">สรุปยอดรายวัน (${formattedDate})</p>
+      `;
+      container.appendChild(header);
+
+      const body = document.createElement('div');
+      body.className = 'whitespace-pre-wrap text-[15px] leading-relaxed text-gray-800 font-medium z-10 relative';
+      body.innerText = text;
+      container.appendChild(body);
+
+      // Extract all unique images
+      const images: string[] = [];
+      if (entry?.transferSlipUrl) images.push(entry.transferSlipUrl);
+      if (entry?.tollReceiptUrl) images.push(entry.tollReceiptUrl);
+      if (entry?.tolls) {
+        entry.tolls.forEach(t => { if (t.receiptUrl) images.push(t.receiptUrl); });
+      }
+      if (entry?.adjustments) {
+        entry.adjustments.forEach(a => { if (a.receiptUrl) images.push(a.receiptUrl); });
+      }
+
+      const uniqueImages = [...new Set(images)].filter(url => url && !url.startsWith('data:'));
+
+      if (uniqueImages.length > 0) {
+        const imgGrid = document.createElement('div');
+        imgGrid.className = 'mt-6 pt-5 border-t border-dashed border-gray-200 grid gap-3 z-10 relative';
+        // Auto grid columns based on number of images
+        if (uniqueImages.length > 1) {
+          imgGrid.classList.add('grid-cols-2');
+        } else {
+          imgGrid.classList.add('grid-cols-1');
+        }
+        
+        uniqueImages.forEach(src => {
+          const imgWrap = document.createElement('div');
+          imgWrap.className = 'rounded-xl overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center';
+          const img = document.createElement('img');
+          img.src = src;
+          img.crossOrigin = 'anonymous'; // critical for canvas
+          img.className = 'w-full h-auto object-contain';
+          img.style.maxHeight = '300px';
+          imgWrap.appendChild(img);
+          imgGrid.appendChild(imgWrap);
+        });
+        
+        container.appendChild(imgGrid);
+      }
+
+      const footer = document.createElement('div');
+      footer.className = 'text-center mt-6 pt-4 border-t-2 border-gray-900 z-10 relative';
+      footer.innerHTML = '<p class="text-[10px] text-gray-400 font-bold tracking-widest">พัดลมดี - THANK YOU FOR YOUR HARD WORK</p>';
+      container.appendChild(footer);
+
+      // Background shapes for premium look
+      const bg1 = document.createElement('div');
+      bg1.className = 'absolute -bottom-16 -right-16 w-40 h-40 bg-gray-100 rounded-full opacity-50 -z-10 pointer-events-none';
+      container.appendChild(bg1);
+      const bg2 = document.createElement('div');
+      bg2.className = 'absolute -top-16 -left-16 w-32 h-32 bg-red-50 rounded-full opacity-80 -z-10 pointer-events-none';
+      container.appendChild(bg2);
+
+      document.body.appendChild(container);
+
+      // Wait for all images to actually load
+      const imgElements = Array.from(container.querySelectorAll('img'));
+      if (imgElements.length > 0) {
+        await Promise.all(imgElements.map(img => {
+          if (img.complete) return Promise.resolve();
+          return new Promise((resolve) => {
+            img.onload = resolve;
+            img.onerror = resolve; // Continue even on error so it doesn't hang
+          });
+        }));
+      }
+
+      // Small delay to ensure styles apply
+      await new Promise(r => setTimeout(r, 100));
+
+      const canvas = await html2canvas(container, {
+        scale: 2,
+        useCORS: true, // required to draw crossOrigin images
+        backgroundColor: '#ffffff'
+      });
+
+      document.body.removeChild(container);
+
+      // Convert to blob and write to clipboard
+      const blob = await new Promise<Blob | null>(res => canvas.toBlob(res, 'image/png', 1.0));
+      if (blob) {
+        const item = new ClipboardItem({ 'image/png': blob });
+        await navigator.clipboard.write([item]);
+
+        setCopiedId(idToUse);
+        setTimeout(() => setCopiedId(null), 2000);
+      } else {
+        throw new Error("Canvas toBlob failed");
+      }
+      
+    } catch (err) {
+      console.error('Error copying image:', err);
+      alert('ไม่สามารถคัดลอกรูปภาพอัตโนมัติได้ จะใช้การคัดลอกเป็นตัวหนังสือแทนครับ');
+      // Fallback
+      handleCopy(text, idToUse);
+    } finally {
+      setIsGeneratingSlipId(null);
+    }
   };
 
   const handleCopyAllDetailed = () => {
@@ -767,11 +890,12 @@ export function DailyEntryPage() {
                     <Button
                       variant="secondary"
                       onClick={(e) => handleCopySingle(activeWorker, activeEntry, e)}
-                      className="p-2.5 h-auto rounded-xl bg-sky-50 text-red-600 hover:bg-sky-100 border-sky-100"
-                      title="คัดลอกสรุปรายวัน"
+                      disabled={isGeneratingSlipId === activeEntry.id}
+                      className="p-2.5 h-auto rounded-xl bg-sky-50 text-red-600 hover:bg-sky-100 border-sky-100 min-w-[90px]"
+                      title="คัดลอกสรุปรายวันพร้อมสลิป"
                     >
-                      {copiedId === activeEntry.id ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5" />}
-                      <span className="ml-1 text-sm font-semibold pr-1">คัดลอก</span>
+                      {isGeneratingSlipId === activeEntry.id ? <Loader2 className="w-5 h-5 animate-spin mx-auto text-sky-600" /> : copiedId === activeEntry.id ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5" />}
+                      {isGeneratingSlipId !== activeEntry.id && <span className="ml-1 text-sm font-semibold pr-1">คัดลอก</span>}
                     </Button>
                     <Button
                       variant="danger"
@@ -795,10 +919,11 @@ export function DailyEntryPage() {
                     <Button
                       variant="secondary"
                       onClick={(e) => handleCopySingle(activeWorker, undefined, e)}
+                      disabled={isGeneratingSlipId === activeWorker.id}
                       className="p-3 h-auto rounded-xl bg-sky-50 text-red-600 hover:bg-sky-100 border-sky-100"
                       title="คัดลอกสรุปรายการ (ค่าแรงปกติ)"
                     >
-                      {copiedId === activeWorker.id ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5" />}
+                      {isGeneratingSlipId === activeWorker.id ? <Loader2 className="w-5 h-5 animate-spin mx-auto text-sky-600" /> : copiedId === activeWorker.id ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5" />}
                     </Button>
                     <div className="flex gap-2 flex-wrap items-center">
                       <Button
