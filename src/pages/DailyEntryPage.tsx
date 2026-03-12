@@ -232,13 +232,62 @@ export function DailyEntryPage() {
     handleSave(false);
   };
 
+  const compressImage = (file: File): Promise<File> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const MAX_SIZE = 1200;
+
+          if (width > height) {
+            if (width > MAX_SIZE) {
+              height *= MAX_SIZE / width;
+              width = MAX_SIZE;
+            }
+          } else {
+            if (height > MAX_SIZE) {
+              width *= MAX_SIZE / height;
+              height = MAX_SIZE;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob((blob) => {
+            if (blob) {
+              // Convert to jpeg to ensure good compression, retain original extension logic
+              const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, ".jpg"), {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              });
+              resolve(compressedFile);
+            } else {
+              resolve(file); // Fallback
+            }
+          }, 'image/jpeg', 0.8);
+        };
+        img.onerror = () => resolve(file); // Fallback
+        img.src = event.target?.result as string;
+      };
+      reader.onerror = () => resolve(file); // Fallback
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'transferSlipUrl' | 'tollReceiptUrl' | 'adjustments' | 'tolls', adjId?: string) => {
-    const file = e.target.files?.[0];
+    let file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('ไฟล์ภาพมีขนาดใหญ่เกินไป แนะนำให้ใช้ไฟล์ที่เล็กกว่า 5MB');
-      return;
+    if (file.type.startsWith('image/')) {
+      setIsUploading(true);
+      file = await compressImage(file);
     }
 
     try {
