@@ -19,8 +19,6 @@ export function DailyEntryPage() {
   const { workers, entries, addEntry, updateEntry, deleteEntry } = useStore();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isGeneratingSlipId, setIsGeneratingSlipId] = useState<string | null>(null);
-  const [dailySlipPreview, setDailySlipPreview] = useState<{ workerName: string, imageUrl: string } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showShiftSettings, setShowShiftSettings] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -390,7 +388,6 @@ export function DailyEntryPage() {
     e.stopPropagation(); // prevent modal opening
 
     const idToUse = entry ? entry.id : worker.id;
-    setIsGeneratingSlipId(idToUse);
 
     const thaiYear = selectedDate.getFullYear() + 543;
     const shortThaiYear = thaiYear.toString().slice(-2);
@@ -494,173 +491,7 @@ export function DailyEntryPage() {
 
     text += `\n✅ ยอดสุทธิวันนี้: ฿${totalPay}`;
 
-    try {
-      // 1. Create a hidden element
-      const container = document.createElement('div');
-      container.style.position = 'absolute';
-      container.style.top = '-9999px';
-      container.style.left = '-9999px';
-      // Use standard CSS since Tailwind classes might need slightly different processing outside react root, 
-      // but simple utility classes work if they are in the bundle!
-      container.className = 'bg-white p-6 w-[450px] font-sans text-gray-900 shadow-none border border-gray-100 rounded-xl overflow-hidden relative z-0';
-      
-      const header = document.createElement('div');
-      header.className = 'text-center pb-4 border-b-2 border-dashed border-gray-200 mb-4 z-10 relative';
-      header.innerHTML = `
-        <div class="mx-auto w-12 h-12 bg-red-600 rounded-2xl flex items-center justify-center text-white font-bold text-2xl mb-3 shadow-sm shadow-red-200">P</div>
-        <h2 class="text-xl font-bold text-gray-900 tracking-tight">PAYROLL</h2>
-        <p class="text-[11px] font-semibold text-gray-400 mt-1 tracking-widest uppercase">สรุปยอดรายวัน (${formattedDate})</p>
-      `;
-      container.appendChild(header);
-
-      const body = document.createElement('div');
-      body.className = 'whitespace-pre-wrap text-[15px] leading-relaxed text-gray-800 font-medium z-10 relative';
-      body.innerText = text;
-      container.appendChild(body);
-
-      // Extract all unique images
-      const images: string[] = [];
-      if (entry?.transferSlipUrl) images.push(entry.transferSlipUrl);
-      if (entry?.tollReceiptUrl) images.push(entry.tollReceiptUrl);
-      if (entry?.tolls) {
-        entry.tolls.forEach(t => { if (t.receiptUrl) images.push(t.receiptUrl); });
-      }
-      if (entry?.adjustments) {
-        entry.adjustments.forEach(a => { if (a.receiptUrl) images.push(a.receiptUrl); });
-      }
-
-      const uniqueImages = [...new Set(images)].filter(url => url && !url.startsWith('data:'));
-      const safeDataUrls: string[] = [];
-
-      for (const src of uniqueImages) {
-        try {
-          // Fetch image and convert to base64 to avoid html2canvas tainting canvas
-          const response = await fetch(src, { mode: 'cors' });
-          if (!response.ok) throw new Error("Fetch failed");
-          const imgBlob = await response.blob();
-          
-          const base64 = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(imgBlob);
-          });
-          safeDataUrls.push(base64);
-        } catch (e) {
-          console.warn("Could not convert image to base64", e);
-          // Skip this image instead of tainting the canvas and crashing the whole process
-        }
-      }
-
-      if (safeDataUrls.length > 0) {
-        const imgGrid = document.createElement('div');
-        imgGrid.className = 'mt-6 pt-5 border-t border-dashed border-gray-200 grid gap-3 z-10 relative';
-        // Auto grid columns based on number of images
-        if (safeDataUrls.length > 1) {
-          imgGrid.classList.add('grid-cols-2');
-        } else {
-          imgGrid.classList.add('grid-cols-1');
-        }
-        
-        safeDataUrls.forEach(src => {
-          const imgWrap = document.createElement('div');
-          imgWrap.className = 'rounded-xl overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center';
-          const img = document.createElement('img');
-          img.src = src;
-          // No crossOrigin needed for data: URLs
-          img.className = 'w-full h-auto object-contain';
-          img.style.maxHeight = '300px';
-          imgWrap.appendChild(img);
-          imgGrid.appendChild(imgWrap);
-        });
-        
-        container.appendChild(imgGrid);
-      }
-
-      const footer = document.createElement('div');
-      footer.className = 'text-center mt-6 pt-4 border-t-2 border-gray-900 z-10 relative';
-      footer.innerHTML = '<p class="text-[10px] text-gray-400 font-bold tracking-widest">พัดลมดี - THANK YOU FOR YOUR HARD WORK</p>';
-      container.appendChild(footer);
-
-      // Background shapes for premium look
-      const bg1 = document.createElement('div');
-      bg1.className = 'absolute -bottom-16 -right-16 w-40 h-40 bg-gray-100 rounded-full opacity-50 -z-10 pointer-events-none';
-      container.appendChild(bg1);
-      const bg2 = document.createElement('div');
-      bg2.className = 'absolute -top-16 -left-16 w-32 h-32 bg-red-50 rounded-full opacity-80 -z-10 pointer-events-none';
-      container.appendChild(bg2);
-
-      document.body.appendChild(container);
-
-      // Wait for all images to actually load
-      const imgElements = Array.from(container.querySelectorAll('img'));
-      if (imgElements.length > 0) {
-        await Promise.all(imgElements.map(img => {
-          if (img.complete) return Promise.resolve();
-          return new Promise((resolve) => {
-            img.onload = resolve;
-            img.onerror = resolve; // Continue even on error so it doesn't hang
-          });
-        }));
-      }
-
-      // Small delay to ensure styles apply
-      await new Promise(r => setTimeout(r, 100));
-
-      const imageUrl = await toPng(container, {
-        pixelRatio: 2,
-        backgroundColor: '#ffffff'
-      });
-
-      document.body.removeChild(container);
-      setDailySlipPreview({ workerName: worker.name, imageUrl });
-
-      try {
-        // Fallback to fetch blob from data URL
-        const res = await fetch(imageUrl);
-        const blob = await res.blob();
-        
-        if (typeof ClipboardItem !== 'undefined') {
-          const item = new ClipboardItem({ 'image/png': blob });
-          await navigator.clipboard.write([item]);
-          setCopiedId(idToUse);
-          setTimeout(() => setCopiedId(null), 2000);
-        } else {
-          console.warn("ClipboardItem is not supported on this browser");
-        }
-      } catch (clipErr) {
-        console.warn("Could not copy automatically to clipboard", clipErr);
-      }
-      
-    } catch (err: any) {
-      console.error('Error copying image:', err);
-      alert(`ไม่สามารถสร้างรูปภาพได้ (ระบบคัดลอกเป็นตัวหนังสือแทน)\n\nข้อผิดพลาด: ${err?.message || String(err)}`);
-      // Fallback
-      handleCopy(text, idToUse);
-    } finally {
-      setIsGeneratingSlipId(null);
-    }
-  };
-
-  const handleNativeShareDaily = async () => {
-    if (!dailySlipPreview) return;
-    try {
-      const blob = await (await fetch(dailySlipPreview.imageUrl)).blob();
-      const file = new File([blob], `daily_${dailySlipPreview.workerName}.png`, { type: 'image/png' });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          title: `สรุปยอดรายวัน ${dailySlipPreview.workerName}`,
-          files: [file]
-        });
-      } else {
-        const link = document.createElement('a');
-        link.href = dailySlipPreview.imageUrl;
-        link.download = `daily_${dailySlipPreview.workerName}.png`;
-        link.click();
-      }
-    } catch (err) {
-      console.error(err);
-    }
+    handleCopy(text, idToUse);
   };
 
   const handleCopyAllDetailed = () => {
@@ -987,12 +818,11 @@ export function DailyEntryPage() {
                     <Button
                       variant="secondary"
                       onClick={(e) => handleCopySingle(activeWorker, activeEntry, e)}
-                      disabled={isGeneratingSlipId === activeEntry.id}
                       className="p-2.5 h-auto rounded-xl bg-sky-50 text-red-600 hover:bg-sky-100 border-sky-100 min-w-[90px]"
                       title="คัดลอกสรุปรายวันพร้อมสลิป"
                     >
-                      {isGeneratingSlipId === activeEntry.id ? <Loader2 className="w-5 h-5 animate-spin mx-auto text-sky-600" /> : copiedId === activeEntry.id ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5" />}
-                      {isGeneratingSlipId !== activeEntry.id && <span className="ml-1 text-sm font-semibold pr-1">คัดลอก</span>}
+                      {copiedId === activeEntry.id ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5" />}
+                      <span className="ml-1 text-sm font-semibold pr-1">คัดลอก</span>
                     </Button>
                     <Button
                       variant="danger"
@@ -1016,11 +846,10 @@ export function DailyEntryPage() {
                     <Button
                       variant="secondary"
                       onClick={(e) => handleCopySingle(activeWorker, undefined, e)}
-                      disabled={isGeneratingSlipId === activeWorker.id}
                       className="p-3 h-auto rounded-xl bg-sky-50 text-red-600 hover:bg-sky-100 border-sky-100"
                       title="คัดลอกสรุปรายการ (ค่าแรงปกติ)"
                     >
-                      {isGeneratingSlipId === activeWorker.id ? <Loader2 className="w-5 h-5 animate-spin mx-auto text-sky-600" /> : copiedId === activeWorker.id ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5" />}
+                      {copiedId === activeWorker.id ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5" />}
                     </Button>
                     <div className="flex gap-2 flex-wrap items-center">
                       <Button
@@ -1635,42 +1464,6 @@ export function DailyEntryPage() {
           </div>
         </Modal>
       )}
-
-      {/* Daily Slip Preview Modal */}
-      <Modal
-        isOpen={!!dailySlipPreview}
-        onClose={() => setDailySlipPreview(null)}
-        title="สรุปยอดรายวัน (พร้อมส่ง)"
-      >
-        {dailySlipPreview && (
-          <div className="flex flex-col items-center">
-            <div className="bg-emerald-50 text-emerald-700 px-4 py-2 rounded-xl text-sm font-semibold mb-3">
-              ✅ สร้างรูปภาพสำเร็จ!
-            </div>
-            {/* The generated image ready for long press to save */}
-            <div className="max-h-[60vh] overflow-y-auto mb-3 w-full flex justify-center border border-gray-200 rounded-xl max-w-[350px] shadow-sm">
-              <img 
-                src={dailySlipPreview.imageUrl} 
-                alt="Generated Slip" 
-                className="w-full object-contain"
-              />
-            </div>
-            <div className="text-xs text-gray-500 text-center px-4 mb-4">
-              💡 ทริค: ถ้าปุ่มแชร์ด้านล่างไม่ทำงาน<br/><span className="font-bold text-gray-700">ให้แตะค้างที่รูปภาพนี้แล้วเลือก "บันทึกรูปภาพ" หรือ "คัดลอกรูปภาพ"</span> ได้เลยครับ
-            </div>
-            
-            <div className="flex w-full gap-2">
-              <Button onClick={() => setDailySlipPreview(null)} variant="secondary" className="px-6 py-3.5 rounded-xl border-gray-200 bg-white">
-                ปิด
-              </Button>
-              <Button onClick={handleNativeShareDaily} className="flex-1 py-3.5 rounded-xl bg-[#00B900] hover:bg-[#009900] shadow-sm text-white flex items-center justify-center gap-2">
-                <Share2 className="w-5 h-5" />
-                แชร์ส่งให้ช่าง
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
     </div >
   );
 }
