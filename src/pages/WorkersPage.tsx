@@ -15,10 +15,11 @@ export function WorkersPage() {
     shiftEnd: '16:00',
     paymentType: 'day' as 'day' | 'month' | 'half-month',
     hasGuarantee: false,
+    lateRateRule: 'normal' as 'normal' | 'special',
   });
 
   const resetForm = () => {
-    setFormData({ name: '', baseWage: '', defaultTravelAllowance: '', shiftStart: '07:00', shiftEnd: '16:00', paymentType: 'day', hasGuarantee: false });
+    setFormData({ name: '', baseWage: '', defaultTravelAllowance: '', shiftStart: '07:00', shiftEnd: '16:00', paymentType: 'day', hasGuarantee: false, lateRateRule: 'normal' });
     setEditingId(null);
     setIsModalOpen(false);
   };
@@ -32,6 +33,7 @@ export function WorkersPage() {
       shiftEnd: worker.shiftEnd || '16:00',
       paymentType: worker.paymentType || 'day',
       hasGuarantee: worker.hasGuarantee || false,
+      lateRateRule: worker.lateRateRule || 'normal',
     });
     setEditingId(worker.id);
     setIsModalOpen(true);
@@ -49,6 +51,7 @@ export function WorkersPage() {
       shiftEnd: formData.shiftEnd,
       paymentType: formData.paymentType,
       hasGuarantee: formData.hasGuarantee,
+      lateRateRule: formData.lateRateRule,
     };
 
     if (editingId) {
@@ -106,6 +109,9 @@ export function WorkersPage() {
                           {worker.hasGuarantee && (
                             <span className="bg-orange-50 text-orange-700 px-2 py-0.5 rounded-md shrink-0">หักประกัน</span>
                           )}
+                          <span className={`px-2 py-0.5 rounded-md shrink-0 ${worker.lateRateRule === 'special' ? 'bg-purple-50 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>
+                            หักสาย{worker.lateRateRule === 'special' ? 'อัตราพิเศษ' : 'ปกติ'}
+                          </span>
                         </div>
                       </div>
                       <div className="flex items-center gap-1 pl-2 border-l border-gray-100 ml-2">
@@ -221,6 +227,19 @@ export function WorkersPage() {
               <option value="day">จ่ายรายวัน (จบวันเคลียร์เลย)</option>
               <option value="half-month">จ่ายแบบวิก (ทุก 15 วัน)</option>
               <option value="month">จ่ายสิ้นเดือน (ทุก 30 วัน)</option>
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="lateRateRule">กฎการหักมาสาย/กลับก่อน</Label>
+            <select
+              id="lateRateRule"
+              value={formData.lateRateRule}
+              onChange={(e) => setFormData({ ...formData, lateRateRule: e.target.value as 'normal' | 'special' })}
+              className="w-full rounded-2xl border-0 bg-gray-100/80 px-4 py-3 text-base text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all appearance-none cursor-pointer"
+            >
+              <option value="normal">เรทปกติ (หัก 100 บาท/ชม.)</option>
+              <option value="special">เรทพิเศษ {`(ไม่เกิน 15น. = 0บ., ไม่เกิน 45น. = 25บ., ไม่เกิน 60น. = 50บ.)`}</option>
             </select>
           </div>
 

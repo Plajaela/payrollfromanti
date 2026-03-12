@@ -526,7 +526,7 @@ export function DailyEntryPage() {
       // Create a canvas to convert to PNG in order to fix JPEG/HEIC cross compatibility for clipboard
       const img = new Image();
       img.crossOrigin = 'anonymous'; // This is essential to draw external image onto canvas and get data back
-      
+
       const imgLoadPromise = new Promise<HTMLImageElement>((resolve, reject) => {
         img.onload = () => resolve(img);
         img.onerror = reject;
@@ -540,10 +540,10 @@ export function DailyEntryPage() {
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('No 2d context');
       ctx.drawImage(loadedImg, 0, 0);
-      
+
       const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png', 1.0));
       if (!blob) throw new Error('Could not create blob');
-      
+
       if (typeof ClipboardItem !== 'undefined') {
         const item = new ClipboardItem({ 'image/png': blob });
         await navigator.clipboard.write([item]);
@@ -1551,9 +1551,9 @@ export function DailyEntryPage() {
         {dailySlipsViewer && (
           <div className="flex flex-col items-center">
             <div className="text-sm text-gray-600 font-medium mb-3 text-center bg-gray-50 p-3 rounded-xl w-full">
-              👉 <span className="text-gray-900 font-bold">วิธีคัดลอกรูปภาพ:</span><br/> แตะค้างที่รูปภาพด้านล่าง <br/>แล้วเลือกคำว่า <b>"คัดลอก"</b> (Copy) หรือ <b>"บันทึก"</b> (Save)
+              👉 <span className="text-gray-900 font-bold">วิธีคัดลอกรูปภาพ:</span><br /> แตะค้างที่รูปภาพด้านล่าง <br />แล้วเลือกคำว่า <b>"คัดลอก"</b> (Copy) หรือ <b>"บันทึก"</b> (Save)
             </div>
-            
+
             <div className="max-h-[50vh] overflow-y-auto mb-4 w-full flex flex-col gap-3 border border-gray-100 bg-gray-50/50 p-2 rounded-xl shadow-inner">
               {dailySlipsViewer.images.map((imgUrl, i) => (
                 <div key={i} className="relative rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-white flex justify-center p-1">
@@ -1561,7 +1561,7 @@ export function DailyEntryPage() {
                 </div>
               ))}
             </div>
-            
+
             <Button onClick={() => setDailySlipsViewer(null)} variant="primary" className="w-full py-3.5 rounded-xl">
               ปิดหน้าต่าง
             </Button>

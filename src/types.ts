@@ -23,6 +23,7 @@ export interface Worker {
   paymentType?: 'half-month' | 'month' | 'day';
   hasGuarantee?: boolean;
   historicalGuarantee?: number;
+  lateRateRule?: 'normal' | 'special';
 }
 
 export interface DailyEntry {
@@ -50,6 +51,7 @@ export interface DailyEntry {
   tollDate?: string;
   tolls?: TollEntry[];
   guaranteeDeduction?: number;
+  lateRateRule?: 'normal' | 'special';
 }
 
 export interface AdvancePayment {
