@@ -8,7 +8,7 @@ import { SlipModal } from '../components/SlipModal';
 
 
 export function ReportsPage() {
-  const { workers, entries } = useStore();
+  const { workers, entries, advances } = useStore();
 
   // Default to current month
   const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
@@ -57,6 +57,12 @@ export function ReportsPage() {
       // Extract guarantee deduction specifically within current range (just for reference if needed, though they want accumulated)
       const rangeGuaranteeDeduction = workerEntries.reduce((sum, e) => sum + (e.guaranteeDeduction || 0), 0);
 
+      // Current active advance debt for the worker
+      const workerAdvances = advances.filter(a => a.workerId === worker.id);
+      const advanceTotal = workerAdvances.reduce((sum, a) => sum + (a.type === 'borrow' ? a.amount : -a.amount), 0);
+      const advanceDeduction = advanceTotal > 0 ? advanceTotal : 0;
+      const finalPay = grandTotal - advanceDeduction;
+
       return {
         worker,
         totalDays,
@@ -72,12 +78,14 @@ export function ReportsPage() {
         personalDays,
         absentDays,
         guaranteeTotal,
-        rangeGuaranteeDeduction
+        rangeGuaranteeDeduction,
+        advanceDeduction,
+        finalPay
       };
     });
 
-    return summary.filter(s => s.totalDays > 0 || s.leaveDays > 0 || s.guaranteeTotal > 0 || s.rangeGuaranteeDeduction !== 0);
-  }, [entries, workers, startDate, endDate]);
+    return summary.filter(s => s.totalDays > 0 || s.leaveDays > 0 || s.guaranteeTotal > 0 || s.rangeGuaranteeDeduction !== 0 || s.advanceDeduction > 0);
+  }, [entries, workers, advances, startDate, endDate]);
 
   const handleCopy = async (text: string, id: string) => {
     try {
@@ -104,7 +112,12 @@ export function ReportsPage() {
     }
 
     text += `- อื่นๆ: ฿${row.netAdjustments}\n` +
-      `📌 ยอดสุทธิ: ฿${row.grandTotal}`;
+      `📌 ยอดรวม: ฿${row.grandTotal}`;
+
+    if (row.advanceDeduction > 0) {
+      text += `\n❌ หักหนี้เบิกล่วงหน้า: -฿${row.advanceDeduction}\n` +
+      `✅ คงเหลือรับสุทธิ: ฿${row.finalPay}`;
+    }
 
     if (row.guaranteeTotal > 0) {
       text += `\n(🔒 มีเงินประกันสะสมรวมทั้งหมด: ฿${row.guaranteeTotal})`;
@@ -118,15 +131,18 @@ export function ReportsPage() {
     let text = `📋 สรุปยอดช่างทุกคน (วันที่ ${dateRangeStr})\n\n`;
 
     reportData.forEach((row, index) => {
-      let workerText = `${index + 1}. ${row.worker.name}: ทำงาน ${row.totalDays} วัน${row.leaveDays > 0 ? ` (+ ลาหยุด ${row.leaveDays} วัน)` : ''} | สุทธิ ฿${row.grandTotal}`;
+      let workerText = `${index + 1}. ${row.worker.name}: ทำงาน ${row.totalDays} วัน${row.leaveDays > 0 ? ` (+ ลา ${row.leaveDays})` : ''} | รับสุทธิ ${row.finalPay}`;
+      if (row.advanceDeduction > 0) {
+          workerText += ` (รวม ${row.grandTotal} หักเบิก ${row.advanceDeduction})`;
+      }
       if (row.guaranteeTotal > 0) {
-        workerText += ` (ประกันสะสมรวม ฿${row.guaranteeTotal})`;
+        workerText += ` (ประกันสะสม ฿${row.guaranteeTotal})`;
       }
       text += workerText + '\n';
     });
 
-    const grandTotal = reportData.reduce((sum, r) => sum + r.grandTotal, 0);
-    text += `\n💰 รวมยอดทั้งหมด: ฿${grandTotal}`;
+    const grandFinalPayTotal = reportData.reduce((sum, r) => sum + r.finalPay, 0);
+    text += `\n💰 รวมยอดที่ต้องจ่ายจริง: ฿${grandFinalPayTotal}`;
 
     handleCopy(text, 'all');
   };
@@ -195,7 +211,8 @@ export function ReportsPage() {
       baseRow['รวมอื่นๆ (สุทธิ)'] = otherSums;
       baseRow['หักประกันสะสม(ในรอบ)'] = row.rangeGuaranteeDeduction;
       baseRow['ยอดประกันสะสมรวมทั้งหมด'] = row.guaranteeTotal || 0;
-      baseRow['ยอดสุทธิ(ในรอบ)'] = row.grandTotal;
+      baseRow['หักเบิกล่วงหน้า'] = row.advanceDeduction;
+      baseRow['ยอดสุทธิ(ในรอบ)'] = row.finalPay;
 
       return baseRow;
     });
@@ -223,7 +240,8 @@ export function ReportsPage() {
     grandTotalRow['รวมอื่นๆ (สุทธิ)'] = summaryRows.reduce((sum, r) => sum + (r['รวมอื่นๆ (สุทธิ)'] || 0), 0);
     grandTotalRow['หักประกันสะสม(ในรอบ)'] = reportData.reduce((sum, r) => sum + r.rangeGuaranteeDeduction, 0);
     grandTotalRow['ยอดประกันสะสมรวมทั้งหมด'] = reportData.reduce((sum, r) => sum + r.guaranteeTotal, 0);
-    grandTotalRow['ยอดสุทธิ(ในรอบ)'] = reportData.reduce((sum, r) => sum + r.grandTotal, 0);
+    grandTotalRow['หักเบิกล่วงหน้า'] = reportData.reduce((sum, r) => sum + r.advanceDeduction, 0);
+    grandTotalRow['ยอดสุทธิ(ในรอบ)'] = reportData.reduce((sum, r) => sum + r.finalPay, 0);
 
     XLSX.utils.sheet_add_json(wsSummary, [grandTotalRow], { skipHeader: true, origin: -1 });
 
@@ -273,7 +291,7 @@ export function ReportsPage() {
           row['หักสาย'] = '';
           row['หักประกันสะสม'] = '';
           row['รวมอื่นๆ'] = '';
-          row['ยอดสุทธิประจำวัน'] = '';
+          row['ยอดสุทธิ(ก่อนหักเบิก)'] = '';
           row['หมายเหตุอื่นๆ'] = '';
           row['สลิปโอนเงิน'] = '';
           row['สลิปทางด่วน'] = '';
@@ -444,6 +462,7 @@ export function ReportsPage() {
       { wpx: 100 }, // รวมอื่นๆ
       { wpx: 150 }, // หักประกันสะสม
       { wpx: 150 }, // ยอดประกันสะสมรวม
+      { wpx: 120 }, // หักเบิกล่วงหน้า
       { wpx: 150 }  // ยอดสุทธิ
     );
     wsSummary['!cols'] = summaryCols;
@@ -508,7 +527,8 @@ export function ReportsPage() {
                     <th scope="col" className="px-3 py-3.5 text-right text-[13px] font-semibold text-red-600 uppercase tracking-wide">หักสาย</th>
                     <th scope="col" className="px-3 py-3.5 text-right text-[13px] font-semibold text-zinc-900 uppercase tracking-wide">อื่นๆ</th>
                     <th scope="col" className="py-3.5 px-3 text-right text-[13px] font-semibold text-orange-600 uppercase tracking-wide">ประกันสะสมรวม</th>
-                    <th scope="col" className="py-3.5 px-3 text-right text-[13px] font-semibold text-blue-600 uppercase tracking-wide">ยอดสุทธิ</th>
+                    <th scope="col" className="py-3.5 px-3 text-right text-[13px] font-semibold text-red-600 uppercase tracking-wide">หักเบิก</th>
+                    <th scope="col" className="py-3.5 px-3 text-right text-[13px] font-semibold text-blue-600 uppercase tracking-wide">สุทธิ</th>
                     <th scope="col" className="py-3.5 pl-3 pr-4 sm:pr-6"><span className="sr-only">คัดลอก</span></th>
                   </tr>
                 </thead>
@@ -532,7 +552,15 @@ export function ReportsPage() {
                       <td className="whitespace-nowrap px-3 py-4 text-sm font-bold text-orange-600 text-right">
                         {row.guaranteeTotal > 0 ? `฿${row.guaranteeTotal}` : '-'}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm font-bold text-blue-600 text-right">฿{row.grandTotal}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm font-bold text-red-500 text-right">
+                        {row.advanceDeduction > 0 ? `-฿${row.advanceDeduction}` : '-'}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm font-bold text-blue-600 text-right">
+                        <div className="flex flex-col items-end">
+                            {row.advanceDeduction > 0 && <span className="text-[10px] text-zinc-400 line-through">฿{row.grandTotal}</span>}
+                            <span>฿{row.finalPay}</span>
+                        </div>
+                      </td>
                       <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                         <div className="flex justify-end gap-1">
                           <button
@@ -567,7 +595,8 @@ export function ReportsPage() {
                     <td className="px-3 py-3 text-sm font-bold text-red-600 text-right">-฿{reportData.reduce((sum, r) => sum + r.totalLate, 0)}</td>
                     <td className="px-3 py-3 text-sm font-bold text-blue-900 text-right">฿{reportData.reduce((sum, r) => sum + r.netAdjustments, 0)}</td>
                     <td className="px-3 py-3 text-sm font-bold text-orange-600 text-right">฿{reportData.reduce((sum, r) => sum + r.guaranteeTotal, 0)}</td>
-                    <td className="px-3 py-3 text-sm font-bold text-blue-700 text-right">฿{reportData.reduce((sum, r) => sum + r.grandTotal, 0)}</td>
+                    <td className="px-3 py-3 text-sm font-bold text-red-600 text-right">-฿{reportData.reduce((sum, r) => sum + r.advanceDeduction, 0)}</td>
+                    <td className="px-3 py-3 text-sm font-bold text-blue-700 text-right">฿{reportData.reduce((sum, r) => sum + r.finalPay, 0)}</td>
                     <td className="py-3 pl-3 pr-4 sm:pr-6"></td>
                   </tr>
                 </tfoot>

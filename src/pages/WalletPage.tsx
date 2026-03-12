@@ -134,11 +134,13 @@ export function WalletPage() {
                 {(() => {
                     const filteredWorkers = workers
                         .map(worker => ({ worker, stats: getWorkerStats(worker.id) }))
-                        .filter(({ stats }) => stats.guaranteeTotal > 0 || stats.workerAdvances.length > 0)
                         .sort((a, b) => {
                             // Sort by active advance debt first, then by guarantee total
                             if (a.stats.advanceTotal > 0 && b.stats.advanceTotal <= 0) return -1;
                             if (b.stats.advanceTotal > 0 && a.stats.advanceTotal <= 0) return 1;
+                            // Sort by workers with non-zero guarantee total next
+                            if (a.stats.guaranteeTotal > 0 && b.stats.guaranteeTotal <= 0) return -1;
+                            if (b.stats.guaranteeTotal > 0 && a.stats.guaranteeTotal <= 0) return 1;
                             return b.stats.guaranteeTotal - a.stats.guaranteeTotal;
                         });
 
