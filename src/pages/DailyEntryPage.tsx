@@ -68,6 +68,7 @@ export function DailyEntryPage() {
     leaveNote: '',
     hasGuaranteeDeduction: false,
     guaranteeDeductionAmount: 100,
+    lateRateRule: 'normal' as 'normal' | 'special',
   });
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
@@ -112,9 +113,28 @@ export function DailyEntryPage() {
     if (inMins > startMins) missingMins += (inMins - startMins);
     if (outMins < endMins) missingMins += (endMins - outMins);
 
-    // Calculate deduction: 100 baht per hour late
-    const deductionRatePerHour = 100;
-    const deduction = Math.round((deductionRatePerHour / 60) * missingMins);
+    // Calculate late deduction
+    let deduction = 0;
+    
+    if (formData.lateRateRule === 'special') {
+      const hours = Math.floor(missingMins / 60);
+      const remainder = missingMins % 60;
+      let remainderDeduction = 0;
+      
+      if (remainder > 0 && remainder <= 15) {
+        remainderDeduction = 0;
+      } else if (remainder >= 16 && remainder <= 45) {
+        remainderDeduction = 25;
+      } else if (remainder >= 46 && remainder < 60) {
+        remainderDeduction = 50;
+      }
+      
+      deduction = (hours * 50) + remainderDeduction;
+    } else {
+      // Normal rate: 100 baht per hour, calculated proportionally
+      const deductionRatePerHour = 100;
+      deduction = Math.round((deductionRatePerHour / 60) * missingMins);
+    }
 
     // Calculate overtime minutes
     let otRawMins = 0;
@@ -146,7 +166,7 @@ export function DailyEntryPage() {
         overtimeMinutes: otMins
       };
     });
-  }, [formData.clockIn, formData.clockOut, formData.shiftStart, formData.shiftEnd, formData.baseWage, isModalOpen]);
+  }, [formData.clockIn, formData.clockOut, formData.shiftStart, formData.shiftEnd, formData.baseWage, isModalOpen, formData.lateRateRule]);
 
   const resetToShiftTimes = () => {
     setFormData(prev => ({
@@ -201,6 +221,7 @@ export function DailyEntryPage() {
         leaveNote: existingEntry.leaveNote || '',
         hasGuaranteeDeduction: (existingEntry.guaranteeDeduction || 0) > 0,
         guaranteeDeductionAmount: existingEntry.guaranteeDeduction || Math.min(100, capRemaining),
+        lateRateRule: existingEntry.lateRateRule || worker.lateRateRule || 'normal',
       });
       setEditingId(existingEntry.id);
     } else {
@@ -228,6 +249,7 @@ export function DailyEntryPage() {
         leaveNote: '',
         hasGuaranteeDeduction: (worker.hasGuarantee || false) && capRemaining > 0,
         guaranteeDeductionAmount: Math.min(100, capRemaining),
+        lateRateRule: worker.lateRateRule || 'normal',
       });
       setEditingId(null);
     }
@@ -374,6 +396,7 @@ export function DailyEntryPage() {
       tollReceiptUrl: formData.tollReceiptUrl,
       tollDate: formData.tollDate,
       guaranteeDeduction: formData.hasGuaranteeDeduction ? formData.guaranteeDeductionAmount : 0,
+      lateRateRule: formData.lateRateRule,
     };
 
     if (editingId) {
