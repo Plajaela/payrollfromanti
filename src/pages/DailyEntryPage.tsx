@@ -3,7 +3,7 @@ import { useStore } from '../useStore';
 import { Button, Input, Label, Card, Modal } from '../components/ui';
 import { format, addDays, subDays, isSunday, parseISO } from 'date-fns';
 import { th } from 'date-fns/locale';
-import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Settings2, RefreshCw, Copy, Check, Paperclip, ImagePlus, X, AlertTriangle, Loader2, Share2 } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Settings2, RefreshCw, Copy, Check, Paperclip, ImagePlus, X, AlertTriangle, Loader2, Share2, Wallet, ArrowDownCircle } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Adjustment } from '../types';
 import { supabase } from '../lib/supabase';
@@ -16,7 +16,7 @@ const timeToMins = (time: string) => {
 };
 
 export function DailyEntryPage() {
-  const { workers, entries, addEntry, updateEntry, deleteEntry } = useStore();
+  const { workers, entries, advances, addEntry, updateEntry, deleteEntry, addAdvance } = useStore();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [dailySlipsViewer, setDailySlipsViewer] = useState<{ workerName: string, images: string[] } | null>(null);
@@ -29,6 +29,13 @@ export function DailyEntryPage() {
   const [lalamoveDist, setLalamoveDist] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [isAdvanceModalOpen, setIsAdvanceModalOpen] = useState(false);
+  const [advanceFormData, setAdvanceFormData] = useState({
+    workerId: '',
+    workerName: '',
+    amount: '',
+    note: ''
+  });
 
   // Set default tab when workers change or active tab is not set
   useEffect(() => {
@@ -673,6 +680,39 @@ export function DailyEntryPage() {
 
   const activeWorker = workers.find(w => w.id === activeTabWorkerId) || workers[0];
   const activeEntry = activeWorker ? entriesForDate.find(e => e.workerId === activeWorker.id) : undefined;
+  
+  const activeAdvanceTotal = useMemo(() => {
+    if (!activeWorker) return 0;
+    return advances
+      .filter(a => a.workerId === activeWorker.id)
+      .reduce((sum, a) => sum + (a.type === 'borrow' ? a.amount : -a.amount), 0);
+  }, [advances, activeWorker]);
+
+  const handleOpenAdvanceModal = (worker: typeof workers[0], e: React.MouseEvent) => {
+    e.stopPropagation();
+    setAdvanceFormData({
+      workerId: worker.id,
+      workerName: worker.name,
+      amount: '',
+      note: ''
+    });
+    setIsAdvanceModalOpen(true);
+  };
+
+  const handleAdvanceSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!advanceFormData.workerId || !advanceFormData.amount) return;
+
+    addAdvance({
+      workerId: advanceFormData.workerId,
+      date: dateStr,
+      type: 'borrow',
+      amount: Number(advanceFormData.amount),
+      note: advanceFormData.note
+    });
+
+    setIsAdvanceModalOpen(false);
+  };
 
   const handleQuickLeaveInfo = (e: React.MouseEvent, leaveType: 'ลาป่วย' | 'ลากิจ' | 'ขาดงาน') => {
     e.stopPropagation();
@@ -857,23 +897,42 @@ export function DailyEntryPage() {
             >
               <div className="mb-4">
                 <div className="font-bold text-gray-900 text-2xl mb-2">{activeWorker.name}</div>
-                {activeEntry ? (
-                  <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-sm font-semibold shadow-sm ${activeEntry.isLeave ? 'bg-red-100 text-red-700' : activeEntry.isDraft ? 'bg-amber-100 text-amber-700' : 'bg-sky-100 text-sky-700'}`}>
-                    {activeEntry.isLeave ? <X className="w-4 h-4" /> : activeEntry.isDraft ? <Clock className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
-                    {activeEntry.isLeave ? (activeEntry.leaveType || 'ลากิจ') : activeEntry.isDraft ? 'ฉบับร่าง' : 'บันทึกแล้ว'}
-                    <span className={`${activeEntry.isLeave ? 'text-red-800' : activeEntry.isDraft ? 'text-amber-800' : 'text-sky-800'} ml-1`}>฿{activeEntry.totalPay}</span>
-                    <span className={`${activeEntry.isLeave ? 'text-red-600/70 border-red-200' : activeEntry.isDraft ? 'text-amber-600/70 border-amber-200' : 'text-sky-600/70 border-sky-200'} font-normal ml-1 border-l pl-2`}>
-                      {activeEntry.isLeave ? 'ลาหยุด' : `${activeEntry.clockIn} - ${activeEntry.clockOut}`}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="text-sm text-gray-500 bg-gray-50 inline-block px-3 py-1 rounded-xl border border-gray-100">
-                    รอการบันทึก • เวลาปกติ {activeWorker.shiftStart || '07:00'} - {activeWorker.shiftEnd || '16:00'}
-                  </div>
-                )}
+                <div className="flex flex-col items-center gap-2">
+                  {activeEntry ? (
+                    <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-sm font-semibold shadow-sm ${activeEntry.isLeave ? 'bg-red-100 text-red-700' : activeEntry.isDraft ? 'bg-amber-100 text-amber-700' : 'bg-sky-100 text-sky-700'}`}>
+                      {activeEntry.isLeave ? <X className="w-4 h-4" /> : activeEntry.isDraft ? <Clock className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                      {activeEntry.isLeave ? (activeEntry.leaveType || 'ลากิจ') : activeEntry.isDraft ? 'ฉบับร่าง' : 'บันทึกแล้ว'}
+                      <span className={`${activeEntry.isLeave ? 'text-red-800' : activeEntry.isDraft ? 'text-amber-800' : 'text-sky-800'} ml-1`}>฿{activeEntry.totalPay}</span>
+                      <span className={`${activeEntry.isLeave ? 'text-red-600/70 border-red-200' : activeEntry.isDraft ? 'text-amber-600/70 border-amber-200' : 'text-sky-600/70 border-sky-200'} font-normal ml-1 border-l pl-2`}>
+                        {activeEntry.isLeave ? 'ลาหยุด' : `${activeEntry.clockIn} - ${activeEntry.clockOut}`}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-500 bg-gray-50 flex items-center justify-center px-3 py-1 rounded-xl border border-gray-100">
+                      รอการบันทึก • เวลาปกติ {activeWorker.shiftStart || '07:00'} - {activeWorker.shiftEnd || '16:00'}
+                    </div>
+                  )}
+
+                  {activeAdvanceTotal > 0 && (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-100">
+                      <Wallet className="w-3.5 h-3.5" /> หนี้เบิกล่วงหน้าคงค้าง: ฿{activeAdvanceTotal.toLocaleString()}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div className="flex flex-wrap justify-center items-center gap-2 mt-2">
+              <div className="flex justify-center items-center w-full mb-3 pb-3 border-b border-gray-100 border-dashed">
+                <Button 
+                  variant="secondary" 
+                  onClick={(e) => handleOpenAdvanceModal(activeWorker, e)}
+                  className="px-4 py-2 text-sm rounded-xl bg-gradient-to-r from-orange-50 to-orange-100 text-orange-700 hover:from-orange-100 hover:to-orange-200 border-orange-200 shadow-sm flex items-center gap-1.5"
+                  title="เบิกเงินล่วงหน้า"
+                >
+                  <ArrowDownCircle className="w-4 h-4" /> เบิกเงินล่วงหน้า
+                </Button>
+              </div>
+
+              <div className="flex flex-wrap justify-center items-center gap-2">
                 {activeEntry ? (
                   <>
                     <Button
@@ -1568,6 +1627,50 @@ export function DailyEntryPage() {
           </div>
         )}
       </Modal>
+      {/* Advance Payment Modal */}
+      <Modal
+        isOpen={isAdvanceModalOpen}
+        onClose={() => setIsAdvanceModalOpen(false)}
+        title={`เบิกเงินล่วงหน้า - ${advanceFormData.workerName}`}
+      >
+        <form onSubmit={handleAdvanceSubmit} className="space-y-4">
+          <div className="bg-orange-50 p-4 rounded-2xl border border-orange-100 shadow-sm flex items-center justify-between">
+            <span className="text-orange-800 font-medium text-sm">วันที่ทำรายการ</span>
+            <span className="text-orange-600 font-bold">{format(selectedDate, 'd MMM yyyy', { locale: th })}</span>
+          </div>
+          
+          <div className="space-y-2">
+            <Label>จำนวนเงิน (บาท)</Label>
+            <Input
+              type="number"
+              min="1"
+              placeholder="ระบุจำนวนเงินเบิกล่วงหน้า"
+              value={advanceFormData.amount}
+              onChange={e => setAdvanceFormData(p => ({ ...p, amount: e.target.value }))}
+              required
+              autoFocus
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>หมายเหตุ / ช่องทางการรับเงิน (ถ้ามี)</Label>
+            <Input
+              type="text"
+              placeholder="เช่น เบิกค่ากิน, เบิกค่ารถ, รับเงินสด"
+              value={advanceFormData.note}
+              onChange={e => setAdvanceFormData(p => ({ ...p, note: e.target.value }))}
+            />
+          </div>
+
+          <div className="flex gap-2 pt-2">
+            <Button type="button" variant="secondary" onClick={() => setIsAdvanceModalOpen(false)} className="flex-1 rounded-xl">ยกเลิก</Button>
+            <Button type="submit" className="flex-1 bg-orange-500 hover:bg-orange-600 shadow-orange-200 shadow-lg text-white rounded-xl flex justify-center items-center gap-1.5">
+              <ArrowDownCircle className="w-4 h-4" /> บันทึกเบิกเงิน
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
     </div >
   );
 }
