@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Modal, Button } from './ui';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import { Download, Loader2, Share2, Image as ImageIcon } from 'lucide-react';
 import { Worker } from '../types';
 
@@ -38,12 +38,10 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
     if (!slipRef.current) return;
     try {
       setIsGenerating(true);
-      const canvas = await html2canvas(slipRef.current, {
-        scale: 2, // Safe scale for mobile
-        useCORS: true,
+      const image = await toPng(slipRef.current, {
+        pixelRatio: 2, // Safe scale for mobile
         backgroundColor: '#ffffff'
       });
-      const image = canvas.toDataURL('image/png', 1.0);
       setGeneratedImage(image);
     } catch (error) {
       console.error('Error generating slip:', error);

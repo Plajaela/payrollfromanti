@@ -7,7 +7,7 @@ import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Settings2
 import { v4 as uuidv4 } from 'uuid';
 import { Adjustment } from '../types';
 import { supabase } from '../lib/supabase';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 
 const timeToMins = (time: string) => {
   if (!time) return 0;
@@ -607,16 +607,12 @@ export function DailyEntryPage() {
       // Small delay to ensure styles apply
       await new Promise(r => setTimeout(r, 100));
 
-      const canvas = await html2canvas(container, {
-        scale: 2,
-        useCORS: true, // required to draw crossOrigin images
+      const imageUrl = await toPng(container, {
+        pixelRatio: 2,
         backgroundColor: '#ffffff'
       });
 
       document.body.removeChild(container);
-
-      // Use toDataURL which is synchronous and identical to SlipModal
-      const imageUrl = canvas.toDataURL('image/png', 1.0);
       setDailySlipPreview({ workerName: worker.name, imageUrl });
 
       try {
