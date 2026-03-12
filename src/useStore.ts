@@ -72,7 +72,8 @@ export function useStore() {
                   shift_end: w.shiftEnd || '16:00',
                   payment_type: w.paymentType || 'month',
                   has_guarantee: w.hasGuarantee || false,
-                  historical_guarantee: w.historicalGuarantee || 0
+                  historical_guarantee: w.historicalGuarantee || 0,
+                  late_rate_rule: w.lateRateRule || 'normal'
                 }))
               );
 
@@ -95,7 +96,8 @@ export function useStore() {
             shiftEnd: w.shift_end,
             paymentType: w.payment_type,
             hasGuarantee: w.has_guarantee || false,
-            historicalGuarantee: Number(w.historical_guarantee) || 0
+            historicalGuarantee: Number(w.historical_guarantee) || 0,
+            lateRateRule: w.late_rate_rule || 'normal'
           }));
           setWorkers(formattedWorkers);
         }
@@ -185,7 +187,8 @@ export function useStore() {
                   is_leave: e.isLeave || false,
                   transfer_slip_url: e.transferSlipUrl,
                   toll_receipt_url: e.tollReceiptUrl,
-                  guarantee_deduction: e.guaranteeDeduction || 0
+                  guarantee_deduction: e.guaranteeDeduction || 0,
+                  late_rate_rule: e.lateRateRule || 'normal'
                 }))
               );
 
@@ -219,7 +222,8 @@ export function useStore() {
             isLeave: e.is_leave,
             transferSlipUrl: e.transfer_slip_url,
             tollReceiptUrl: e.toll_receipt_url,
-            guaranteeDeduction: Number(e.guarantee_deduction) || 0
+            guaranteeDeduction: Number(e.guarantee_deduction) || 0,
+            lateRateRule: e.late_rate_rule || 'normal'
           }));
           setEntries(formattedEntries);
         }
@@ -323,7 +327,8 @@ export function useStore() {
         shift_end: worker.shiftEnd || '16:00',
         payment_type: worker.paymentType || 'month',
         has_guarantee: worker.hasGuarantee || false,
-        historical_guarantee: worker.historicalGuarantee || 0
+        historical_guarantee: worker.historicalGuarantee || 0,
+        late_rate_rule: worker.lateRateRule || 'normal'
       }]);
 
       if (error) throw error;
@@ -350,6 +355,7 @@ export function useStore() {
       if (updated.paymentType !== undefined) updateData.payment_type = updated.paymentType;
       if (updated.hasGuarantee !== undefined) updateData.has_guarantee = updated.hasGuarantee;
       if (updated.historicalGuarantee !== undefined) updateData.historical_guarantee = updated.historicalGuarantee;
+      if (updated.lateRateRule !== undefined) updateData.late_rate_rule = updated.lateRateRule;
 
       const { error } = await supabase
         .from('workers')
@@ -405,7 +411,8 @@ export function useStore() {
         is_leave: entry.isLeave || false,
         transfer_slip_url: entry.transferSlipUrl,
         toll_receipt_url: entry.tollReceiptUrl,
-        guarantee_deduction: entry.guaranteeDeduction || 0
+        guarantee_deduction: entry.guaranteeDeduction || 0,
+        late_rate_rule: entry.lateRateRule || 'normal'
       }]);
 
       if (error) throw error;
@@ -440,6 +447,7 @@ export function useStore() {
       if (updated.transferSlipUrl !== undefined) updateData.transfer_slip_url = updated.transferSlipUrl;
       if (updated.tollReceiptUrl !== undefined) updateData.toll_receipt_url = updated.tollReceiptUrl;
       if (updated.guaranteeDeduction !== undefined) updateData.guarantee_deduction = updated.guaranteeDeduction;
+      if (updated.lateRateRule !== undefined) updateData.late_rate_rule = updated.lateRateRule;
 
       const { error } = await supabase
         .from('daily_entries')
