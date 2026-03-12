@@ -3,7 +3,7 @@ import { useStore } from '../useStore';
 import { Button, Input, Label, Card, Modal } from '../components/ui';
 import { format, addDays, subDays, isSunday, parseISO } from 'date-fns';
 import { th } from 'date-fns/locale';
-import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Settings2, RefreshCw, Copy, Check, Paperclip, ImagePlus, X, AlertTriangle, Loader2 } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Settings2, RefreshCw, Copy, Check, Paperclip, ImagePlus, X, AlertTriangle, Loader2, Share2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Adjustment } from '../types';
 import { supabase } from '../lib/supabase';
@@ -20,6 +20,7 @@ export function DailyEntryPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isGeneratingSlipId, setIsGeneratingSlipId] = useState<string | null>(null);
+  const [dailySlipPreview, setDailySlipPreview] = useState<{ workerName: string, imageUrl: string } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showShiftSettings, setShowShiftSettings] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -547,11 +548,17 @@ export function DailyEntryPage() {
       // Convert to blob and write to clipboard
       const blob = await new Promise<Blob | null>(res => canvas.toBlob(res, 'image/png', 1.0));
       if (blob) {
-        const item = new ClipboardItem({ 'image/png': blob });
-        await navigator.clipboard.write([item]);
+        const imageUrl = URL.createObjectURL(blob);
+        setDailySlipPreview({ workerName: worker.name, imageUrl });
 
-        setCopiedId(idToUse);
-        setTimeout(() => setCopiedId(null), 2000);
+        try {
+          const item = new ClipboardItem({ 'image/png': blob });
+          await navigator.clipboard.write([item]);
+          setCopiedId(idToUse);
+          setTimeout(() => setCopiedId(null), 2000);
+        } catch (clipErr) {
+          console.warn("Could not copy automatically", clipErr);
+        }
       } else {
         throw new Error("Canvas toBlob failed");
       }
@@ -563,6 +570,27 @@ export function DailyEntryPage() {
       handleCopy(text, idToUse);
     } finally {
       setIsGeneratingSlipId(null);
+    }
+  };
+
+  const handleNativeShareDaily = async () => {
+    if (!dailySlipPreview) return;
+    try {
+      const blob = await (await fetch(dailySlipPreview.imageUrl)).blob();
+      const file = new File([blob], `daily_${dailySlipPreview.workerName}.png`, { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: `สรุปยอดรายวัน ${dailySlipPreview.workerName}`,
+          files: [file]
+        });
+      } else {
+        const link = document.createElement('a');
+        link.href = dailySlipPreview.imageUrl;
+        link.download = `daily_${dailySlipPreview.workerName}.png`;
+        link.click();
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -1538,6 +1566,42 @@ export function DailyEntryPage() {
           </div>
         </Modal>
       )}
+
+      {/* Daily Slip Preview Modal */}
+      <Modal
+        isOpen={!!dailySlipPreview}
+        onClose={() => setDailySlipPreview(null)}
+        title="สรุปยอดรายวัน (พร้อมส่ง)"
+      >
+        {dailySlipPreview && (
+          <div className="flex flex-col items-center">
+            <div className="bg-emerald-50 text-emerald-700 px-4 py-2 rounded-xl text-sm font-semibold mb-3">
+              ✅ สร้างรูปภาพสำเร็จ!
+            </div>
+            {/* The generated image ready for long press to save */}
+            <div className="max-h-[60vh] overflow-y-auto mb-3 w-full flex justify-center border border-gray-200 rounded-xl max-w-[350px] shadow-sm">
+              <img 
+                src={dailySlipPreview.imageUrl} 
+                alt="Generated Slip" 
+                className="w-full object-contain"
+              />
+            </div>
+            <div className="text-xs text-gray-500 text-center px-4 mb-4">
+              💡 ทริค: ถ้าปุ่มแชร์ด้านล่างไม่ทำงาน<br/><span className="font-bold text-gray-700">ให้แตะค้างที่รูปภาพนี้แล้วเลือก "บันทึกรูปภาพ" หรือ "คัดลอกรูปภาพ"</span> ได้เลยครับ
+            </div>
+            
+            <div className="flex w-full gap-2">
+              <Button onClick={() => setDailySlipPreview(null)} variant="secondary" className="px-6 py-3.5 rounded-xl border-gray-200 bg-white">
+                ปิด
+              </Button>
+              <Button onClick={handleNativeShareDaily} className="flex-1 py-3.5 rounded-xl bg-[#00B900] hover:bg-[#009900] shadow-sm text-white flex items-center justify-center gap-2">
+                <Share2 className="w-5 h-5" />
+                แชร์ส่งให้ช่าง
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div >
   );
 }
