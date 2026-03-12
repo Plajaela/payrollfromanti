@@ -312,8 +312,21 @@ export function ReportsPage() {
           return s;
         }).join(', ') || '';
 
-        if (entry.tollFee > 0 && entry.tollDate && entry.tollDate !== entry.date) {
-          notes += (notes ? ', ' : '') + `ทางด่วนวันที่ ${format(parseISO(entry.tollDate), 'dd/MM/yyyy')}`;
+        if (entry.tollFee > 0) {
+          const tDates: string[] = [];
+          if (entry.tolls && entry.tolls.length > 0) {
+            entry.tolls.forEach(t => {
+              if (t.date && t.date !== entry.date) {
+                const fDate = format(parseISO(t.date), 'dd/MM/yyyy');
+                if (!tDates.includes(fDate)) tDates.push(fDate);
+              }
+            });
+          } else if (entry.tollDate && entry.tollDate !== entry.date) {
+            tDates.push(format(parseISO(entry.tollDate), 'dd/MM/yyyy'));
+          }
+          if (tDates.length > 0) {
+            notes += (notes ? ', ' : '') + `ทางด่วนวันที่ ${tDates.join(', ')}`;
+          }
         }
 
         workerTotal += entry.totalPay;

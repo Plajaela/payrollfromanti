@@ -408,8 +408,20 @@ export function DailyEntryPage() {
       if (travelAllowance > 0) text += `- ค่ารถ: ฿${travelAllowance}\n`;
       if (tollFee > 0) {
         text += `- ทางด่วน`;
-        if (entry?.tollDate && entry.tollDate !== entry.date) {
-          text += ` (บิลลงวันที่ ${format(parseISO(entry.tollDate), 'dd/MM/yy')})`;
+        const differentDates: string[] = [];
+        if (entry?.tolls && entry.tolls.length > 0) {
+          entry.tolls.forEach(t => {
+            if (t.date && t.date !== entry.date) {
+              const fDate = format(parseISO(t.date), 'dd/MM/yy');
+              if (!differentDates.includes(fDate)) differentDates.push(fDate);
+            }
+          });
+        } else if (entry?.tollDate && entry.tollDate !== entry.date) {
+          differentDates.push(format(parseISO(entry.tollDate), 'dd/MM/yy'));
+        }
+
+        if (differentDates.length > 0) {
+          text += ` (บิลลงวันที่ ${differentDates.join(', ')})`;
         }
         text += `: ฿${tollFee}\n`;
       }
@@ -507,8 +519,20 @@ export function DailyEntryPage() {
         if (travelAllowance > 0) text += `- ค่ารถ: ฿${travelAllowance}\n`;
         if (tollFee > 0) {
           text += `- ทางด่วน`;
-          if (entry?.tollDate && entry.tollDate !== entry.date) {
-            text += ` (บิลลงวันที่ ${format(parseISO(entry.tollDate), 'dd/MM/yy')})`;
+          const differentDates: string[] = [];
+          if (entry?.tolls && entry.tolls.length > 0) {
+            entry.tolls.forEach(t => {
+              if (t.date && t.date !== entry.date) {
+                const fDate = format(parseISO(t.date), 'dd/MM/yy');
+                if (!differentDates.includes(fDate)) differentDates.push(fDate);
+              }
+            });
+          } else if (entry?.tollDate && entry.tollDate !== entry.date) {
+            differentDates.push(format(parseISO(entry.tollDate), 'dd/MM/yy'));
+          }
+
+          if (differentDates.length > 0) {
+            text += ` (บิลลงวันที่ ${differentDates.join(', ')})`;
           }
           text += `: ฿${tollFee}\n`;
         }
