@@ -481,23 +481,44 @@ export function DailyEntryPage() {
       }
 
       const uniqueImages = [...new Set(images)].filter(url => url && !url.startsWith('data:'));
+      const safeDataUrls: string[] = [];
 
-      if (uniqueImages.length > 0) {
+      for (const src of uniqueImages) {
+        try {
+          // Fetch image and convert to base64 to avoid html2canvas tainting canvas
+          const response = await fetch(src, { mode: 'cors' });
+          if (!response.ok) throw new Error("Fetch failed");
+          const imgBlob = await response.blob();
+          
+          const base64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(imgBlob);
+          });
+          safeDataUrls.push(base64);
+        } catch (e) {
+          console.warn("Could not convert image to base64", e);
+          // Skip this image instead of tainting the canvas and crashing the whole process
+        }
+      }
+
+      if (safeDataUrls.length > 0) {
         const imgGrid = document.createElement('div');
         imgGrid.className = 'mt-6 pt-5 border-t border-dashed border-gray-200 grid gap-3 z-10 relative';
         // Auto grid columns based on number of images
-        if (uniqueImages.length > 1) {
+        if (safeDataUrls.length > 1) {
           imgGrid.classList.add('grid-cols-2');
         } else {
           imgGrid.classList.add('grid-cols-1');
         }
         
-        uniqueImages.forEach(src => {
+        safeDataUrls.forEach(src => {
           const imgWrap = document.createElement('div');
           imgWrap.className = 'rounded-xl overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center';
           const img = document.createElement('img');
           img.src = src;
-          img.crossOrigin = 'anonymous'; // critical for canvas
+          // No crossOrigin needed for data: URLs
           img.className = 'w-full h-auto object-contain';
           img.style.maxHeight = '300px';
           imgWrap.appendChild(img);
