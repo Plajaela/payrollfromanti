@@ -245,6 +245,13 @@ export function ReportsPage() {
 
     XLSX.utils.sheet_add_json(wsSummary, [grandTotalRow], { skipHeader: true, origin: -1 });
 
+    // Helper for calculating time distance
+    const timeToMins = (time: string) => {
+      if (!time) return 0;
+      const [h, m] = time.split(':').map(Number);
+      return h * 60 + m;
+    };
+
     // 2. Individual Worker Sheets
     const groupedByWorker: Record<string, typeof entries[number][]> = {};
     filteredEntries.forEach(entry => {
@@ -287,8 +294,9 @@ export function ReportsPage() {
           PRESETS.forEach(p => row[p] = '');
           row['ทางด่วน'] = '';
           row['โอที'] = '';
+          row['เริ่มทำโอที'] = '';
           row['ทำโอทีถึงเวลา'] = '';
-          row['หักสาย'] = '';
+          row['หักสาย (นาที/บาท)'] = '';
           row['หักประกันสะสม'] = '';
           row['รวมอื่นๆ'] = '';
           row['ยอดสุทธิ(ก่อนหักเบิก)'] = '';
@@ -375,8 +383,30 @@ export function ReportsPage() {
 
         row['ทางด่วน'] = entry.isLeave || !entry.tollFee ? '' : entry.tollFee;
         row['โอที'] = entry.isLeave || !entry.overtimePay ? '' : entry.overtimePay;
+        row['เริ่มทำโอที'] = entry.isLeave || !entry.overtimePay ? '' : worker.shiftEnd || '16:00';
         row['ทำโอทีถึงเวลา'] = entry.isLeave || !entry.overtimePay ? '' : entry.clockOut;
-        row['หักสาย'] = entry.isLeave || !entry.lateDeduction ? '' : -entry.lateDeduction;
+        
+        let lateText = '';
+        if (!entry.isLeave && entry.lateDeduction > 0) {
+           const inMins = timeToMins(entry.clockIn);
+           const startMins = timeToMins(worker.shiftStart || '07:00');
+           const outMins = timeToMins(entry.clockOut);
+           let endMins = timeToMins(worker.shiftEnd || '16:00');
+           if (endMins < startMins) endMins += 24 * 60;
+           let actualOutMins = outMins;
+           if (actualOutMins < inMins) actualOutMins += 24 * 60;
+           
+           let lateMins = 0;
+           let earlyLeaveMins = 0;
+           if (inMins > startMins) lateMins += (inMins - startMins);
+           if (actualOutMins < endMins) earlyLeaveMins += (endMins - actualOutMins);
+           
+           const totalMissingMins = (entry.lateRateRule || worker.lateRateRule) === 'special' ? lateMins : lateMins + earlyLeaveMins;
+           
+           lateText = `${totalMissingMins} นาที / -฿${entry.lateDeduction}`;
+        }
+        
+        row['หักสาย (นาที/บาท)'] = lateText;
         row['หักประกันสะสม'] = entry.isLeave || !entry.guaranteeDeduction ? '' : -(entry.guaranteeDeduction || 0);
         row['รวมอื่นๆ'] = entry.isLeave || !otherSums ? '' : otherSums;
         row['ยอดสุทธิประจำวัน'] = entry.isLeave ? '' : entry.totalPay;
@@ -402,8 +432,9 @@ export function ReportsPage() {
 
       workerTotalRow['ทางด่วน'] = '';
       workerTotalRow['โอที'] = '';
+      workerTotalRow['เริ่มทำโอที'] = '';
       workerTotalRow['ทำโอทีถึงเวลา'] = '';
-      workerTotalRow['หักสาย'] = '';
+      workerTotalRow['หักสาย (นาที/บาท)'] = '';
       workerTotalRow['หักประกันสะสม'] = summaryData.guaranteeTotal > 0 ? `สะสมรวม: ฿${summaryData.guaranteeTotal}` : '';
       workerTotalRow['รวมอื่นๆ'] = '';
       workerTotalRow['ยอดสุทธิประจำวัน'] = workerTotal;
@@ -433,11 +464,35 @@ export function ReportsPage() {
         const remainingKeys = Object.keys(workerRows[0]);
         const customWidths: Record<string, number> = {
           'วันที่': 110, 'ชื่อช่าง': 100, 'เวลาทำงาน': 100, 'ประเภทการลา': 120, 'ค่าแรง': 80, 'ค่ารถ': 60,
-          'ทางด่วน': 60, 'โอที': 60, 'ทำโอทีถึงเวลา': 100, 'หักสาย': 60, 'หักประกันสะสม': 90, 'รวมอื่นๆ': 80,
+          'ทางด่วน': 60, 'โอที': 60, 'เริ่มทำโอที': 100, 'ทำโอทีถึงเวลา': 100, 'หักสาย (นาที/บาท)': 120, 'หักประกันสะสม': 90, 'รวมอื่นๆ': 80,
           'ยอดสุทธิประจำวัน': 100, 'หมายเหตุอื่นๆ': 180, 'สลิปโอนเงิน': 100, 'สลิปทางด่วน': 100
         };
         const detailCols = remainingKeys.map(key => ({ wpx: customWidths[key] || 90 }));
         wsWorker['!cols'] = detailCols;
+        
+        // Apply black styling for Sunday rows with no records
+        // Start from row index 1 (skip header)
+        for (let R = 1; R <= workerRows.length; R++) {
+            const dateCell = wsWorker[XLSX.utils.encode_cell({r: R, c: remainingKeys.indexOf('วันที่')} )];
+            // Identify Sunday without record rows
+            if (dateCell && typeof dateCell.v === 'string' && dateCell.v.includes('(อาทิตย์)') && workerRows[R-1] && workerRows[R-1]['เวลาทำงาน'] === 'หยุดวันอาทิตย์') {
+                for(let C = 0; C < remainingKeys.length; C++) {
+                    const cellAddress = XLSX.utils.encode_cell({r: R, c: C});
+                    if (!wsWorker[cellAddress]) continue;
+                    
+                    // Add simple grey styling note (xlsx lib doesn't fully support styles without xlsx-js-style, but we can try)
+                    wsWorker[cellAddress].s = {
+                        fill: { fgColor: { rgb: "FFE0E0E0" } }, // light gray as "black" background might be too dark, but let's try a dark gray or black
+                        font: { color: { rgb: "FF000000" } }
+                    };
+                    
+                    // Actually, let's just make the text explicitly state it's a Sunday
+                    if (C !== remainingKeys.indexOf('วันที่') && C !== remainingKeys.indexOf('ชื่อช่าง')) {
+                        wsWorker[cellAddress].v = '-'; 
+                    }
+                }
+            }
+        }
       }
 
       // Ensure tab name doesn't exceed 31 limits and doesn't contain forbidden chars \ / ? * [ ] :
