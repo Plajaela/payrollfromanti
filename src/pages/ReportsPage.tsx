@@ -311,6 +311,8 @@ export function ReportsPage() {
           row['ทางด่วน'] = '';
           row['หักประกันสะสม'] = '';
           row['รวมอื่นๆ'] = '';
+          row['หักเบิกล่วงหน้า'] = '';
+          row['ยอดสุทธิ(หลังหักเบิก)'] = '';
           row['หมายเหตุอื่นๆ'] = '';
           row['สลิปโอนเงิน'] = '';
           row['สลิปทางด่วน'] = '';
@@ -424,6 +426,8 @@ export function ReportsPage() {
         row['ทางด่วน'] = entry.isLeave || !entry.tollFee ? '' : entry.tollFee;
         row['หักประกันสะสม'] = entry.isLeave || !entry.guaranteeDeduction ? '' : -(entry.guaranteeDeduction || 0);
         row['รวมอื่นๆ'] = entry.isLeave || !otherSums ? '' : otherSums;
+        row['หักเบิกล่วงหน้า'] = '';
+        row['ยอดสุทธิ(หลังหักเบิก)'] = '';
         row['หมายเหตุอื่นๆ'] = entry.isLeave ? getLeaveText(entry) : notes;
         row['สลิปโอนเงิน'] = entry.isLeave || !entry.transferSlipUrl ? '' : formatSlipUrl(entry.transferSlipUrl);
         row['สลิปทางด่วน'] = entry.isLeave || !entry.tollFee || !entry.tollReceiptUrl ? '' : formatSlipUrl(entry.tollReceiptUrl);
@@ -452,6 +456,8 @@ export function ReportsPage() {
       workerTotalRow['ทางด่วน'] = '';
       workerTotalRow['หักประกันสะสม'] = summaryData.guaranteeTotal > 0 ? `สะสมรวม: ฿${summaryData.guaranteeTotal}` : '';
       workerTotalRow['รวมอื่นๆ'] = '';
+      workerTotalRow['หักเบิกล่วงหน้า'] = summaryData.advanceDeduction > 0 ? -summaryData.advanceDeduction : '';
+      workerTotalRow['ยอดสุทธิ(หลังหักเบิก)'] = summaryData.advanceDeduction > 0 ? summaryData.finalPay : '';
       workerTotalRow['หมายเหตุอื่นๆ'] = '';
       workerTotalRow['สลิปโอนเงิน'] = '';
       workerTotalRow['สลิปทางด่วน'] = '';
@@ -483,6 +489,7 @@ export function ReportsPage() {
           'วันที่': 110, 'ชื่อช่าง': 100, 'เวลาทำงาน': 100, 'จำนวนเวลาสาย': 100, 'หักสาย': 80, 'ค่าแรง': 80,
           'เวลาทำโอที': 110, 'โอที': 60, 'ค่ารถ': 60, 'ยอดสุทธิประจำวัน': 100, 'ประเภทการลา': 120, 
           'ทางด่วน': 60, 'หักประกันสะสม': 90, 'รวมอื่นๆ': 80,
+          'หักเบิกล่วงหน้า': 100, 'ยอดสุทธิ(หลังหักเบิก)': 130,
           'หมายเหตุอื่นๆ': 180, 'สลิปโอนเงิน': 100, 'สลิปทางด่วน': 100
         };
         const detailCols = remainingKeys.map(key => ({ wpx: customWidths[key] || 90 }));
