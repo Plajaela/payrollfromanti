@@ -109,16 +109,19 @@ export function DailyEntryPage() {
     }
 
     // Calculate late/early leave minutes
-    let missingMins = 0;
-    if (inMins > startMins) missingMins += (inMins - startMins);
-    if (outMins < endMins) missingMins += (endMins - outMins);
+    let lateMins = 0;
+    let earlyLeaveMins = 0;
+    if (inMins > startMins) lateMins += (inMins - startMins);
+    if (outMins < endMins) earlyLeaveMins += (endMins - outMins);
 
     // Calculate late deduction
     let deduction = 0;
     
     if (formData.lateRateRule === 'special') {
-      const hours = Math.floor(missingMins / 60);
-      const remainder = missingMins % 60;
+      // Special rate: only deduct for late arrival, ignore early leave
+      const missingMinsToDeduct = lateMins; // ignore early leave
+      const hours = Math.floor(missingMinsToDeduct / 60);
+      const remainder = missingMinsToDeduct % 60;
       let remainderDeduction = 0;
       
       if (remainder > 0 && remainder <= 15) {
@@ -131,9 +134,10 @@ export function DailyEntryPage() {
       
       deduction = (hours * 50) + remainderDeduction;
     } else {
-      // Normal rate: 100 baht per hour, calculated proportionally
+      // Normal rate: 100 baht per hour, calculated proportionally based on BOTH late and early leave
+      const missingMinsToDeduct = lateMins + earlyLeaveMins;
       const deductionRatePerHour = 100;
-      deduction = Math.round((deductionRatePerHour / 60) * missingMins);
+      deduction = Math.round((deductionRatePerHour / 60) * missingMinsToDeduct);
     }
 
     // Calculate overtime minutes
