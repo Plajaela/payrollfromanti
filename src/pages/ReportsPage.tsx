@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useStore } from '../useStore';
 import { Button, Input, Card, Label } from '../components/ui';
 import { parseISO, startOfMonth, endOfMonth, isWithinInterval, format, isSunday, eachDayOfInterval } from 'date-fns';
-import { FileSpreadsheet, Copy, Check, Image as ImageIcon } from 'lucide-react';
+import { FileSpreadsheet, Copy, Check, Image as ImageIcon, X } from 'lucide-react';
 import * as XLSX from 'xlsx-js-style';
 import { SlipModal } from '../components/SlipModal';
 
@@ -16,6 +16,7 @@ export function ReportsPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedSlipData, setSelectedSlipData] = useState<any>(null);
   const [isSlipModalOpen, setIsSlipModalOpen] = useState(false);
+  const [selectedAdjustments, setSelectedAdjustments] = useState<{ workerName: string, list: { note: string, amount: number, type: 'add' | 'deduct', date: string }[] } | null>(null);
 
   const reportData = useMemo(() => {
     const filteredEntries = entries.filter(entry => {
@@ -48,6 +49,20 @@ export function ReportsPage() {
         , 0);
       const netAdjustments = totalAdditions - totalDeductions;
 
+      const adjustmentsList: { note: string, amount: number, type: 'add' | 'deduct', date: string }[] = [];
+      workerEntries.forEach(e => {
+        if (e.adjustments && e.adjustments.length > 0) {
+          e.adjustments.forEach(a => {
+            adjustmentsList.push({
+               note: a.note || (a.type === 'add' ? 'เพิ่มเงิน' : 'หักเงิน'),
+               amount: Number(a.amount),
+               type: a.type as 'add' | 'deduct',
+               date: e.date
+            });
+          });
+        }
+      });
+
       const grandTotal = workerEntries.reduce((sum, e) => sum + e.totalPay, 0);
 
       const guaranteeTotal = (worker.historicalGuarantee || 0) + entries
@@ -72,6 +87,7 @@ export function ReportsPage() {
         totalLate,
         totalOT,
         netAdjustments,
+        adjustmentsList,
         grandTotal,
         leaveDays,
         sickDays,
@@ -625,9 +641,19 @@ export function ReportsPage() {
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-zinc-500 text-right">฿{row.totalOT}</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-red-500 text-right">-฿{row.totalLate}</td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-zinc-500 text-right">
-                        <span className={row.netAdjustments > 0 ? 'text-emerald-600' : row.netAdjustments < 0 ? 'text-red-600' : ''}>
-                          {row.netAdjustments > 0 ? '+' : ''}{row.netAdjustments !== 0 ? `฿${row.netAdjustments}` : '-'}
-                        </span>
+                        {row.adjustmentsList && row.adjustmentsList.length > 0 ? (
+                          <button
+                            onClick={() => setSelectedAdjustments({ workerName: row.worker.name, list: row.adjustmentsList })}
+                            className={`hover:underline cursor-pointer transition-colors px-2 py-1 -mr-2 rounded-md hover:bg-zinc-100 ${row.netAdjustments > 0 ? 'text-emerald-600 font-medium' : row.netAdjustments < 0 ? 'text-red-600 font-medium' : ''}`}
+                            title="คลิกเพื่อดูรายการอื่นๆ"
+                          >
+                            {row.netAdjustments > 0 ? '+' : ''}{row.netAdjustments !== 0 ? `฿${row.netAdjustments}` : '-'}
+                          </button>
+                        ) : (
+                          <span className={row.netAdjustments > 0 ? 'text-emerald-600' : row.netAdjustments < 0 ? 'text-red-600' : ''}>
+                            {row.netAdjustments > 0 ? '+' : ''}{row.netAdjustments !== 0 ? `฿${row.netAdjustments}` : '-'}
+                          </span>
+                        )}
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm font-bold text-orange-600 text-right">
                         {row.guaranteeTotal > 0 ? `฿${row.guaranteeTotal}` : '-'}
@@ -692,6 +718,45 @@ export function ReportsPage() {
         dateRangeStr={startDate === endDate ? startDate : `${startDate} ถึง ${endDate}`}
         data={selectedSlipData}
       />
+
+      {/* Adjustments Modal */}
+      {selectedAdjustments && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-sm max-h-[80vh] flex flex-col shadow-xl animate-in zoom-in-95 duration-200">
+            <div className="p-4 border-b border-zinc-100 flex justify-between items-center">
+              <h3 className="font-semibold text-lg text-zinc-900">รายการอื่นๆ - {selectedAdjustments.workerName}</h3>
+              <button 
+                onClick={() => setSelectedAdjustments(null)}
+                className="p-2 bg-zinc-100 hover:bg-zinc-200 rounded-full text-zinc-500 transition-colors focus:outline-none"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto flex-1 space-y-3">
+              {selectedAdjustments.list.map((adj, i) => (
+                <div key={i} className="flex justify-between items-center p-3 bg-zinc-50 rounded-xl border border-zinc-100">
+                  <div>
+                    <div className="text-sm font-medium text-zinc-800">{adj.note}</div>
+                    <div className="text-xs text-zinc-500 mt-1">{format(parseISO(adj.date), 'dd/MM/yyyy')}</div>
+                  </div>
+                  <div className={`font-bold text-sm ${adj.type === 'add' ? 'text-emerald-600' : 'text-red-600'}`}>
+                    {adj.type === 'add' ? '+' : '-'}฿{adj.amount}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="p-4 border-t border-zinc-100">
+               <div className="flex justify-between items-center font-bold">
+                 <span>รวมยอดอื่นๆสุทธิ</span>
+                 <span className={selectedAdjustments.list.reduce((acc, curr) => acc + (curr.type === 'add' ? curr.amount : -curr.amount), 0) > 0 ? 'text-emerald-600' : selectedAdjustments.list.reduce((acc, curr) => acc + (curr.type === 'add' ? curr.amount : -curr.amount), 0) < 0 ? 'text-red-600' : 'text-zinc-900'}>
+                    {selectedAdjustments.list.reduce((acc, curr) => acc + (curr.type === 'add' ? curr.amount : -curr.amount), 0) > 0 ? '+' : ''}
+                    ฿{selectedAdjustments.list.reduce((acc, curr) => acc + (curr.type === 'add' ? curr.amount : -curr.amount), 0)}
+                 </span>
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
