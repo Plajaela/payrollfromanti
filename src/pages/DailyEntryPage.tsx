@@ -452,7 +452,7 @@ export function DailyEntryPage() {
     } else {
       const actualStart = clockIn > wStart ? clockIn : wStart;
       const actualEnd = clockOut < wEnd ? clockOut : wEnd;
-      text += `เวลาทำงาน: ${actualStart} - ${actualEnd}\n`;
+      text += `เวลาทำงาน: ${actualStart} - ${actualEnd}  ค่าแรง: ฿${baseWage}\n`;
       if (lateDeduction > 0) text += `หักมาสาย: -฿${lateDeduction}\n`;
     }
     if (overtimePay > 0) {
@@ -491,7 +491,6 @@ export function DailyEntryPage() {
     }
     if (!entry?.isLeave) {
       text += `\n`;
-      text += `- ค่าแรง: ฿${baseWage}\n`;
       if (travelAllowance > 0) text += `- ค่ารถ: ฿${travelAllowance}\n`;
       if (tollFee > 0) {
         text += `- ทางด่วน`;
@@ -628,7 +627,7 @@ export function DailyEntryPage() {
       } else {
         const actualStart = clockIn > wStart ? clockIn : wStart;
         const actualEnd = clockOut < wEnd ? clockOut : wEnd;
-        text += `เวลาทำงาน: ${actualStart} - ${actualEnd}\n`;
+        text += `เวลาทำงาน: ${actualStart} - ${actualEnd}  ค่าแรง: ฿${baseWage}\n`;
         if (lateDeduction > 0) text += `หักมาสาย: -฿${lateDeduction}\n`;
       }
       if (overtimePay > 0) {
@@ -667,7 +666,6 @@ export function DailyEntryPage() {
         }
       }
       if (!entry?.isLeave) {
-        text += `- ค่าแรง: ฿${baseWage}\n`;
         if (travelAllowance > 0) text += `- ค่ารถ: ฿${travelAllowance}\n`;
         if (tollFee > 0) {
           text += `- ทางด่วน`;
