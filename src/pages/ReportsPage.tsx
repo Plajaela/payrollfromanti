@@ -301,7 +301,7 @@ export function ReportsPage() {
             'จำนวนเวลาสาย': '',
             'หักสาย': '',
             'ค่าแรง': '',
-            'ทำโอทีถึงเวลา': '',
+            'เวลาทำโอที': '',
             'โอที': '',
             'ค่ารถ': '',
             'ยอดสุทธิประจำวัน': '',
@@ -309,7 +309,6 @@ export function ReportsPage() {
           };
           PRESETS.forEach(p => row[p] = '');
           row['ทางด่วน'] = '';
-          row['เริ่มทำโอที'] = '';
           row['หักประกันสะสม'] = '';
           row['รวมอื่นๆ'] = '';
           row['หมายเหตุอื่นๆ'] = '';
@@ -411,7 +410,7 @@ export function ReportsPage() {
           'จำนวนเวลาสาย': lateMinsStr,
           'หักสาย': lateDeductionValue,
           'ค่าแรง': entry.isLeave ? '' : (entry.baseWage || ''),
-          'ทำโอทีถึงเวลา': entry.isLeave || !entry.overtimePay ? '' : entry.clockOut,
+          'เวลาทำโอที': entry.isLeave || !entry.overtimePay ? '' : `${wEnd} - ${entry.clockOut}`,
           'โอที': entry.isLeave || !entry.overtimePay ? '' : entry.overtimePay,
           'ค่ารถ': entry.isLeave ? '' : (entry.travelAllowance || ''),
           'ยอดสุทธิประจำวัน': entry.isLeave ? '' : entry.totalPay,
@@ -423,7 +422,6 @@ export function ReportsPage() {
         });
 
         row['ทางด่วน'] = entry.isLeave || !entry.tollFee ? '' : entry.tollFee;
-        row['เริ่มทำโอที'] = entry.isLeave || !entry.overtimePay ? '' : worker.shiftEnd || '16:00';
         row['หักประกันสะสม'] = entry.isLeave || !entry.guaranteeDeduction ? '' : -(entry.guaranteeDeduction || 0);
         row['รวมอื่นๆ'] = entry.isLeave || !otherSums ? '' : otherSums;
         row['หมายเหตุอื่นๆ'] = entry.isLeave ? getLeaveText(entry) : notes;
@@ -440,7 +438,7 @@ export function ReportsPage() {
         'จำนวนเวลาสาย': '',
         'หักสาย': '',
         'ค่าแรง': '',
-        'ทำโอทีถึงเวลา': '',
+        'เวลาทำโอที': '',
         'โอที': '',
         'ค่ารถ': '',
         'ยอดสุทธิประจำวัน': workerTotal,
@@ -452,7 +450,6 @@ export function ReportsPage() {
       });
 
       workerTotalRow['ทางด่วน'] = '';
-      workerTotalRow['เริ่มทำโอที'] = '';
       workerTotalRow['หักประกันสะสม'] = summaryData.guaranteeTotal > 0 ? `สะสมรวม: ฿${summaryData.guaranteeTotal}` : '';
       workerTotalRow['รวมอื่นๆ'] = '';
       workerTotalRow['หมายเหตุอื่นๆ'] = '';
@@ -464,7 +461,7 @@ export function ReportsPage() {
       // Dynamically remove empty columns
       const alwaysShow = [
         'วันที่', 'ชื่อช่าง', 'เวลาทำงาน', 'จำนวนเวลาสาย', 'หักสาย', 'ค่าแรง',
-        'ทำโอทีถึงเวลา', 'โอที', 'ค่ารถ', 'ยอดสุทธิประจำวัน', 'ประเภทการลา'
+        'เวลาทำโอที', 'โอที', 'ค่ารถ', 'ยอดสุทธิประจำวัน', 'ประเภทการลา'
       ];
       const allKeys = Object.keys(workerRows[0] || {});
 
@@ -484,8 +481,8 @@ export function ReportsPage() {
         const remainingKeys = Object.keys(workerRows[0]);
         const customWidths: Record<string, number> = {
           'วันที่': 110, 'ชื่อช่าง': 100, 'เวลาทำงาน': 100, 'จำนวนเวลาสาย': 100, 'หักสาย': 80, 'ค่าแรง': 80,
-          'ทำโอทีถึงเวลา': 100, 'โอที': 60, 'ค่ารถ': 60, 'ยอดสุทธิประจำวัน': 100, 'ประเภทการลา': 120, 
-          'ทางด่วน': 60, 'เริ่มทำโอที': 100, 'หักประกันสะสม': 90, 'รวมอื่นๆ': 80,
+          'เวลาทำโอที': 110, 'โอที': 60, 'ค่ารถ': 60, 'ยอดสุทธิประจำวัน': 100, 'ประเภทการลา': 120, 
+          'ทางด่วน': 60, 'หักประกันสะสม': 90, 'รวมอื่นๆ': 80,
           'หมายเหตุอื่นๆ': 180, 'สลิปโอนเงิน': 100, 'สลิปทางด่วน': 100
         };
         const detailCols = remainingKeys.map(key => ({ wpx: customWidths[key] || 90 }));
