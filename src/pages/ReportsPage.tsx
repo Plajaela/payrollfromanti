@@ -97,8 +97,17 @@ export function ReportsPage() {
     }
   };
 
+  const formatDateThai = (dateStr: string) => {
+    const d = parseISO(dateStr);
+    const thaiYear = d.getFullYear() + 543;
+    const shortThaiYear = thaiYear.toString().slice(-2);
+    return format(d, `dd/MM/${shortThaiYear}`);
+  };
+
   const handleCopySingle = (row: typeof reportData[0]) => {
-    const dateRangeStr = startDate === endDate ? startDate : `${startDate} ถึง ${endDate}`;
+    const formattedStart = formatDateThai(startDate);
+    const formattedEnd = formatDateThai(endDate);
+    const dateRangeStr = startDate === endDate ? formattedStart : `${formattedStart} ถึง ${formattedEnd}`;
 
     let text = `สรุปยอด ${row.worker.name} (วันที่ ${dateRangeStr})\n` +
       `- วันทำงาน: ${row.totalDays} วัน${row.leaveDays > 0 ? ` (ลาหยุด ${row.leaveDays} วัน)` : ''}\n` +
@@ -127,7 +136,9 @@ export function ReportsPage() {
   };
 
   const handleCopyAll = () => {
-    const dateRangeStr = startDate === endDate ? startDate : `${startDate} ถึง ${endDate}`;
+    const formattedStart = formatDateThai(startDate);
+    const formattedEnd = formatDateThai(endDate);
+    const dateRangeStr = startDate === endDate ? formattedStart : `${formattedStart} ถึง ${formattedEnd}`;
     let text = `📋 สรุปยอดช่างทุกคน (วันที่ ${dateRangeStr})\n\n`;
 
     reportData.forEach((row, index) => {
