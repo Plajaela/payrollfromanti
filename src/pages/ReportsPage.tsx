@@ -3,7 +3,7 @@ import { useStore } from '../useStore';
 import { Button, Input, Card, Label } from '../components/ui';
 import { parseISO, startOfMonth, endOfMonth, isWithinInterval, format, isSunday, eachDayOfInterval } from 'date-fns';
 import { FileSpreadsheet, Copy, Check, Image as ImageIcon } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 import { SlipModal } from '../components/SlipModal';
 
 
@@ -498,13 +498,13 @@ export function ReportsPage() {
                     const cellAddress = XLSX.utils.encode_cell({r: R, c: C});
                     if (!wsWorker[cellAddress]) continue;
                     
-                    // Add simple grey styling note (xlsx lib doesn't fully support styles without xlsx-js-style, but we can try)
+                    // Add styling for dark gray background and white text
                     wsWorker[cellAddress].s = {
-                        fill: { fgColor: { rgb: "FFE0E0E0" } }, // light gray as "black" background might be too dark, but let's try a dark gray or black
-                        font: { color: { rgb: "FF000000" } }
+                        fill: { fgColor: { rgb: "FF808080" } }, // Dark gray
+                        font: { color: { rgb: "FFFFFFFF" }, bold: true }
                     };
                     
-                    // Actually, let's just make the text explicitly state it's a Sunday
+                    // Explicitly state it's a Sunday with a dash
                     if (C !== remainingKeys.indexOf('วันที่') && C !== remainingKeys.indexOf('ชื่อช่าง')) {
                         wsWorker[cellAddress].v = '-'; 
                     }
