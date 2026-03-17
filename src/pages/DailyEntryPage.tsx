@@ -599,12 +599,26 @@ export function DailyEntryPage() {
     const shortThaiYear = thaiYear.toString().slice(-2);
     const formattedDate = format(selectedDate, `dd/MM/${shortThaiYear}`);
 
+    let calculatedTotal = 0;
+    
+    // Pre-calculate the total sum of the workers that will be printed
+    workers.forEach(worker => {
+      const entry = entriesForDate.find(e => e.workerId === worker.id);
+      if (isSunday(selectedDate) && !entry) return;
+      const baseWage = entry ? entry.baseWage : worker.baseWage;
+      const travelAllowance = entry ? entry.travelAllowance : (worker.defaultTravelAllowance || 0);
+      calculatedTotal += entry ? entry.totalPay : (baseWage + travelAllowance);
+    });
+
     let text = `📋 สรุปยอดรวมประจำวัน (วันที่ ${formattedDate})\n`;
-    text += `💰 ยอดรวมทั้งหมด: ฿${totalPayForDay}\n`;
+    text += `💰 ยอดรวมทั้งหมด: ฿${calculatedTotal}\n`;
     text += `========================\n\n`;
 
     workers.forEach(worker => {
       const entry = entriesForDate.find(e => e.workerId === worker.id);
+      
+      // On Sunday, only show people who came to work (have an entry)
+      if (isSunday(selectedDate) && !entry) return;
 
       const baseWage = entry ? entry.baseWage : worker.baseWage;
       const travelAllowance = entry ? entry.travelAllowance : (worker.defaultTravelAllowance || 0);
