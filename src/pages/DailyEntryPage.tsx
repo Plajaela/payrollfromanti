@@ -603,8 +603,7 @@ export function DailyEntryPage() {
             await new Promise((resolve, reject) => {
               img.onload = resolve;
               img.onerror = reject;
-              // Cache bust to avoid some CORS issues with cached images
-              img.src = slip.url.includes('?') ? `${slip.url}&t=${Date.now()}` : `${slip.url}?t=${Date.now()}`;
+              img.src = slip.url;
             });
             return { name: slip.workerName, img };
           } catch (err) {
@@ -653,9 +652,9 @@ export function DailyEntryPage() {
         const aspectRatio = li.img.height / li.img.width;
         const drawHeight = targetWidth * aspectRatio;
 
-        // Draw label background for better visibility
+        // Draw label background for better visibility (Simplified for compatibility)
         ctx.fillStyle = '#f1f5f9'; // slate-100
-        ctx.roundRect?.(padding - 10, currentY - 5, targetWidth + 20, 50, 10);
+        ctx.fillRect(padding - 10, currentY - 5, targetWidth + 20, 50);
         ctx.fill();
 
         // Draw label
@@ -669,22 +668,27 @@ export function DailyEntryPage() {
         currentY += drawHeight + labelHeight + padding;
       });
 
-      // Copy to clipboard
-      canvas.toBlob(async (blob) => {
-        if (!blob) throw new Error('Blob creation failed');
-        try {
-          const data = [new ClipboardItem({ [blob.type]: blob })];
-          await navigator.clipboard.write(data);
-          setLastCopiedUrl('merged_slips_daily');
-          setCopiedId('all_slips');
-          setTimeout(() => {
-            setLastCopiedUrl(null);
-            setCopiedId(null);
-          }, 3000);
-        } catch (err) {
-          console.error('Clipboard error:', err);
-        }
-      }, 'image/png');
+      // Copy to clipboard using Promise-based ClipboardItem for Safari compatibility
+      try {
+        const blobPromise = new Promise<Blob>((resolve, reject) => {
+          canvas.toBlob((blob) => {
+            if (blob) resolve(blob);
+            else reject(new Error('Blob creation failed'));
+          }, 'image/png');
+        });
+
+        const item = new ClipboardItem({ 'image/png': blobPromise });
+        await navigator.clipboard.write([item]);
+        
+        setLastCopiedUrl('merged_slips_daily');
+        setCopiedId('all_slips');
+        setTimeout(() => {
+          setLastCopiedUrl(null);
+          setCopiedId(null);
+        }, 3000);
+      } catch (err) {
+        console.error('Clipboard error:', err);
+      }
 
     } catch (err) {
       console.error('Merge error:', err);
@@ -930,7 +934,17 @@ export function DailyEntryPage() {
   };
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="space-y-6 pb-20 relative">
+      <Toast 
+        isVisible={!!lastCopiedUrl || !!copiedId} 
+        message={
+          lastCopiedUrl === 'merged_slips_daily' ? 'คัดลอกรูปภาพทุกคนสำเร็จ!' :
+          lastCopiedUrl ? 'คัดลอกรูปภาพสำเร็จ!' : 
+          copiedId === 'all_slips_loading' ? 'กำลังประมวลผลรูปภาพ...' :
+          'คัดลอกข้อความสำเร็จ!'
+        }
+        icon={copiedId === 'all_slips_loading' ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
+      />
       {/* Date Selector */}
       <div className="flex items-center justify-between bg-white p-2 rounded-3xl shadow-sm border border-gray-100">
         <button onClick={() => setSelectedDate(subDays(selectedDate, 1))} className="p-3 hover:bg-gray-100 rounded-2xl transition-colors">
