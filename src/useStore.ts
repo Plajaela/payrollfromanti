@@ -187,8 +187,12 @@ export function useStore() {
                   is_leave: e.isLeave || false,
                   transfer_slip_url: e.transferSlipUrl,
                   toll_receipt_url: e.tollReceiptUrl,
+                  toll_date: e.tollDate,
+                  tolls: e.tolls || [],
                   guarantee_deduction: e.guaranteeDeduction || 0,
-                  late_rate_rule: e.lateRateRule || 'normal'
+                  late_rate_rule: e.lateRateRule || 'normal',
+                  leave_type: e.leaveType,
+                  leave_note: e.leaveNote
                 }))
               );
 
@@ -220,8 +224,12 @@ export function useStore() {
             note: e.note,
             isDraft: e.is_draft,
             isLeave: e.is_leave,
+            leaveType: e.leave_type,
+            leaveNote: e.leave_note,
             transferSlipUrl: e.transfer_slip_url,
             tollReceiptUrl: e.toll_receipt_url,
+            tollDate: e.toll_date,
+            tolls: e.tolls || [],
             guaranteeDeduction: Number(e.guarantee_deduction) || 0,
             lateRateRule: e.late_rate_rule || 'normal'
           }));
@@ -409,8 +417,12 @@ export function useStore() {
         note: entry.note,
         is_draft: entry.isDraft || false,
         is_leave: entry.isLeave || false,
+        leave_type: entry.leaveType,
+        leave_note: entry.leaveNote,
         transfer_slip_url: entry.transferSlipUrl,
         toll_receipt_url: entry.tollReceiptUrl,
+        toll_date: entry.tollDate,
+        tolls: entry.tolls || [],
         guarantee_deduction: entry.guaranteeDeduction || 0,
         late_rate_rule: entry.lateRateRule || 'normal'
       }]);
@@ -444,8 +456,12 @@ export function useStore() {
       if (updated.note !== undefined) updateData.note = updated.note;
       if (updated.isDraft !== undefined) updateData.is_draft = updated.isDraft;
       if (updated.isLeave !== undefined) updateData.is_leave = updated.isLeave;
+      if (updated.leaveType !== undefined) updateData.leave_type = updated.leaveType;
+      if (updated.leaveNote !== undefined) updateData.leave_note = updated.leaveNote;
       if (updated.transferSlipUrl !== undefined) updateData.transfer_slip_url = updated.transferSlipUrl;
       if (updated.tollReceiptUrl !== undefined) updateData.toll_receipt_url = updated.tollReceiptUrl;
+      if (updated.tollDate !== undefined) updateData.toll_date = updated.tollDate;
+      if (updated.tolls !== undefined) updateData.tolls = updated.tolls;
       if (updated.guaranteeDeduction !== undefined) updateData.guarantee_deduction = updated.guaranteeDeduction;
       if (updated.lateRateRule !== undefined) updateData.late_rate_rule = updated.lateRateRule;
 
