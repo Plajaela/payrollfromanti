@@ -604,7 +604,7 @@ export function DailyEntryPage() {
     // Pre-calculate the total sum of the workers that will be printed
     workers.forEach(worker => {
       const entry = entriesForDate.find(e => e.workerId === worker.id);
-      if (isSunday(selectedDate) && !entry) return;
+      if (!entry) return;
       const baseWage = entry ? entry.baseWage : worker.baseWage;
       const travelAllowance = entry ? entry.travelAllowance : (worker.defaultTravelAllowance || 0);
       calculatedTotal += entry ? entry.totalPay : (baseWage + travelAllowance);
@@ -617,8 +617,8 @@ export function DailyEntryPage() {
     workers.forEach(worker => {
       const entry = entriesForDate.find(e => e.workerId === worker.id);
       
-      // On Sunday, only show people who came to work (have an entry)
-      if (isSunday(selectedDate) && !entry) return;
+      // Only show people who came to work (have an entry)
+      if (!entry) return;
 
       const baseWage = entry ? entry.baseWage : worker.baseWage;
       const travelAllowance = entry ? entry.travelAllowance : (worker.defaultTravelAllowance || 0);
