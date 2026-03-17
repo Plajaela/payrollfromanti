@@ -82,6 +82,28 @@ export function DailyEntryPage() {
 
   const totalPayForDay = entriesForDate.reduce((sum, e) => sum + e.totalPay, 0);
 
+  const workersWithSlips = useMemo(() => {
+    return workers.map(worker => {
+      const entry = entriesForDate.find(e => e.workerId === worker.id);
+      if (!entry) return null;
+      const images: string[] = [];
+      // Collect all possible slip types
+      if (entry.transferSlipUrl) images.push(entry.transferSlipUrl);
+      if (entry.tollReceiptUrl) images.push(entry.tollReceiptUrl);
+      if (entry.tolls) entry.tolls.forEach(t => { if (t.receiptUrl) images.push(t.receiptUrl); });
+      if (entry.adjustments) entry.adjustments.forEach(a => { if (a.receiptUrl) images.push(a.receiptUrl); });
+      
+      const uniqueImages = [...new Set(images)].filter(url => url && !url.startsWith('data:'));
+      if (uniqueImages.length === 0) return null;
+      
+      return { worker, images: uniqueImages };
+    }).filter((w): w is { worker: any, images: string[] } => w !== null);
+  }, [workers, entriesForDate]);
+
+  const totalSlipsCount = useMemo(() => {
+    return workersWithSlips.reduce((sum, w) => sum + w.images.length, 0);
+  }, [workersWithSlips]);
+
   const calculateTotal = () => {
     if (formData.isLeave) return 0;
     const otRatePerHour = 100;
@@ -556,7 +578,7 @@ export function DailyEntryPage() {
   };
 
   const handleCopyAllSlips = async () => {
-    if (entriesForDate.length === 0) return;
+    if (workersWithSlips.length === 0) return;
     
     setIsCopyingAllSlips(true);
     setCopiedId('all_slips_loading');
@@ -564,32 +586,41 @@ export function DailyEntryPage() {
     try {
       const slipsToMerge: { workerName: string, url: string }[] = [];
       
-      workers.forEach(worker => {
-        const entry = entriesForDate.find(e => e.workerId === worker.id);
-        if (entry?.transferSlipUrl) {
-          slipsToMerge.push({ workerName: worker.name, url: entry.transferSlipUrl });
-        }
+      workersWithSlips.forEach(w => {
+        w.images.forEach((url, index) => {
+          // Label with index if multiple images for one person
+          const label = w.images.length > 1 ? `${w.worker.name} (${index + 1})` : w.worker.name;
+          slipsToMerge.push({ workerName: label, url });
+        });
       });
 
-      if (slipsToMerge.length === 0) {
+      // Load all images gracefully
+      const loadedImagesResults = await Promise.all(
+        slipsToMerge.map(async (slip) => {
+          try {
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            await new Promise((resolve, reject) => {
+              img.onload = resolve;
+              img.onerror = reject;
+              // Cache bust to avoid some CORS issues with cached images
+              img.src = slip.url.includes('?') ? `${slip.url}&t=${Date.now()}` : `${slip.url}?t=${Date.now()}`;
+            });
+            return { name: slip.workerName, img };
+          } catch (err) {
+            console.error(`Failed to load image for ${slip.workerName}:`, slip.url, err);
+            return null;
+          }
+        })
+      );
+
+      const loadedImages = loadedImagesResults.filter((li): li is { name: string, img: HTMLImageElement } => li !== null);
+
+      if (loadedImages.length === 0) {
         setIsCopyingAllSlips(false);
         setCopiedId(null);
         return;
       }
-
-      // Load all images
-      const loadedImages = await Promise.all(
-        slipsToMerge.map(async (slip) => {
-          const img = new Image();
-          img.crossOrigin = "anonymous";
-          await new Promise((resolve, reject) => {
-            img.onload = resolve;
-            img.onerror = reject;
-            img.src = slip.url;
-          });
-          return { name: slip.workerName, img };
-        })
-      );
 
       // Create canvas
       const canvas = document.createElement('canvas');
@@ -598,15 +629,19 @@ export function DailyEntryPage() {
 
       const padding = 40;
       const labelHeight = 60;
-      const maxWidth = Math.max(...loadedImages.map(li => li.img.width));
+      
+      // Calculate dimensions
+      // Use a consistent width for the merged image
+      const targetWidth = 1200; 
+      
       const totalHeight = loadedImages.reduce((sum, li) => {
         const aspectRatio = li.img.height / li.img.width;
-        const targetHeight = maxWidth * aspectRatio;
-        return sum + targetHeight + labelHeight + padding;
+        const drawHeight = targetWidth * aspectRatio;
+        return sum + drawHeight + labelHeight + padding;
       }, padding);
 
-      canvas.width = maxWidth + (padding * 2);
-      canvas.height = totalHeight;
+      canvas.width = targetWidth + (padding * 2);
+      canvas.height = Math.min(canvas.height = totalHeight, 16384); // Limit height for browser stability
 
       // Fill background
       ctx.fillStyle = '#f8fafc'; // sky-50
@@ -616,16 +651,20 @@ export function DailyEntryPage() {
 
       loadedImages.forEach((li) => {
         const aspectRatio = li.img.height / li.img.width;
-        const drawWidth = maxWidth;
-        const drawHeight = maxWidth * aspectRatio;
+        const drawHeight = targetWidth * aspectRatio;
+
+        // Draw label background for better visibility
+        ctx.fillStyle = '#f1f5f9'; // slate-100
+        ctx.roundRect?.(padding - 10, currentY - 5, targetWidth + 20, 50, 10);
+        ctx.fill();
 
         // Draw label
         ctx.fillStyle = '#1e293b'; // slate-800
         ctx.font = 'bold 32px sans-serif';
-        ctx.fillText(`👤 ${li.name}`, padding, currentY + 35);
+        ctx.fillText(`👤 ${li.name}`, padding, currentY + 32);
 
         // Draw image
-        ctx.drawImage(li.img, padding, currentY + labelHeight, drawWidth, drawHeight);
+        ctx.drawImage(li.img, padding, currentY + labelHeight, targetWidth, drawHeight);
 
         currentY += drawHeight + labelHeight + padding;
       });
@@ -1004,11 +1043,11 @@ export function DailyEntryPage() {
 
                 <Button
                   onClick={handleCopyAllSlips}
-                  disabled={isCopyingAllSlips || entriesForDate.filter(e => e.transferSlipUrl).length === 0}
+                  disabled={isCopyingAllSlips || totalSlipsCount === 0}
                   className={`w-full sm:w-auto px-6 py-3 rounded-xl shadow-md gap-2 transition-all ${lastCopiedUrl === 'merged_slips_daily' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200' : 'bg-violet-600 hover:bg-violet-700 shadow-violet-200'} text-white`}
                 >
                   {isCopyingAllSlips ? <Loader2 className="w-5 h-5 animate-spin" /> : lastCopiedUrl === 'merged_slips_daily' ? <Check className="w-5 h-5" /> : <ImagePlus className="w-5 h-5" />}
-                  คัดลอกรูปทุกคน ({entriesForDate.filter(e => e.transferSlipUrl).length} รูป)
+                  คัดลอกรูปทุกคน ({totalSlipsCount} รูป)
                 </Button>
               </div>
 
