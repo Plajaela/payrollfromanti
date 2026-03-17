@@ -93,7 +93,7 @@ export function DailyEntryPage() {
       if (entry.tolls) entry.tolls.forEach(t => { if (t.receiptUrl) images.push(t.receiptUrl); });
       if (entry.adjustments) entry.adjustments.forEach(a => { if (a.receiptUrl) images.push(a.receiptUrl); });
       
-      const uniqueImages = [...new Set(images)].filter(url => url && !url.startsWith('data:'));
+      const uniqueImages = [...new Set(images)].filter(url => url);
       if (uniqueImages.length === 0) return null;
       
       return { worker, images: uniqueImages };
@@ -584,114 +584,102 @@ export function DailyEntryPage() {
     setCopiedId('all_slips_loading');
 
     try {
-      const slipsToMerge: { workerName: string, url: string }[] = [];
-      
-      workersWithSlips.forEach(w => {
-        w.images.forEach((url, index) => {
-          // Label with index if multiple images for one person
-          const label = w.images.length > 1 ? `${w.worker.name} (${index + 1})` : w.worker.name;
-          slipsToMerge.push({ workerName: label, url });
+      // Create the ClipboardItem immediately, and perform the work inside the promise.
+      // This is the MOST reliable way for Safari/macOS to handle async clipboard writes.
+      const clipboardPromise = (async () => {
+        const slipsToMerge: { workerName: string, url: string }[] = [];
+        
+        workersWithSlips.forEach(w => {
+          w.images.forEach((url, index) => {
+            const label = w.images.length > 1 ? `${w.worker.name} (${index + 1})` : w.worker.name;
+            slipsToMerge.push({ workerName: label, url });
+          });
         });
-      });
 
-      // Load all images gracefully
-      const loadedImagesResults = await Promise.all(
-        slipsToMerge.map(async (slip) => {
-          try {
-            const img = new Image();
-            img.crossOrigin = "anonymous";
-            await new Promise((resolve, reject) => {
-              img.onload = resolve;
-              img.onerror = reject;
-              img.src = slip.url;
-            });
-            return { name: slip.workerName, img };
-          } catch (err) {
-            console.error(`Failed to load image for ${slip.workerName}:`, slip.url, err);
-            return null;
-          }
-        })
-      );
+        const loadedImagesResults = await Promise.all(
+          slipsToMerge.map(async (slip) => {
+            try {
+              const img = new Image();
+              // Don't set crossOrigin for data URLs
+              if (!slip.url.startsWith('data:')) {
+                img.crossOrigin = "anonymous";
+              }
+              await new Promise((resolve, reject) => {
+                img.onload = resolve;
+                img.onerror = reject;
+                img.src = slip.url;
+              });
+              return { name: slip.workerName, img };
+            } catch (err) {
+              console.error(`Failed to load image for ${slip.workerName}:`, slip.url, err);
+              return null;
+            }
+          })
+        );
 
-      const loadedImages = loadedImagesResults.filter((li): li is { name: string, img: HTMLImageElement } => li !== null);
+        const loadedImages = loadedImagesResults.filter((li): li is { name: string, img: HTMLImageElement } => li !== null);
 
-      if (loadedImages.length === 0) {
-        setIsCopyingAllSlips(false);
-        setCopiedId(null);
-        return;
-      }
+        if (loadedImages.length === 0) {
+          throw new Error('ไม่สามารถโหลดรูปภาพได้เลย');
+        }
 
-      // Create canvas
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('Could not get canvas context');
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('Could not get canvas context');
 
-      const padding = 40;
-      const labelHeight = 60;
-      
-      // Calculate dimensions
-      // Use a consistent width for the merged image
-      const targetWidth = 1200; 
-      
-      const totalHeight = loadedImages.reduce((sum, li) => {
-        const aspectRatio = li.img.height / li.img.width;
-        const drawHeight = targetWidth * aspectRatio;
-        return sum + drawHeight + labelHeight + padding;
-      }, padding);
+        const padding = 40;
+        const labelHeight = 60;
+        const targetWidth = 1200; 
+        
+        const totalHeight = loadedImages.reduce((sum, li) => {
+          const aspectRatio = li.img.height / li.img.width;
+          const drawHeight = targetWidth * aspectRatio;
+          return sum + drawHeight + labelHeight + padding;
+        }, padding);
 
-      canvas.width = targetWidth + (padding * 2);
-      canvas.height = Math.min(canvas.height = totalHeight, 16384); // Limit height for browser stability
+        canvas.width = targetWidth + (padding * 2);
+        canvas.height = Math.min(totalHeight, 16384); 
 
-      // Fill background
-      ctx.fillStyle = '#f8fafc'; // sky-50
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#f8fafc'; 
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      let currentY = padding;
+        let currentY = padding;
+        loadedImages.forEach((li) => {
+          const aspectRatio = li.img.height / li.img.width;
+          const drawHeight = targetWidth * aspectRatio;
 
-      loadedImages.forEach((li) => {
-        const aspectRatio = li.img.height / li.img.width;
-        const drawHeight = targetWidth * aspectRatio;
+          ctx.fillStyle = '#f1f5f9'; 
+          ctx.fillRect(padding - 10, currentY - 5, targetWidth + 20, 50);
+          
+          ctx.fillStyle = '#1e293b'; 
+          ctx.font = 'bold 32px sans-serif';
+          ctx.fillText(`👤 ${li.name}`, padding, currentY + 32);
 
-        // Draw label background for better visibility (Simplified for compatibility)
-        ctx.fillStyle = '#f1f5f9'; // slate-100
-        ctx.fillRect(padding - 10, currentY - 5, targetWidth + 20, 50);
-        ctx.fill();
+          ctx.drawImage(li.img, padding, currentY + labelHeight, targetWidth, drawHeight);
+          currentY += drawHeight + labelHeight + padding;
+        });
 
-        // Draw label
-        ctx.fillStyle = '#1e293b'; // slate-800
-        ctx.font = 'bold 32px sans-serif';
-        ctx.fillText(`👤 ${li.name}`, padding, currentY + 32);
-
-        // Draw image
-        ctx.drawImage(li.img, padding, currentY + labelHeight, targetWidth, drawHeight);
-
-        currentY += drawHeight + labelHeight + padding;
-      });
-
-      // Copy to clipboard using Promise-based ClipboardItem for Safari compatibility
-      try {
-        const blobPromise = new Promise<Blob>((resolve, reject) => {
+        return new Promise<Blob>((resolve, reject) => {
           canvas.toBlob((blob) => {
             if (blob) resolve(blob);
             else reject(new Error('Blob creation failed'));
           }, 'image/png');
         });
+      })();
 
-        const item = new ClipboardItem({ 'image/png': blobPromise });
-        await navigator.clipboard.write([item]);
-        
-        setLastCopiedUrl('merged_slips_daily');
-        setCopiedId('all_slips');
-        setTimeout(() => {
-          setLastCopiedUrl(null);
-          setCopiedId(null);
-        }, 3000);
-      } catch (err) {
-        console.error('Clipboard error:', err);
-      }
+      const item = new ClipboardItem({ 'image/png': clipboardPromise });
+      await navigator.clipboard.write([item]);
+      
+      setLastCopiedUrl('merged_slips_daily');
+      setCopiedId('all_slips');
+      setTimeout(() => {
+        setLastCopiedUrl(null);
+        setCopiedId(null);
+      }, 3000);
 
     } catch (err) {
       console.error('Merge error:', err);
+      alert('เกิดข้อผิดพลาดในการรวมรูปภาพ: ' + (err as Error).message);
     } finally {
       setIsCopyingAllSlips(false);
     }
