@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useStore } from '../useStore';
-import { Button, Input, Card, Label } from '../components/ui';
+import { Button, Input, Card, Label, Toast } from '../components/ui';
 import { parseISO, startOfMonth, endOfMonth, isWithinInterval, format, isSunday, eachDayOfInterval } from 'date-fns';
 import { FileSpreadsheet, Copy, Check, Image as ImageIcon, X, ImagePlus, Loader2 } from 'lucide-react';
 import * as XLSX from 'xlsx-js-style';
@@ -630,20 +630,26 @@ export function ReportsPage() {
 
 
   return (
-    <div className="space-y-6 pb-20">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          <Button onClick={handleCopyAll} disabled={reportData.length === 0} className="w-full sm:w-auto gap-2 bg-red-600 hover:bg-red-700 shadow-red-200 text-white">
-            {copiedId === 'all' ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
-            {copiedId === 'all' ? 'คัดลอกแล้ว' : 'คัดลอกสรุปทุกคน'}
-          </Button>
-          <div className="flex gap-2">
-            <Button onClick={handleExportExcel} disabled={reportData.length === 0} className="flex-1 sm:w-auto gap-2 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200 text-white border-0 px-4">
-              <FileSpreadsheet className="w-5 h-5" /> Export Excel
+    <div className="min-h-screen bg-zinc-50 pb-20 md:pb-8 relative">
+      <Toast 
+        isVisible={!!lastCopiedUrl || !!copiedId} 
+        message={lastCopiedUrl ? 'คัดลอกรูปภาพสำเร็จ!' : 'คัดลอกข้อความสำเร็จ!'}
+        icon={<Check className="w-5 h-5" />}
+      />
+      <div className="max-w-6xl mx-auto px-4 pt-4 md:pt-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button onClick={handleCopyAll} disabled={reportData.length === 0} className="w-full sm:w-auto gap-2 bg-red-600 hover:bg-red-700 shadow-red-200 text-white">
+              {copiedId === 'all' ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+              {copiedId === 'all' ? 'คัดลอกแล้ว' : 'คัดลอกสรุปทุกคน'}
             </Button>
+            <div className="flex gap-2">
+              <Button onClick={handleExportExcel} disabled={reportData.length === 0} className="flex-1 sm:w-auto gap-2 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200 text-white border-0 px-4">
+                <FileSpreadsheet className="w-5 h-5" /> Export Excel
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
 
       <Card className="p-4 sm:p-6 bg-white">
         <div className="grid grid-cols-2 gap-4 mb-6">
@@ -839,6 +845,7 @@ export function ReportsPage() {
           </div>
         </div>
       )}
-    </div>
+        </div>
+      </div>
   );
 }

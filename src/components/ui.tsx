@@ -126,3 +126,21 @@ export const Modal = ({ isOpen, onClose, title, children }: { isOpen: boolean; o
     </AnimatePresence>
   );
 };
+
+export const Toast = ({ message, isVisible, icon }: { message: string; isVisible: boolean; icon?: React.ReactNode }) => {
+  return (
+    <AnimatePresence>
+      {isVisible && (
+        <motion.div
+          initial={{ opacity: 0, y: -20, x: '-50%' }}
+          animate={{ opacity: 1, y: 0, x: '-50%' }}
+          exit={{ opacity: 0, y: -20, x: '-50%' }}
+          className="fixed top-24 left-1/2 z-[100] bg-gray-900/90 backdrop-blur-md text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 font-semibold pointer-events-none"
+        >
+          {icon && <div className="text-emerald-400">{icon}</div>}
+          <span>{message}</span>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
