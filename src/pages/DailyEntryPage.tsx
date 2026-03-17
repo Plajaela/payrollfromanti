@@ -31,6 +31,7 @@ export function DailyEntryPage() {
   const [lalamoveDist, setLalamoveDist] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [isCopyingAllSlips, setIsCopyingAllSlips] = useState(false);
   const [isAdvanceModalOpen, setIsAdvanceModalOpen] = useState(false);
   const [advanceFormData, setAdvanceFormData] = useState({
     workerId: '',
@@ -554,6 +555,105 @@ export function DailyEntryPage() {
     await handleCopySingleImage(uniqueImages[0], e);
   };
 
+  const handleCopyAllSlips = async () => {
+    if (entriesForDate.length === 0) return;
+    
+    setIsCopyingAllSlips(true);
+    setCopiedId('all_slips_loading');
+
+    try {
+      const slipsToMerge: { workerName: string, url: string }[] = [];
+      
+      workers.forEach(worker => {
+        const entry = entriesForDate.find(e => e.workerId === worker.id);
+        if (entry?.transferSlipUrl) {
+          slipsToMerge.push({ workerName: worker.name, url: entry.transferSlipUrl });
+        }
+      });
+
+      if (slipsToMerge.length === 0) {
+        setIsCopyingAllSlips(false);
+        setCopiedId(null);
+        return;
+      }
+
+      // Load all images
+      const loadedImages = await Promise.all(
+        slipsToMerge.map(async (slip) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+            img.src = slip.url;
+          });
+          return { name: slip.workerName, img };
+        })
+      );
+
+      // Create canvas
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Could not get canvas context');
+
+      const padding = 40;
+      const labelHeight = 60;
+      const maxWidth = Math.max(...loadedImages.map(li => li.img.width));
+      const totalHeight = loadedImages.reduce((sum, li) => {
+        const aspectRatio = li.img.height / li.img.width;
+        const targetHeight = maxWidth * aspectRatio;
+        return sum + targetHeight + labelHeight + padding;
+      }, padding);
+
+      canvas.width = maxWidth + (padding * 2);
+      canvas.height = totalHeight;
+
+      // Fill background
+      ctx.fillStyle = '#f8fafc'; // sky-50
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      let currentY = padding;
+
+      loadedImages.forEach((li) => {
+        const aspectRatio = li.img.height / li.img.width;
+        const drawWidth = maxWidth;
+        const drawHeight = maxWidth * aspectRatio;
+
+        // Draw label
+        ctx.fillStyle = '#1e293b'; // slate-800
+        ctx.font = 'bold 32px sans-serif';
+        ctx.fillText(`👤 ${li.name}`, padding, currentY + 35);
+
+        // Draw image
+        ctx.drawImage(li.img, padding, currentY + labelHeight, drawWidth, drawHeight);
+
+        currentY += drawHeight + labelHeight + padding;
+      });
+
+      // Copy to clipboard
+      canvas.toBlob(async (blob) => {
+        if (!blob) throw new Error('Blob creation failed');
+        try {
+          const data = [new ClipboardItem({ [blob.type]: blob })];
+          await navigator.clipboard.write(data);
+          setLastCopiedUrl('merged_slips_daily');
+          setCopiedId('all_slips');
+          setTimeout(() => {
+            setLastCopiedUrl(null);
+            setCopiedId(null);
+          }, 3000);
+        } catch (err) {
+          console.error('Clipboard error:', err);
+        }
+      }, 'image/png');
+
+    } catch (err) {
+      console.error('Merge error:', err);
+    } finally {
+      setIsCopyingAllSlips(false);
+    }
+  };
+
   const handleCopyAllDetailed = () => {
     const thaiYear = selectedDate.getFullYear() + 543;
     const shortThaiYear = thaiYear.toString().slice(-2);
@@ -893,13 +993,24 @@ export function DailyEntryPage() {
                 </div>
               </div>
 
-              <Button
-                onClick={handleCopyAllDetailed}
-                className="w-full sm:w-auto px-6 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white shadow-md shadow-red-200 gap-2 mb-6"
-              >
-                {copiedId === 'all_detailed' ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
-                คัดลอกรายละเอียดทุกคน ({workers.length} คน)
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-3 w-full justify-center mb-6">
+                <Button
+                  onClick={handleCopyAllDetailed}
+                  className="w-full sm:w-auto px-6 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white shadow-md shadow-red-200 gap-2"
+                >
+                  {copiedId === 'all_detailed' ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                  คัดลอกรายละเอียดทุกคน ({workers.length} คน)
+                </Button>
+
+                <Button
+                  onClick={handleCopyAllSlips}
+                  disabled={isCopyingAllSlips || entriesForDate.filter(e => e.transferSlipUrl).length === 0}
+                  className={`w-full sm:w-auto px-6 py-3 rounded-xl shadow-md gap-2 transition-all ${lastCopiedUrl === 'merged_slips_daily' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200' : 'bg-violet-600 hover:bg-violet-700 shadow-violet-200'} text-white`}
+                >
+                  {isCopyingAllSlips ? <Loader2 className="w-5 h-5 animate-spin" /> : lastCopiedUrl === 'merged_slips_daily' ? <Check className="w-5 h-5" /> : <ImagePlus className="w-5 h-5" />}
+                  คัดลอกรูปทุกคน ({entriesForDate.filter(e => e.transferSlipUrl).length} รูป)
+                </Button>
+              </div>
 
               <div className="w-full space-y-3 text-left">
                 {workers.map(worker => {
