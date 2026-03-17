@@ -782,7 +782,9 @@ export function DailyEntryPage() {
     addEntry(entryData);
   };
 
-  const handleCopySingleImage = async (imageUrl: string) => {
+  const handleCopySingleImage = async (imageUrl: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    e?.preventDefault();
     setIsCopyingPreviewUrl(imageUrl);
     try {
       const img = new Image();
@@ -1386,7 +1388,7 @@ export function DailyEntryPage() {
                             <button type="button" onClick={() => setPreviewImageUrl(toll.receiptUrl || '')} className="text-emerald-600 bg-emerald-50 p-1.5 rounded-lg hover:bg-emerald-100 transition-colors border border-emerald-100" title="ดูใบเสร็จ">
                               <ImagePlus className="w-4 h-4" />
                             </button>
-                            <button type="button" onClick={() => handleCopySingleImage(toll.receiptUrl!)} className="text-violet-600 bg-violet-50 p-1.5 rounded-lg hover:bg-violet-100 transition-colors border border-violet-100" title="คัดลอกรูป">
+                            <button type="button" onClick={(e) => handleCopySingleImage(toll.receiptUrl!, e)} className="text-violet-600 bg-violet-50 p-1.5 rounded-lg hover:bg-violet-100 transition-colors border border-violet-100" title="คัดลอกรูป">
                               <Copy className="w-4 h-4" />
                             </button>
                           </>
@@ -1545,7 +1547,7 @@ export function DailyEntryPage() {
                             <button type="button" onClick={() => setPreviewImageUrl(adj.receiptUrl!)} className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 p-1 rounded transition-colors" title="ดูรูปที่แนบ">
                               <ImagePlus className="w-3.5 h-3.5" />
                             </button>
-                            <button type="button" onClick={() => handleCopySingleImage(adj.receiptUrl!)} className="text-violet-600 hover:text-violet-700 hover:bg-violet-50 p-1 rounded transition-colors" title="คัดลอกรูป">
+                            <button type="button" onClick={(e) => handleCopySingleImage(adj.receiptUrl!, e)} className="text-violet-600 hover:text-violet-700 hover:bg-violet-50 p-1 rounded transition-colors" title="คัดลอกรูป">
                               <Copy className="w-3.5 h-3.5" />
                             </button>
                             <button type="button" onClick={() => {
@@ -1607,7 +1609,7 @@ export function DailyEntryPage() {
                         </div>
                       </button>
                       <div className="flex flex-col gap-1 shrink-0 p-1 text-center bg-gray-50 rounded-lg border border-gray-100">
-                        <button type="button" onClick={() => handleCopySingleImage(formData.transferSlipUrl)} className="flex items-center justify-center w-8 h-8 rounded-lg text-violet-600 bg-violet-50 hover:bg-violet-100 border border-violet-100 transition-colors" title="คัดลอกรูปสลิป">
+                        <button type="button" onClick={(e) => handleCopySingleImage(formData.transferSlipUrl, e)} className="flex items-center justify-center w-8 h-8 rounded-lg text-violet-600 bg-violet-50 hover:bg-violet-100 border border-violet-100 transition-colors" title="คัดลอกรูปสลิป">
                           <Copy className="w-3.5 h-3.5" />
                         </button>
                         <button type="button" onClick={() => setFormData(p => ({ ...p, transferSlipUrl: '' }))} className="flex items-center justify-center w-8 h-8 rounded-lg text-red-500 bg-red-50 hover:bg-red-100 border border-red-100 transition-colors" title="ลบสลิปโอนเงิน">
@@ -1686,7 +1688,7 @@ export function DailyEntryPage() {
             <img src={previewImageUrl} alt="Preview" className="max-w-full max-h-[70vh] object-contain rounded-xl border border-gray-200 shadow-sm" />
             <div className="flex w-full gap-2 mt-6">
               <Button
-                onClick={() => handleCopySingleImage(previewImageUrl)}
+                onClick={(e) => handleCopySingleImage(previewImageUrl, e)}
                 disabled={isCopyingPreviewUrl === previewImageUrl}
                 className="flex-1 py-3 rounded-2xl shadow-sm bg-violet-100 hover:bg-violet-200 text-violet-700 flex items-center justify-center gap-2 font-semibold"
               >
@@ -1721,7 +1723,7 @@ export function DailyEntryPage() {
                 <div key={i} className="relative rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-white flex flex-col justify-center p-2 gap-2">
                   <img src={imgUrl} alt={`Slip ${i}`} className="max-w-full h-auto object-contain max-h-[400px]" />
                   <Button
-                    onClick={() => handleCopySingleImage(imgUrl)}
+                    onClick={(e) => handleCopySingleImage(imgUrl, e)}
                     disabled={isCopyingPreviewUrl === imgUrl}
                     className="w-full py-2.5 rounded-xl bg-violet-50 hover:bg-violet-100 text-violet-700 font-semibold flex items-center justify-center gap-2"
                   >

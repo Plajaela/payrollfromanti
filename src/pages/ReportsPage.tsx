@@ -154,7 +154,9 @@ export function ReportsPage() {
 
   const [isCopyingPreviewUrl, setIsCopyingPreviewUrl] = useState<string | null>(null);
 
-  const handleCopySingleImage = async (imageUrl: string) => {
+  const handleCopySingleImage = async (imageUrl: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    e?.preventDefault();
     setIsCopyingPreviewUrl(imageUrl);
     try {
       const img = new Image();
@@ -791,7 +793,7 @@ export function ReportsPage() {
                           <ImagePlus className="w-4 h-4" />
                         </button>
                         <button 
-                          onClick={() => handleCopySingleImage(adj.receiptUrl!)}
+                          onClick={(e) => handleCopySingleImage(adj.receiptUrl!, e)}
                           disabled={isCopyingPreviewUrl === adj.receiptUrl}
                           className="p-2 bg-violet-50 text-violet-600 hover:bg-violet-100 rounded-lg border border-violet-100 transition-colors"
                           title="คัดลอกรูป"
