@@ -1380,9 +1380,16 @@ export function DailyEntryPage() {
                           title="วันที่ในบิล"
                         />
                       </div>
-                      <div className="flex items-center shrink-0 w-8 justify-center">
+                      <div className="flex items-center shrink-0 w-auto justify-center gap-1">
                         {toll.receiptUrl && (
-                          <button type="button" onClick={() => setPreviewImageUrl(toll.receiptUrl || '')} className="text-emerald-600 bg-emerald-50 p-1.5 rounded-lg hover:bg-emerald-100 transition-colors border border-emerald-100" title="ดูใบเสร็จ"><Check className="w-4 h-4" /></button>
+                          <>
+                            <button type="button" onClick={() => setPreviewImageUrl(toll.receiptUrl || '')} className="text-emerald-600 bg-emerald-50 p-1.5 rounded-lg hover:bg-emerald-100 transition-colors border border-emerald-100" title="ดูใบเสร็จ">
+                              <ImagePlus className="w-4 h-4" />
+                            </button>
+                            <button type="button" onClick={() => handleCopySingleImage(toll.receiptUrl!)} className="text-violet-600 bg-violet-50 p-1.5 rounded-lg hover:bg-violet-100 transition-colors border border-violet-100" title="คัดลอกรูป">
+                              <Copy className="w-4 h-4" />
+                            </button>
+                          </>
                         )}
                       </div>
                       <button type="button" onClick={() => setFormData(p => ({ ...p, tolls: p.tolls.filter(t => t.id !== toll.id) }))} className="text-red-500 hover:text-white bg-red-50 hover:bg-red-500 p-1.5 rounded-lg shrink-0 transition-colors">
@@ -1538,6 +1545,9 @@ export function DailyEntryPage() {
                             <button type="button" onClick={() => setPreviewImageUrl(adj.receiptUrl!)} className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 p-1 rounded transition-colors" title="ดูรูปที่แนบ">
                               <ImagePlus className="w-3.5 h-3.5" />
                             </button>
+                            <button type="button" onClick={() => handleCopySingleImage(adj.receiptUrl!)} className="text-violet-600 hover:text-violet-700 hover:bg-violet-50 p-1 rounded transition-colors" title="คัดลอกรูป">
+                              <Copy className="w-3.5 h-3.5" />
+                            </button>
                             <button type="button" onClick={() => {
                               const newAdjs = [...formData.adjustments];
                               newAdjs[idx].receiptUrl = '';
@@ -1596,9 +1606,14 @@ export function DailyEntryPage() {
                           <span className="text-[9px] text-white font-bold tracking-wide">ดูสลิป</span>
                         </div>
                       </button>
-                      <button type="button" onClick={() => setFormData(p => ({ ...p, transferSlipUrl: '' }))} className="shrink-0 flex items-center justify-center w-8 h-10 rounded-lg text-red-500 bg-red-50 hover:bg-red-100 border border-red-100 transition-colors" title="ลบสลิปโอนเงิน">
-                        <X className="w-4 h-4" />
-                      </button>
+                      <div className="flex flex-col gap-1 shrink-0 p-1 text-center bg-gray-50 rounded-lg border border-gray-100">
+                        <button type="button" onClick={() => handleCopySingleImage(formData.transferSlipUrl)} className="flex items-center justify-center w-8 h-8 rounded-lg text-violet-600 bg-violet-50 hover:bg-violet-100 border border-violet-100 transition-colors" title="คัดลอกรูปสลิป">
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                        <button type="button" onClick={() => setFormData(p => ({ ...p, transferSlipUrl: '' }))} className="flex items-center justify-center w-8 h-8 rounded-lg text-red-500 bg-red-50 hover:bg-red-100 border border-red-100 transition-colors" title="ลบสลิปโอนเงิน">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   )}
                   <label className={`flex items-center gap-2 px-3 py-1.5 rounded-xl cursor-pointer transition-all border ${isUploading ? 'bg-amber-50 border-amber-200 text-amber-700 cursor-not-allowed' : formData.transferSlipUrl ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-sky-50 hover:border-sky-200 hover:text-sky-600'}`}>

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useStore } from '../useStore';
 import { Button, Input, Card, Label } from '../components/ui';
 import { parseISO, startOfMonth, endOfMonth, isWithinInterval, format, isSunday, eachDayOfInterval } from 'date-fns';
-import { FileSpreadsheet, Copy, Check, Image as ImageIcon, X } from 'lucide-react';
+import { FileSpreadsheet, Copy, Check, Image as ImageIcon, X, ImagePlus, Loader2 } from 'lucide-react';
 import * as XLSX from 'xlsx-js-style';
 import { SlipModal } from '../components/SlipModal';
 
@@ -16,7 +16,7 @@ export function ReportsPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedSlipData, setSelectedSlipData] = useState<any>(null);
   const [isSlipModalOpen, setIsSlipModalOpen] = useState(false);
-  const [selectedAdjustments, setSelectedAdjustments] = useState<{ workerName: string, list: { note: string, amount: number, type: 'add' | 'deduct', date: string }[] } | null>(null);
+  const [selectedAdjustments, setSelectedAdjustments] = useState<{ workerName: string, list: { note: string, amount: number, type: 'add' | 'deduct', date: string, receiptUrl?: string }[] } | null>(null);
 
   const reportData = useMemo(() => {
     const filteredEntries = entries.filter(entry => {
@@ -49,7 +49,7 @@ export function ReportsPage() {
         , 0);
       const netAdjustments = totalAdditions - totalDeductions;
 
-      const adjustmentsList: { note: string, amount: number, type: 'add' | 'deduct', date: string }[] = [];
+      const adjustmentsList: { note: string, amount: number, type: 'add' | 'deduct', date: string, receiptUrl?: string }[] = [];
       workerEntries.forEach(e => {
         if (e.adjustments && e.adjustments.length > 0) {
           e.adjustments.forEach(a => {
@@ -57,7 +57,8 @@ export function ReportsPage() {
                note: a.note || (a.type === 'add' ? 'เพิ่มเงิน' : 'หักเงิน'),
                amount: Number(a.amount),
                type: a.type as 'add' | 'deduct',
-               date: e.date
+               date: e.date,
+               receiptUrl: a.receiptUrl
             });
           });
         }
@@ -149,6 +150,46 @@ export function ReportsPage() {
     }
 
     handleCopy(text, row.worker.id);
+  };
+
+  const [isCopyingPreviewUrl, setIsCopyingPreviewUrl] = useState<string | null>(null);
+
+  const handleCopySingleImage = async (imageUrl: string) => {
+    setIsCopyingPreviewUrl(imageUrl);
+    try {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+
+      const imgLoadPromise = new Promise<HTMLImageElement>((resolve, reject) => {
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = imageUrl;
+      });
+
+      const loadedImg = await imgLoadPromise;
+      const canvas = document.createElement('canvas');
+      canvas.width = loadedImg.width;
+      canvas.height = loadedImg.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('No 2d context');
+      ctx.drawImage(loadedImg, 0, 0);
+
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png', 1.0));
+      if (!blob) throw new Error('Could not create blob');
+
+      if (typeof ClipboardItem !== 'undefined') {
+        const item = new ClipboardItem({ 'image/png': blob });
+        await navigator.clipboard.write([item]);
+        alert('คัดลอกรูปภาพลงคลิปบอร์ดแล้ว สามารถนำไปวางได้เลยครับ');
+      } else {
+        throw new Error('ClipboardItem not supported');
+      }
+    } catch (err: any) {
+      console.warn("Could not copy directly", err);
+      alert('ไม่สามารถคัดลอกรูปได้อัตโนมัติ กรุณากดแตะค้างที่รูปภาพแล้วเลือกคัดลอกแทนครับ');
+    } finally {
+      setIsCopyingPreviewUrl(null);
+    }
   };
 
   const handleCopyAll = () => {
@@ -739,8 +780,29 @@ export function ReportsPage() {
                     <div className="text-sm font-medium text-zinc-800">{adj.note}</div>
                     <div className="text-xs text-zinc-500 mt-1">{format(parseISO(adj.date), 'dd/MM/yyyy')}</div>
                   </div>
-                  <div className={`font-bold text-sm ${adj.type === 'add' ? 'text-emerald-600' : 'text-red-600'}`}>
-                    {adj.type === 'add' ? '+' : '-'}฿{adj.amount}
+                  <div className="flex items-center gap-3">
+                    {adj.receiptUrl && (
+                      <div className="flex gap-1.5">
+                        <button 
+                          onClick={() => window.open(adj.receiptUrl, '_blank')}
+                          className="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg border border-emerald-100 transition-colors"
+                          title="ดูรูป"
+                        >
+                          <ImagePlus className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => handleCopySingleImage(adj.receiptUrl!)}
+                          disabled={isCopyingPreviewUrl === adj.receiptUrl}
+                          className="p-2 bg-violet-50 text-violet-600 hover:bg-violet-100 rounded-lg border border-violet-100 transition-colors"
+                          title="คัดลอกรูป"
+                        >
+                          {isCopyingPreviewUrl === adj.receiptUrl ? <Loader2 className="w-4 h-4 animate-spin" /> : <Copy className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    )}
+                    <div className={`font-bold text-sm ${adj.type === 'add' ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {adj.type === 'add' ? '+' : '-'}฿{adj.amount}
+                    </div>
                   </div>
                 </div>
               ))}
