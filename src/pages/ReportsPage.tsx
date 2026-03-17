@@ -98,7 +98,15 @@ export function ReportsPage() {
         guaranteeTotal,
         rangeGuaranteeDeduction,
         advanceDeduction,
-        finalPay
+        finalPay,
+        allReceiptUrls: [...new Set(workerEntries.flatMap(e => {
+          const urls = [];
+          if (e.transferSlipUrl) urls.push(e.transferSlipUrl);
+          if (e.tollReceiptUrl) urls.push(e.tollReceiptUrl);
+          if (e.tolls) e.tolls.forEach(t => { if (t.receiptUrl) urls.push(t.receiptUrl); });
+          if (e.adjustments) e.adjustments.forEach(a => { if (a.receiptUrl) urls.push(a.receiptUrl); });
+          return urls;
+        }))].filter(Boolean) as string[]
       };
     });
 
@@ -677,6 +685,7 @@ export function ReportsPage() {
                     <th scope="col" className="py-3.5 px-3 text-right text-[13px] font-semibold text-orange-600 uppercase tracking-wide">ประกันสะสมรวม</th>
                     <th scope="col" className="py-3.5 px-3 text-right text-[13px] font-semibold text-red-600 uppercase tracking-wide">หักเบิก</th>
                     <th scope="col" className="py-3.5 px-3 text-right text-[13px] font-semibold text-blue-600 uppercase tracking-wide">สุทธิ</th>
+                    <th scope="col" className="py-3.5 px-3 text-center text-[13px] font-semibold text-violet-600 uppercase tracking-wide">คัดลอกรูป</th>
                     <th scope="col" className="py-3.5 pl-3 pr-4 sm:pr-6"><span className="sr-only">คัดลอก</span></th>
                   </tr>
                 </thead>

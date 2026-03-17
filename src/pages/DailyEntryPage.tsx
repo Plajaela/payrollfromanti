@@ -533,10 +533,8 @@ export function DailyEntryPage() {
 
   const handleCopySlipImage = async (worker: typeof workers[0], entry: typeof entries[0] | undefined, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!entry) {
-      alert('ยังไม่มีข้อมูลการทำงานสำหรับวันนี้');
-      return;
-    }
+    e.preventDefault();
+    if (!entry) return;
 
     const images: string[] = [];
     if (entry?.transferSlipUrl) images.push(entry.transferSlipUrl);
@@ -549,51 +547,11 @@ export function DailyEntryPage() {
     }
 
     const uniqueImages = [...new Set(images)].filter(url => url && !url.startsWith('data:'));
+    if (uniqueImages.length === 0) return;
 
-    if (uniqueImages.length === 0) {
-      alert('ไม่มีรูปสลิปหรือใบเสร็จแนบไว้ในรายการของวันนี้ครับ');
-      return;
-    }
-
-    setIsCopyingImageId(entry.id);
-
-    try {
-      // Create a canvas to convert to PNG in order to fix JPEG/HEIC cross compatibility for clipboard
-      const img = new Image();
-      img.crossOrigin = 'anonymous'; // This is essential to draw external image onto canvas and get data back
-
-      const imgLoadPromise = new Promise<HTMLImageElement>((resolve, reject) => {
-        img.onload = () => resolve(img);
-        img.onerror = reject;
-        img.src = uniqueImages[0];
-      });
-
-      const loadedImg = await imgLoadPromise;
-      const canvas = document.createElement('canvas');
-      canvas.width = loadedImg.width;
-      canvas.height = loadedImg.height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('No 2d context');
-      ctx.drawImage(loadedImg, 0, 0);
-
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png', 1.0));
-      if (!blob) throw new Error('Could not create blob');
-
-      if (typeof ClipboardItem !== 'undefined') {
-        const item = new ClipboardItem({ 'image/png': blob });
-        await navigator.clipboard.write([item]);
-        setCopiedId(`img_${entry.id}`);
-        setTimeout(() => setCopiedId(null), 2000);
-      } else {
-        throw new Error('ClipboardItem not supported');
-      }
-    } catch (err: any) {
-      console.warn("Could not copy directly, showing modal instead", err);
-      // Fallback to modal
-      setDailySlipsViewer({ workerName: worker.name, images: uniqueImages });
-    } finally {
-      setIsCopyingImageId(null);
-    }
+    // Use handleCopySingleImage for the first image found
+    // This ensures consistency and uses the new robust logic
+    await handleCopySingleImage(uniqueImages[0], e);
   };
 
   const handleCopyAllDetailed = () => {
@@ -971,8 +929,20 @@ export function DailyEntryPage() {
                           )}
                         </div>
                       </div>
-                      <div className={`font-bold text-lg transition-colors ${entry?.isDraft ? 'text-amber-500 group-hover:text-amber-600' : 'text-red-500 group-hover:text-red-600'}`}>
-                        ฿{totalPay}
+                      <div className="flex items-center gap-3">
+                        {entry && (entry.transferSlipUrl || (entry.tolls?.some(t => t.receiptUrl)) || (entry.adjustments?.some(a => a.receiptUrl))) && (
+                          <button
+                            type="button"
+                            onClick={(e) => handleCopySlipImage(worker, entry, e)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all ${lastCopiedUrl === entry.transferSlipUrl || lastCopiedUrl === entry.tollReceiptUrl ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-violet-50 border-violet-100 text-violet-600 hover:bg-violet-100'}`}
+                          >
+                            {isCopyingImageId === entry.id || isCopyingPreviewUrl === entry.transferSlipUrl ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : lastCopiedUrl === entry.transferSlipUrl ? <Check className="w-3.5 h-3.5" /> : <ImagePlus className="w-3.5 h-3.5" />}
+                            {lastCopiedUrl === entry.transferSlipUrl ? 'คัดลอกแล้ว' : 'คัดลอกรูป'}
+                          </button>
+                        )}
+                        <div className={`font-bold text-lg transition-colors ${entry?.isDraft ? 'text-amber-500 group-hover:text-amber-600' : 'text-red-500 group-hover:text-red-600'}`}>
+                          ฿{totalPay}
+                        </div>
                       </div>
                     </div>
                   );
