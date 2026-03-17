@@ -584,25 +584,48 @@ export function DailyEntryPage() {
     setCopiedId('all_slips_loading');
 
     try {
-      const slipsToShare: { workerName: string, url: string }[] = [];
+      const slipsToProcess: { workerName: string, url: string }[] = [];
       
       workersWithSlips.forEach(w => {
         w.images.forEach((url, index) => {
           const label = w.images.length > 1 ? `${w.worker.name}_${index + 1}` : w.worker.name;
-          slipsToShare.push({ workerName: label, url });
+          slipsToProcess.push({ workerName: label, url });
         });
       });
 
-      // Load all images and convert to Blobs/Files
+      // Load all images using the Image() tag (more CORS-friendly than fetch)
       const fileResults = await Promise.all(
-        slipsToShare.map(async (slip) => {
+        slipsToProcess.map(async (slip) => {
           try {
-            const response = await fetch(slip.url);
-            const blob = await response.blob();
-            // Create a File object from the blob
+            const img = new Image();
+            if (!slip.url.startsWith('data:')) {
+              img.crossOrigin = "anonymous";
+            }
+            
+            await new Promise((resolve, reject) => {
+              img.onload = resolve;
+              img.onerror = () => reject(new Error(`โหลดรูปภาพไม่สำเร็จ: ${slip.workerName}`));
+              img.src = slip.url;
+            });
+
+            // Draw to a temporary canvas to get the blob
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = img.width;
+            tempCanvas.height = img.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            if (!tempCtx) throw new Error('Could not get canvas context');
+            tempCtx.drawImage(img, 0, 0);
+
+            const blob = await new Promise<Blob>((resolve, reject) => {
+              tempCanvas.toBlob((b) => {
+                if (b) resolve(b);
+                else reject(new Error('บีบอัดรูปภาพไม่สำเร็จ'));
+              }, 'image/png');
+            });
+
             return new File([blob], `${slip.workerName}.png`, { type: 'image/png' });
           } catch (err) {
-            console.error(`Failed to fetch image for ${slip.workerName}:`, slip.url, err);
+            console.error(`Failed to process image for ${slip.workerName}:`, err);
             return null;
           }
         })
@@ -611,11 +634,11 @@ export function DailyEntryPage() {
       const filesToShare = fileResults.filter((f): f is File => f !== null);
 
       if (filesToShare.length === 0) {
-        throw new Error('ไม่สามารถโหลดรูปภาพได้เลย');
+        throw new Error('ไม่สามารถโหลดรูปภาพได้เลย โปรดเช็คการเชื่อมต่ออินเทอร์เน็ต');
       }
 
       // 1. Try Web Share API (Best for LINE/Mobile)
-      if (navigator.canShare && navigator.canShare({ files: filesToShare })) {
+      if (typeof navigator !== 'undefined' && navigator.canShare && navigator.canShare({ files: filesToShare })) {
         await navigator.share({
           files: filesToShare,
           title: 'สลิปประจำวัน',
@@ -624,10 +647,9 @@ export function DailyEntryPage() {
         setLastCopiedUrl('shared_slips_daily');
         setCopiedId('all_slips');
       } 
-      // 2. Fallback to Merged Image (For Desktop/Old Browsers)
       else {
         const loadedImagesResults = await Promise.all(
-          slipsToShare.map(async (slip) => {
+          slipsToProcess.map(async (slip) => {
             try {
               const img = new Image();
               if (!slip.url.startsWith('data:')) {
