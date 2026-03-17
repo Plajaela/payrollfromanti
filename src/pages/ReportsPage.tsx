@@ -17,6 +17,7 @@ export function ReportsPage() {
   const [selectedSlipData, setSelectedSlipData] = useState<any>(null);
   const [isSlipModalOpen, setIsSlipModalOpen] = useState(false);
   const [selectedAdjustments, setSelectedAdjustments] = useState<{ workerName: string, list: { note: string, amount: number, type: 'add' | 'deduct', date: string, receiptUrl?: string }[] } | null>(null);
+  const [lastCopiedUrl, setLastCopiedUrl] = useState<string | null>(null);
 
   const reportData = useMemo(() => {
     const filteredEntries = entries.filter(entry => {
@@ -159,35 +160,43 @@ export function ReportsPage() {
     e?.preventDefault();
     setIsCopyingPreviewUrl(imageUrl);
     try {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-
-      const imgLoadPromise = new Promise<HTMLImageElement>((resolve, reject) => {
-        img.onload = () => resolve(img);
-        img.onerror = reject;
-        img.src = imageUrl;
-      });
-
-      const loadedImg = await imgLoadPromise;
-      const canvas = document.createElement('canvas');
-      canvas.width = loadedImg.width;
-      canvas.height = loadedImg.height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('No 2d context');
-      ctx.drawImage(loadedImg, 0, 0);
-
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png', 1.0));
-      if (!blob) throw new Error('Could not create blob');
-
-      if (typeof ClipboardItem !== 'undefined') {
-        const item = new ClipboardItem({ 'image/png': blob });
-        await navigator.clipboard.write([item]);
-        alert('คัดลอกรูปภาพลงคลิปบอร์ดแล้ว สามารถนำไปวางได้เลยครับ');
-      } else {
+      if (typeof ClipboardItem === 'undefined') {
         throw new Error('ClipboardItem not supported');
       }
+
+      // Using Promise-based ClipboardItem for maximum reliability (Safari support)
+      const data = [
+        new ClipboardItem({
+          'image/png': (async () => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            const imgLoadPromise = new Promise<HTMLImageElement>((resolve, reject) => {
+              img.onload = () => resolve(img);
+              img.onerror = () => reject(new Error('Image load failed'));
+              img.src = imageUrl;
+            });
+            const loadedImg = await imgLoadPromise;
+            const canvas = document.createElement('canvas');
+            canvas.width = loadedImg.width;
+            canvas.height = loadedImg.height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) throw new Error('Canvas error');
+            ctx.drawImage(loadedImg, 0, 0);
+            return new Promise<Blob>((resolve, reject) => {
+              canvas.toBlob((blob) => {
+                if (blob) resolve(blob);
+                else reject(new Error('Blob error'));
+              }, 'image/png', 1.0);
+            });
+          })()
+        })
+      ];
+
+      await navigator.clipboard.write(data);
+      setLastCopiedUrl(imageUrl);
+      setTimeout(() => setLastCopiedUrl(null), 3000);
     } catch (err: any) {
-      console.warn("Could not copy directly", err);
+      console.warn("Direct copy failed", err);
       alert('ไม่สามารถคัดลอกรูปได้อัตโนมัติ กรุณากดแตะค้างที่รูปภาพแล้วเลือกคัดลอกแทนครับ');
     } finally {
       setIsCopyingPreviewUrl(null);
@@ -795,10 +804,10 @@ export function ReportsPage() {
                         <button 
                           onClick={(e) => handleCopySingleImage(adj.receiptUrl!, e)}
                           disabled={isCopyingPreviewUrl === adj.receiptUrl}
-                          className="p-2 bg-violet-50 text-violet-600 hover:bg-violet-100 rounded-lg border border-violet-100 transition-colors"
+                          className={`p-2 rounded-lg transition-all border ${lastCopiedUrl === adj.receiptUrl ? 'text-emerald-600 bg-emerald-50 border-emerald-200' : 'text-violet-600 bg-violet-50 hover:bg-violet-100 border-violet-100'}`}
                           title="คัดลอกรูป"
                         >
-                          {isCopyingPreviewUrl === adj.receiptUrl ? <Loader2 className="w-4 h-4 animate-spin" /> : <Copy className="w-4 h-4" />}
+                          {isCopyingPreviewUrl === adj.receiptUrl ? <Loader2 className="w-4 h-4 animate-spin" /> : lastCopiedUrl === adj.receiptUrl ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                         </button>
                       </div>
                     )}

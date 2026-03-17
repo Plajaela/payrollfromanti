@@ -22,6 +22,7 @@ export function DailyEntryPage() {
   const [dailySlipsViewer, setDailySlipsViewer] = useState<{ workerName: string, images: string[] } | null>(null);
   const [isCopyingImageId, setIsCopyingImageId] = useState<string | null>(null);
   const [isCopyingPreviewUrl, setIsCopyingPreviewUrl] = useState<string | null>(null);
+  const [lastCopiedUrl, setLastCopiedUrl] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showShiftSettings, setShowShiftSettings] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -787,35 +788,44 @@ export function DailyEntryPage() {
     e?.preventDefault();
     setIsCopyingPreviewUrl(imageUrl);
     try {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-
-      const imgLoadPromise = new Promise<HTMLImageElement>((resolve, reject) => {
-        img.onload = () => resolve(img);
-        img.onerror = reject;
-        img.src = imageUrl;
-      });
-
-      const loadedImg = await imgLoadPromise;
-      const canvas = document.createElement('canvas');
-      canvas.width = loadedImg.width;
-      canvas.height = loadedImg.height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('No 2d context');
-      ctx.drawImage(loadedImg, 0, 0);
-
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png', 1.0));
-      if (!blob) throw new Error('Could not create blob');
-
-      if (typeof ClipboardItem !== 'undefined') {
-        const item = new ClipboardItem({ 'image/png': blob });
-        await navigator.clipboard.write([item]);
-        alert('คัดลอกรูปภาพลงคลิปบอร์ดแล้ว สามารถนำไปวางได้เลยครับ');
-      } else {
+      if (typeof ClipboardItem === 'undefined') {
         throw new Error('ClipboardItem not supported');
       }
+
+      // Using Promise-based ClipboardItem for maximum reliability (Safari support)
+      const data = [
+        new ClipboardItem({
+          'image/png': (async () => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            const imgLoadPromise = new Promise<HTMLImageElement>((resolve, reject) => {
+              img.onload = () => resolve(img);
+              img.onerror = () => reject(new Error('Image load failed'));
+              img.src = imageUrl;
+            });
+            const loadedImg = await imgLoadPromise;
+            const canvas = document.createElement('canvas');
+            canvas.width = loadedImg.width;
+            canvas.height = loadedImg.height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) throw new Error('Canvas error');
+            ctx.drawImage(loadedImg, 0, 0);
+            return new Promise<Blob>((resolve, reject) => {
+              canvas.toBlob((blob) => {
+                if (blob) resolve(blob);
+                else reject(new Error('Blob error'));
+              }, 'image/png', 1.0);
+            });
+          })()
+        })
+      ];
+
+      await navigator.clipboard.write(data);
+      setLastCopiedUrl(imageUrl);
+      setTimeout(() => setLastCopiedUrl(null), 3000);
     } catch (err: any) {
-      console.warn("Could not copy directly", err);
+      console.warn("Direct copy failed", err);
+      // We only show alert if it truly fails to provide fallback instructions
       alert('ไม่สามารถคัดลอกรูปได้อัตโนมัติ กรุณากดแตะค้างที่รูปภาพแล้วเลือกคัดลอกแทนครับ');
     } finally {
       setIsCopyingPreviewUrl(null);
@@ -1388,8 +1398,8 @@ export function DailyEntryPage() {
                             <button type="button" onClick={() => setPreviewImageUrl(toll.receiptUrl || '')} className="text-emerald-600 bg-emerald-50 p-1.5 rounded-lg hover:bg-emerald-100 transition-colors border border-emerald-100" title="ดูใบเสร็จ">
                               <ImagePlus className="w-4 h-4" />
                             </button>
-                            <button type="button" onClick={(e) => handleCopySingleImage(toll.receiptUrl!, e)} className="text-violet-600 bg-violet-50 p-1.5 rounded-lg hover:bg-violet-100 transition-colors border border-violet-100" title="คัดลอกรูป">
-                              <Copy className="w-4 h-4" />
+                            <button type="button" onClick={(e) => handleCopySingleImage(toll.receiptUrl!, e)} className={`p-1.5 rounded-lg transition-all border ${lastCopiedUrl === toll.receiptUrl ? 'text-emerald-600 bg-emerald-50 border-emerald-200' : 'text-violet-600 bg-violet-50 hover:bg-violet-100 border-violet-100'}`} title="คัดลอกรูป">
+                              {lastCopiedUrl === toll.receiptUrl ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                             </button>
                           </>
                         )}
@@ -1547,8 +1557,8 @@ export function DailyEntryPage() {
                             <button type="button" onClick={() => setPreviewImageUrl(adj.receiptUrl!)} className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 p-1 rounded transition-colors" title="ดูรูปที่แนบ">
                               <ImagePlus className="w-3.5 h-3.5" />
                             </button>
-                            <button type="button" onClick={(e) => handleCopySingleImage(adj.receiptUrl!, e)} className="text-violet-600 hover:text-violet-700 hover:bg-violet-50 p-1 rounded transition-colors" title="คัดลอกรูป">
-                              <Copy className="w-3.5 h-3.5" />
+                            <button type="button" onClick={(e) => handleCopySingleImage(adj.receiptUrl!, e)} className={`p-1 rounded transition-all ${lastCopiedUrl === adj.receiptUrl ? 'text-emerald-600 bg-emerald-50' : 'text-violet-600 hover:text-violet-700 hover:bg-violet-50'}`} title="คัดลอกรูป">
+                              {lastCopiedUrl === adj.receiptUrl ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                             </button>
                             <button type="button" onClick={() => {
                               const newAdjs = [...formData.adjustments];
@@ -1609,8 +1619,8 @@ export function DailyEntryPage() {
                         </div>
                       </button>
                       <div className="flex flex-col gap-1 shrink-0 p-1 text-center bg-gray-50 rounded-lg border border-gray-100">
-                        <button type="button" onClick={(e) => handleCopySingleImage(formData.transferSlipUrl, e)} className="flex items-center justify-center w-8 h-8 rounded-lg text-violet-600 bg-violet-50 hover:bg-violet-100 border border-violet-100 transition-colors" title="คัดลอกรูปสลิป">
-                          <Copy className="w-3.5 h-3.5" />
+                        <button type="button" onClick={(e) => handleCopySingleImage(formData.transferSlipUrl, e)} className={`flex items-center justify-center w-8 h-8 rounded-lg transition-all border ${lastCopiedUrl === formData.transferSlipUrl ? 'text-emerald-600 bg-emerald-50 border-emerald-200' : 'text-violet-600 bg-violet-50 hover:bg-violet-100 border-violet-100'}`} title="คัดลอกรูปสลิป">
+                          {lastCopiedUrl === formData.transferSlipUrl ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                         </button>
                         <button type="button" onClick={() => setFormData(p => ({ ...p, transferSlipUrl: '' }))} className="flex items-center justify-center w-8 h-8 rounded-lg text-red-500 bg-red-50 hover:bg-red-100 border border-red-100 transition-colors" title="ลบสลิปโอนเงิน">
                           <X className="w-4 h-4" />
@@ -1690,10 +1700,10 @@ export function DailyEntryPage() {
               <Button
                 onClick={(e) => handleCopySingleImage(previewImageUrl, e)}
                 disabled={isCopyingPreviewUrl === previewImageUrl}
-                className="flex-1 py-3 rounded-2xl shadow-sm bg-violet-100 hover:bg-violet-200 text-violet-700 flex items-center justify-center gap-2 font-semibold"
+                className={`flex-1 py-3 rounded-2xl shadow-sm transition-all flex items-center justify-center gap-2 font-semibold ${lastCopiedUrl === previewImageUrl ? 'bg-emerald-100 text-emerald-700' : 'bg-violet-100 hover:bg-violet-200 text-violet-700'}`}
               >
-                {isCopyingPreviewUrl === previewImageUrl ? <Loader2 className="w-5 h-5 animate-spin" /> : <Copy className="w-5 h-5" />}
-                คัดลอกรูปภาพ
+                {isCopyingPreviewUrl === previewImageUrl ? <Loader2 className="w-5 h-5 animate-spin" /> : lastCopiedUrl === previewImageUrl ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                {lastCopiedUrl === previewImageUrl ? 'คัดลอกแล้ว!' : 'คัดลอกรูปภาพ'}
               </Button>
               <Button
                 onClick={() => setPreviewImageUrl(null)}
