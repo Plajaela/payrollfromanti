@@ -1013,12 +1013,22 @@ export function DailyEntryPage() {
                     <Button
                       variant="secondary"
                       onClick={(e) => handleCopySlipImage(activeWorker, activeEntry, e)}
-                      disabled={isCopyingImageId === activeEntry.id}
-                      className="p-2.5 h-auto rounded-xl bg-violet-50 text-violet-600 hover:bg-violet-100 border-violet-100 min-w-[100px]"
+                      disabled={isCopyingImageId === activeEntry.id || isCopyingPreviewUrl === activeEntry?.transferSlipUrl}
+                      className={`p-2.5 h-auto rounded-xl transition-all border min-w-[100px] ${lastCopiedUrl === activeEntry?.transferSlipUrl || lastCopiedUrl === activeEntry?.tollReceiptUrl ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-violet-50 text-violet-600 hover:bg-violet-100 border-violet-100'}`}
                       title="คัดลอกรูปสลิปภาพแรก"
                     >
-                      {isCopyingImageId === activeEntry.id ? <Loader2 className="w-5 h-5 animate-spin mx-auto text-violet-600" /> : copiedId === `img_${activeEntry.id}` ? <Check className="w-5 h-5 text-emerald-600" /> : <ImagePlus className="w-5 h-5" />}
-                      {isCopyingImageId !== activeEntry.id && <span className="ml-1 text-sm font-semibold pr-1">คัดลอกรูป</span>}
+                      {isCopyingImageId === activeEntry.id || isCopyingPreviewUrl === activeEntry?.transferSlipUrl ? (
+                         <Loader2 className="w-5 h-5 animate-spin mx-auto text-violet-600" />
+                      ) : (lastCopiedUrl === activeEntry?.transferSlipUrl || lastCopiedUrl === activeEntry?.tollReceiptUrl) ? (
+                         <Check className="w-5 h-5 text-emerald-600" />
+                      ) : (
+                         <ImagePlus className="w-5 h-5" />
+                      )}
+                      {(isCopyingImageId !== activeEntry.id && isCopyingPreviewUrl !== activeEntry?.transferSlipUrl) && (
+                        <span className="ml-1 text-sm font-semibold pr-1">
+                          {lastCopiedUrl === activeEntry?.transferSlipUrl || lastCopiedUrl === activeEntry?.tollReceiptUrl ? 'คัดลอกแล้ว' : 'คัดลอกรูป'}
+                        </span>
+                      )}
                     </Button>
                     <Button
                       variant="danger"
