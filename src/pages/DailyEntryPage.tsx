@@ -3,7 +3,7 @@ import { useStore } from '../useStore';
 import { Button, Input, Label, Card, Modal, Toast } from '../components/ui';
 import { format, addDays, subDays, isSunday, parseISO } from 'date-fns';
 import { th } from 'date-fns/locale';
-import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Settings2, RefreshCw, Copy, Check, Paperclip, ImagePlus, X, AlertTriangle, Loader2, Share2, Wallet, ArrowDownCircle } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Settings2, RefreshCw, Copy, Check, Paperclip, ImagePlus, X, AlertTriangle, Loader2, Share2, Wallet, ArrowDownCircle, Send } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Adjustment } from '../types';
 import { supabase } from '../lib/supabase';
@@ -577,30 +577,59 @@ export function DailyEntryPage() {
     await handleCopySingleImage(uniqueImages[0], e);
   };
 
-  const handleCopyAllSlips = async () => {
+  const handleShareAllSlips = async () => {
     if (workersWithSlips.length === 0) return;
     
     setIsCopyingAllSlips(true);
     setCopiedId('all_slips_loading');
 
     try {
-      // Create the ClipboardItem immediately, and perform the work inside the promise.
-      // This is the MOST reliable way for Safari/macOS to handle async clipboard writes.
-      const clipboardPromise = (async () => {
-        const slipsToMerge: { workerName: string, url: string }[] = [];
-        
-        workersWithSlips.forEach(w => {
-          w.images.forEach((url, index) => {
-            const label = w.images.length > 1 ? `${w.worker.name} (${index + 1})` : w.worker.name;
-            slipsToMerge.push({ workerName: label, url });
-          });
+      const slipsToShare: { workerName: string, url: string }[] = [];
+      
+      workersWithSlips.forEach(w => {
+        w.images.forEach((url, index) => {
+          const label = w.images.length > 1 ? `${w.worker.name}_${index + 1}` : w.worker.name;
+          slipsToShare.push({ workerName: label, url });
         });
+      });
 
+      // Load all images and convert to Blobs/Files
+      const fileResults = await Promise.all(
+        slipsToShare.map(async (slip) => {
+          try {
+            const response = await fetch(slip.url);
+            const blob = await response.blob();
+            // Create a File object from the blob
+            return new File([blob], `${slip.workerName}.png`, { type: 'image/png' });
+          } catch (err) {
+            console.error(`Failed to fetch image for ${slip.workerName}:`, slip.url, err);
+            return null;
+          }
+        })
+      );
+
+      const filesToShare = fileResults.filter((f): f is File => f !== null);
+
+      if (filesToShare.length === 0) {
+        throw new Error('ไม่สามารถโหลดรูปภาพได้เลย');
+      }
+
+      // 1. Try Web Share API (Best for LINE/Mobile)
+      if (navigator.canShare && navigator.canShare({ files: filesToShare })) {
+        await navigator.share({
+          files: filesToShare,
+          title: 'สลิปประจำวัน',
+          text: `สลิปทั้งหมดประจำวันที่ ${format(selectedDate, 'dd/MM/yyyy')}`
+        });
+        setLastCopiedUrl('shared_slips_daily');
+        setCopiedId('all_slips');
+      } 
+      // 2. Fallback to Merged Image (For Desktop/Old Browsers)
+      else {
         const loadedImagesResults = await Promise.all(
-          slipsToMerge.map(async (slip) => {
+          slipsToShare.map(async (slip) => {
             try {
               const img = new Image();
-              // Don't set crossOrigin for data URLs
               if (!slip.url.startsWith('data:')) {
                 img.crossOrigin = "anonymous";
               }
@@ -611,17 +640,13 @@ export function DailyEntryPage() {
               });
               return { name: slip.workerName, img };
             } catch (err) {
-              console.error(`Failed to load image for ${slip.workerName}:`, slip.url, err);
               return null;
             }
           })
         );
 
         const loadedImages = loadedImagesResults.filter((li): li is { name: string, img: HTMLImageElement } => li !== null);
-
-        if (loadedImages.length === 0) {
-          throw new Error('ไม่สามารถโหลดรูปภาพได้เลย');
-        }
+        if (loadedImages.length === 0) throw new Error('ไม่สามารถโหลดรูปภาพเพื่อรวมได้');
 
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
@@ -629,7 +654,8 @@ export function DailyEntryPage() {
 
         const padding = 40;
         const labelHeight = 60;
-        const targetWidth = 1200; 
+        // Use maximum native width for fallback to ensure readability
+        const targetWidth = Math.max(1200, ...loadedImages.map(li => li.img.width));
         
         const totalHeight = loadedImages.reduce((sum, li) => {
           const aspectRatio = li.img.height / li.img.width;
@@ -647,39 +673,37 @@ export function DailyEntryPage() {
         loadedImages.forEach((li) => {
           const aspectRatio = li.img.height / li.img.width;
           const drawHeight = targetWidth * aspectRatio;
-
           ctx.fillStyle = '#f1f5f9'; 
           ctx.fillRect(padding - 10, currentY - 5, targetWidth + 20, 50);
-          
           ctx.fillStyle = '#1e293b'; 
           ctx.font = 'bold 32px sans-serif';
-          ctx.fillText(`👤 ${li.name}`, padding, currentY + 32);
-
+          ctx.fillText(`👤 ${li.name.replace('_', ' ')}`, padding, currentY + 32);
           ctx.drawImage(li.img, padding, currentY + labelHeight, targetWidth, drawHeight);
           currentY += drawHeight + labelHeight + padding;
         });
 
-        return new Promise<Blob>((resolve, reject) => {
+        const blobPromise = new Promise<Blob>((resolve, reject) => {
           canvas.toBlob((blob) => {
             if (blob) resolve(blob);
             else reject(new Error('Blob creation failed'));
           }, 'image/png');
         });
-      })();
 
-      const item = new ClipboardItem({ 'image/png': clipboardPromise });
-      await navigator.clipboard.write([item]);
-      
-      setLastCopiedUrl('merged_slips_daily');
-      setCopiedId('all_slips');
+        const item = new ClipboardItem({ 'image/png': blobPromise });
+        await navigator.clipboard.write([item]);
+        
+        setLastCopiedUrl('merged_slips_daily');
+        setCopiedId('all_slips');
+      }
+
       setTimeout(() => {
         setLastCopiedUrl(null);
         setCopiedId(null);
       }, 3000);
 
     } catch (err) {
-      console.error('Merge error:', err);
-      alert('เกิดข้อผิดพลาดในการรวมรูปภาพ: ' + (err as Error).message);
+      console.error('Share/Merge error:', err);
+      alert('เกิดข้อผิดพลาด: ' + (err as Error).message);
     } finally {
       setIsCopyingAllSlips(false);
     }
@@ -926,6 +950,7 @@ export function DailyEntryPage() {
       <Toast 
         isVisible={!!lastCopiedUrl || !!copiedId} 
         message={
+          lastCopiedUrl === 'shared_slips_daily' ? 'ส่งไฟล์รูปภาพสำเร็จ!' :
           lastCopiedUrl === 'merged_slips_daily' ? 'คัดลอกรูปภาพทุกคนสำเร็จ!' :
           lastCopiedUrl ? 'คัดลอกรูปภาพสำเร็จ!' : 
           copiedId === 'all_slips_loading' ? 'กำลังประมวลผลรูปภาพ...' :
@@ -1044,12 +1069,12 @@ export function DailyEntryPage() {
                 </Button>
 
                 <Button
-                  onClick={handleCopyAllSlips}
+                  onClick={handleShareAllSlips}
                   disabled={isCopyingAllSlips || totalSlipsCount === 0}
-                  className={`w-full sm:w-auto px-6 py-3 rounded-xl shadow-md gap-2 transition-all ${lastCopiedUrl === 'merged_slips_daily' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200' : 'bg-violet-600 hover:bg-violet-700 shadow-violet-200'} text-white`}
+                  className={`w-full sm:w-auto px-6 py-3 rounded-xl shadow-md gap-2 transition-all ${lastCopiedUrl === 'shared_slips_daily' || lastCopiedUrl === 'merged_slips_daily' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200' : 'bg-violet-600 hover:bg-violet-700 shadow-violet-200'} text-white`}
                 >
-                  {isCopyingAllSlips ? <Loader2 className="w-5 h-5 animate-spin" /> : lastCopiedUrl === 'merged_slips_daily' ? <Check className="w-5 h-5" /> : <ImagePlus className="w-5 h-5" />}
-                  คัดลอกรูปทุกคน ({totalSlipsCount} รูป)
+                  {isCopyingAllSlips ? <Loader2 className="w-5 h-5 animate-spin" /> : (lastCopiedUrl === 'shared_slips_daily' || lastCopiedUrl === 'merged_slips_daily') ? <Check className="w-5 h-5" /> : <Send className="w-5 h-5" />}
+                  ส่งรูปทุกคน ({totalSlipsCount} รูป)
                 </Button>
               </div>
 
