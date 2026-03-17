@@ -21,6 +21,7 @@ export function DailyEntryPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [dailySlipsViewer, setDailySlipsViewer] = useState<{ workerName: string, images: string[] } | null>(null);
   const [isCopyingImageId, setIsCopyingImageId] = useState<string | null>(null);
+  const [isCopyingPreviewUrl, setIsCopyingPreviewUrl] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showShiftSettings, setShowShiftSettings] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -779,6 +780,44 @@ export function DailyEntryPage() {
       guaranteeDeduction: 0, // No deduction on leave day
     };
     addEntry(entryData);
+  };
+
+  const handleCopySingleImage = async (imageUrl: string) => {
+    setIsCopyingPreviewUrl(imageUrl);
+    try {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+
+      const imgLoadPromise = new Promise<HTMLImageElement>((resolve, reject) => {
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = imageUrl;
+      });
+
+      const loadedImg = await imgLoadPromise;
+      const canvas = document.createElement('canvas');
+      canvas.width = loadedImg.width;
+      canvas.height = loadedImg.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('No 2d context');
+      ctx.drawImage(loadedImg, 0, 0);
+
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png', 1.0));
+      if (!blob) throw new Error('Could not create blob');
+
+      if (typeof ClipboardItem !== 'undefined') {
+        const item = new ClipboardItem({ 'image/png': blob });
+        await navigator.clipboard.write([item]);
+        alert('คัดลอกรูปภาพลงคลิปบอร์ดแล้ว สามารถนำไปวางได้เลยครับ');
+      } else {
+        throw new Error('ClipboardItem not supported');
+      }
+    } catch (err: any) {
+      console.warn("Could not copy directly", err);
+      alert('ไม่สามารถคัดลอกรูปได้อัตโนมัติ กรุณากดแตะค้างที่รูปภาพแล้วเลือกคัดลอกแทนครับ');
+    } finally {
+      setIsCopyingPreviewUrl(null);
+    }
   };
 
   return (
@@ -1630,12 +1669,22 @@ export function DailyEntryPage() {
         >
           <div className="flex flex-col items-center justify-center p-2">
             <img src={previewImageUrl} alt="Preview" className="max-w-full max-h-[70vh] object-contain rounded-xl border border-gray-200 shadow-sm" />
-            <Button
-              onClick={() => setPreviewImageUrl(null)}
-              className="mt-6 w-full py-3 rounded-2xl shadow-sm bg-gray-100 hover:bg-gray-200 text-gray-700"
-            >
-              ปิดหน้าต่าง
-            </Button>
+            <div className="flex w-full gap-2 mt-6">
+              <Button
+                onClick={() => handleCopySingleImage(previewImageUrl)}
+                disabled={isCopyingPreviewUrl === previewImageUrl}
+                className="flex-1 py-3 rounded-2xl shadow-sm bg-violet-100 hover:bg-violet-200 text-violet-700 flex items-center justify-center gap-2 font-semibold"
+              >
+                {isCopyingPreviewUrl === previewImageUrl ? <Loader2 className="w-5 h-5 animate-spin" /> : <Copy className="w-5 h-5" />}
+                คัดลอกรูปภาพ
+              </Button>
+              <Button
+                onClick={() => setPreviewImageUrl(null)}
+                className="flex-1 py-3 rounded-2xl shadow-sm bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold"
+              >
+                ปิดหน้าต่าง
+              </Button>
+            </div>
           </div>
         </Modal>
       )}
@@ -1654,8 +1703,16 @@ export function DailyEntryPage() {
 
             <div className="max-h-[50vh] overflow-y-auto mb-4 w-full flex flex-col gap-3 border border-gray-100 bg-gray-50/50 p-2 rounded-xl shadow-inner">
               {dailySlipsViewer.images.map((imgUrl, i) => (
-                <div key={i} className="relative rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-white flex justify-center p-1">
+                <div key={i} className="relative rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-white flex flex-col justify-center p-2 gap-2">
                   <img src={imgUrl} alt={`Slip ${i}`} className="max-w-full h-auto object-contain max-h-[400px]" />
+                  <Button
+                    onClick={() => handleCopySingleImage(imgUrl)}
+                    disabled={isCopyingPreviewUrl === imgUrl}
+                    className="w-full py-2.5 rounded-xl bg-violet-50 hover:bg-violet-100 text-violet-700 font-semibold flex items-center justify-center gap-2"
+                  >
+                    {isCopyingPreviewUrl === imgUrl ? <Loader2 className="w-4 h-4 animate-spin" /> : <Copy className="w-4 h-4" />}
+                    คัดลอกรูปลงคลิปบอร์ด
+                  </Button>
                 </div>
               ))}
             </div>
