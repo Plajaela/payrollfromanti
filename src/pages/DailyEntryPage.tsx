@@ -702,8 +702,13 @@ export function DailyEntryPage() {
       }, 3000);
 
     } catch (err) {
-      console.error('Share/Merge error:', err);
-      alert('เกิดข้อผิดพลาด: ' + (err as Error).message);
+      // Ignore AbortError (user cancelled) and NotAllowedError (permission denied or no user gesture)
+      if ((err as Error).name === 'AbortError' || (err as Error).name === 'NotAllowedError') {
+        console.log('Share action cancelled by user or not allowed');
+      } else {
+        console.error('Share/Merge error:', err);
+        alert('เกิดข้อผิดพลาด: ' + (err as Error).message);
+      }
     } finally {
       setIsCopyingAllSlips(false);
     }
