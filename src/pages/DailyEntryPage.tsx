@@ -594,6 +594,17 @@ export function DailyEntryPage() {
     await handleCopySingleImage(uniqueImages[0], e);
   };
 
+  const handleCopyTollSlip = async (entry: typeof entries[0], e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const tollImages: string[] = [];
+    if (entry?.tollReceiptUrl) tollImages.push(entry.tollReceiptUrl);
+    if (entry?.tolls) entry.tolls.forEach(t => { if (t.receiptUrl) tollImages.push(t.receiptUrl); });
+    const unique = [...new Set(tollImages)].filter(u => u && !u.startsWith('data:'));
+    if (unique.length === 0) return;
+    await handleCopySingleImage(unique[0], e);
+  };
+
   const handleCopyAllSlips = async () => {
     if (workersWithSlips.length === 0) return;
     
@@ -1106,7 +1117,8 @@ export function DailyEntryPage() {
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        {/* Copy general slip button */}
                         {entry && (entry.transferSlipUrl || (entry.tolls?.some(t => t.receiptUrl)) || (entry.adjustments?.some(a => a.receiptUrl))) && (
                           <button
                             type="button"
@@ -1115,6 +1127,17 @@ export function DailyEntryPage() {
                           >
                             {isCopyingImageId === entry.id || isCopyingPreviewUrl === entry.transferSlipUrl ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : lastCopiedUrl === entry.transferSlipUrl ? <Check className="w-3.5 h-3.5" /> : <ImagePlus className="w-3.5 h-3.5" />}
                             {lastCopiedUrl === entry.transferSlipUrl ? 'คัดลอกแล้ว' : 'คัดลอกรูป'}
+                          </button>
+                        )}
+                        {/* Copy toll slip button — only when there are toll receipts */}
+                        {entry && (entry.tollReceiptUrl || entry.tolls?.some(t => t.receiptUrl)) && (
+                          <button
+                            type="button"
+                            onClick={(e) => handleCopyTollSlip(entry, e)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all ${lastCopiedUrl === entry.tollReceiptUrl || entry.tolls?.some(t => t.receiptUrl && lastCopiedUrl === t.receiptUrl) ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-orange-50 border-orange-100 text-orange-600 hover:bg-orange-100'}`}
+                          >
+                            {lastCopiedUrl === entry.tollReceiptUrl || entry.tolls?.some(t => t.receiptUrl && lastCopiedUrl === t.receiptUrl) ? <Check className="w-3.5 h-3.5" /> : <Paperclip className="w-3.5 h-3.5" />}
+                            {lastCopiedUrl === entry.tollReceiptUrl || entry.tolls?.some(t => t.receiptUrl && lastCopiedUrl === t.receiptUrl) ? 'คัดลอกแล้ว' : 'บิลด่วน'}
                           </button>
                         )}
                         <div className={`font-bold text-lg transition-colors ${entry?.isDraft ? 'text-amber-500 group-hover:text-amber-600' : 'text-red-500 group-hover:text-red-600'}`}>
