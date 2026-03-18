@@ -387,18 +387,22 @@ export function DailyEntryPage() {
 
       if (field === 'transferSlipUrl') {
         setFormData(prev => ({ ...prev, transferSlipUrl: publicUrl }));
+        if (editingId) updateEntry(editingId, { transferSlipUrl: publicUrl });
       } else if (field === 'tollReceiptUrl') {
         setFormData(prev => ({ ...prev, tollReceiptUrl: publicUrl }));
+        if (editingId) updateEntry(editingId, { tollReceiptUrl: publicUrl });
       } else if (field === 'adjustments' && adjId) {
-        setFormData(prev => ({
-          ...prev,
-          adjustments: prev.adjustments.map(a => a.id === adjId ? { ...a, receiptUrl: publicUrl } : a)
-        }));
+        setFormData(prev => {
+          const updated = { ...prev, adjustments: prev.adjustments.map(a => a.id === adjId ? { ...a, receiptUrl: publicUrl } : a) };
+          if (editingId) updateEntry(editingId, { adjustments: updated.adjustments });
+          return updated;
+        });
       } else if (field === 'tolls' && adjId) {
-        setFormData(prev => ({
-          ...prev,
-          tolls: prev.tolls.map(t => t.id === adjId ? { ...t, receiptUrl: publicUrl } : t)
-        }));
+        setFormData(prev => {
+          const updated = { ...prev, tolls: prev.tolls.map(t => t.id === adjId ? { ...t, receiptUrl: publicUrl } : t) };
+          if (editingId) updateEntry(editingId, { tolls: updated.tolls });
+          return updated;
+        });
       }
     } catch (error) {
       console.error('Error uploading image:', error);
@@ -1244,6 +1248,23 @@ export function DailyEntryPage() {
                         </span>
                       )}
                     </Button>
+                    {/* Toll receipt shortcut copy button */}
+                    {(activeEntry?.tollReceiptUrl || activeEntry?.tolls?.some(t => t.receiptUrl)) && (
+                      <Button
+                        variant="secondary"
+                        onClick={(e) => handleCopyTollSlip(activeEntry!, e)}
+                        className={`p-2.5 h-auto rounded-xl transition-all border min-w-[100px] ${lastCopiedUrl === activeEntry?.tollReceiptUrl || activeEntry?.tolls?.some(t => t.receiptUrl && lastCopiedUrl === t.receiptUrl) ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-orange-50 text-orange-600 hover:bg-orange-100 border-orange-100'}`}
+                        title="\u0e04\u0e31\u0e14\u0e25\u0e2d\u0e01\u0e1a\u0e34\u0e25\u0e17\u0e32\u0e07\u0e14\u0e48\u0e27\u0e19"
+                      >
+                        {lastCopiedUrl === activeEntry?.tollReceiptUrl || activeEntry?.tolls?.some(t => t.receiptUrl && lastCopiedUrl === t.receiptUrl)
+                          ? <Check className="w-5 h-5 text-emerald-600" />
+                          : <Wallet className="w-5 h-5" />
+                        }
+                        <span className="ml-1 text-sm font-semibold pr-1">
+                          {lastCopiedUrl === activeEntry?.tollReceiptUrl || activeEntry?.tolls?.some(t => t.receiptUrl && lastCopiedUrl === t.receiptUrl) ? '\u0e04\u0e31\u0e14\u0e25\u0e2d\u0e01\u0e41\u0e25\u0e49\u0e27' : '\u0e1a\u0e34\u0e25\u0e14\u0e48\u0e27\u0e19'}
+                        </span>
+                      </Button>
+                    )}
                     <Button
                       variant="danger"
                       onClick={(e) => {
