@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useStore } from '../useStore';
 import { Button, Input, Label, Card, Modal, Toast } from '../components/ui';
 import { format, addDays, subDays, isSunday, parseISO } from 'date-fns';
@@ -100,6 +100,22 @@ export function DailyEntryPage() {
       return { worker, images: uniqueImages };
     }).filter((w): w is { worker: any, images: string[] } => w !== null);
   }, [workers, entriesForDate]);
+
+  // Pre-load slip images into memory cache as soon as workersWithSlips changes
+  // This means the button press is near-instant (no network wait)
+  const imageCacheRef = useRef<Map<string, HTMLImageElement>>(new Map());
+
+  useEffect(() => {
+    const allUrls = workersWithSlips.flatMap(w => w.images);
+    allUrls.forEach(url => {
+      if (!imageCacheRef.current.has(url) && url) {
+        const img = new Image();
+        if (!url.startsWith('data:')) img.crossOrigin = 'anonymous';
+        img.onload = () => imageCacheRef.current.set(url, img);
+        img.src = url;
+      }
+    });
+  }, [workersWithSlips]);
 
   const totalSlipsCount = useMemo(() => {
     return workersWithSlips.reduce((sum, w) => sum + w.images.length, 0);
@@ -594,29 +610,37 @@ export function DailyEntryPage() {
         });
       });
 
-      // Load ALL images in parallel (much faster than one-by-one)
+      // Use pre-cached images first (should be instant if already loaded in background)
       setShareProgress({ current: 0, total: slipsToProcess.length });
       let doneCount = 0;
 
-      const loadedImagesResults = await Promise.all(
-        slipsToProcess.map(async (slip) => {
+      const loadedImages: { name: string; img: HTMLImageElement }[] = [];
+
+      for (const slip of slipsToProcess) {
+        const cached = imageCacheRef.current.get(slip.url);
+        if (cached && cached.complete && cached.naturalWidth > 0) {
+          // Already in memory — instant!
+          doneCount++;
+          setShareProgress({ current: doneCount, total: slipsToProcess.length });
+          loadedImages.push({ name: slip.workerName, img: cached });
+        } else {
+          // Not cached yet — load it now (and also cache for next time)
           try {
             const img = new Image();
             if (!slip.url.startsWith('data:')) img.crossOrigin = 'anonymous';
-            await new Promise((resolve, reject) => {
-              img.onload = () => { doneCount++; setShareProgress({ current: doneCount, total: slipsToProcess.length }); resolve(null); };
+            await new Promise<void>((resolve, reject) => {
+              img.onload = () => { imageCacheRef.current.set(slip.url, img); doneCount++; setShareProgress({ current: doneCount, total: slipsToProcess.length }); resolve(); };
               img.onerror = reject;
               img.src = slip.url;
             });
-            return { name: slip.workerName, img };
+            loadedImages.push({ name: slip.workerName, img });
           } catch {
-            doneCount++; setShareProgress({ current: doneCount, total: slipsToProcess.length });
-            return null;
+            doneCount++;
+            setShareProgress({ current: doneCount, total: slipsToProcess.length });
           }
-        })
-      );
+        }
+      }
 
-      const loadedImages = loadedImagesResults.filter((li): li is { name: string; img: HTMLImageElement } => li !== null);
       if (loadedImages.length === 0) throw new Error('ไม่สามารถโหลดรูปภาพได้');
 
         const canvas = document.createElement('canvas');
