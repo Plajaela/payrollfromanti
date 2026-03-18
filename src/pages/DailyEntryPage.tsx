@@ -1261,7 +1261,10 @@ export function DailyEntryPage() {
                         <div key={i} className="flex flex-col items-center gap-1">
                           <button
                             type="button"
-                            onClick={() => setPreviewImageUrl(slip.url)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPreviewImageUrl(slip.url);
+                            }}
                             className="w-10 h-10 rounded-lg overflow-hidden border-2 border-gray-200 shadow-sm hover:scale-105 transition-transform"
                           >
                             <img src={slip.url} alt="slip" className="w-full h-full object-cover" />
