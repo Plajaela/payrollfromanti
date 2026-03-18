@@ -594,31 +594,30 @@ export function DailyEntryPage() {
         });
       });
 
-        let loadedCount = 0;
-        const loadedImagesResults = [];
-        
-        for (const slip of slipsToProcess) {
+      // Load ALL images in parallel (much faster than one-by-one)
+      setShareProgress({ current: 0, total: slipsToProcess.length });
+      let doneCount = 0;
+
+      const loadedImagesResults = await Promise.all(
+        slipsToProcess.map(async (slip) => {
           try {
-            loadedCount++;
-            setShareProgress({ current: loadedCount, total: slipsToProcess.length });
-            
             const img = new Image();
-            if (!slip.url.startsWith('data:')) {
-              img.crossOrigin = "anonymous";
-            }
+            if (!slip.url.startsWith('data:')) img.crossOrigin = 'anonymous';
             await new Promise((resolve, reject) => {
-              img.onload = resolve;
+              img.onload = () => { doneCount++; setShareProgress({ current: doneCount, total: slipsToProcess.length }); resolve(null); };
               img.onerror = reject;
               img.src = slip.url;
             });
-            loadedImagesResults.push({ name: slip.workerName, img });
-          } catch (err) {
-            // ignore failure
+            return { name: slip.workerName, img };
+          } catch {
+            doneCount++; setShareProgress({ current: doneCount, total: slipsToProcess.length });
+            return null;
           }
-        }
+        })
+      );
 
-        const loadedImages = loadedImagesResults;
-        if (loadedImages.length === 0) throw new Error('ไม่สามารถโหลดรูปภาพเพื่อรวมได้');
+      const loadedImages = loadedImagesResults.filter((li): li is { name: string; img: HTMLImageElement } => li !== null);
+      if (loadedImages.length === 0) throw new Error('ไม่สามารถโหลดรูปภาพได้');
 
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
