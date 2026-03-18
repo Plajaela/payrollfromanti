@@ -1042,8 +1042,13 @@ export function DailyEntryPage() {
                   >
                     <span className="font-semibold text-[15px]">{worker.name}</span>
                     {entry && (
-                      <div className="flex items-center gap-1.5 ml-2">
+                      <div className="flex items-center gap-1 ml-2">
+                        {/* Transfer slip indicator */}
                         {entry.transferSlipUrl && <Paperclip className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-white/80' : 'text-sky-400'}`} />}
+                        {/* Toll receipt indicator — orange to distinguish */}
+                        {(entry.tollReceiptUrl || entry.tolls?.some(t => t.receiptUrl)) && (
+                          <Wallet className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-orange-200' : 'text-orange-400'}`} />
+                        )}
                         {entry.isLeave ?
                           <X className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-red-100' : 'text-red-500'}`} /> :
                           isDraft ?
