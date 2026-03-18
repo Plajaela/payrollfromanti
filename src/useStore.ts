@@ -228,7 +228,7 @@ export function useStore() {
             leaveType: e.leave_type,
             leaveNote: e.leave_note,
             transferSlipUrl: e.transfer_slip_url,
-            transferSlips: e.transfer_slips || (e.transfer_slip_url ? [e.transfer_slip_url] : []),
+            transferSlips: (e.transfer_slips && e.transfer_slips.length > 0) ? e.transfer_slips : (e.transfer_slip_url ? [e.transfer_slip_url] : []),
             tollReceiptUrl: e.toll_receipt_url,
             tollDate: e.toll_date,
             tolls: e.tolls || [],
@@ -395,7 +395,7 @@ export function useStore() {
     }
   };
 
-  const addEntry = async (entry: Omit<DailyEntry, 'id'>) => {
+  const addEntry = async (entry: Omit<DailyEntry, 'id'>): Promise<string> => {
     const newId = uuidv4();
     const newEntry = { ...entry, id: newId };
     setEntries((prev) => [...prev, newEntry]);
@@ -434,6 +434,7 @@ export function useStore() {
     } catch (err) {
       console.error('Failed to add entry to Supabase:', err);
     }
+    return newId;
   };
 
   const updateEntry = async (id: string, updated: Partial<DailyEntry>) => {

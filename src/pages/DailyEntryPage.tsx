@@ -90,8 +90,11 @@ export function DailyEntryPage() {
       if (!entry) return null;
       const images: string[] = [];
       // Collect all possible slip types
-      if (entry.transferSlipUrl) images.push(entry.transferSlipUrl);
-      if (entry.transferSlips) images.push(...entry.transferSlips);
+      if (entry.transferSlips && entry.transferSlips.length > 0) {
+        images.push(...entry.transferSlips);
+      } else if (entry.transferSlipUrl) {
+        images.push(entry.transferSlipUrl);
+      }
       if (entry.tollReceiptUrl) images.push(entry.tollReceiptUrl);
       if (entry.tolls) entry.tolls.forEach(t => { if (t.receiptUrl) images.push(t.receiptUrl); });
       if (entry.adjustments) entry.adjustments.forEach(a => { if (a.receiptUrl) images.push(a.receiptUrl); });
@@ -261,7 +264,7 @@ export function DailyEntryPage() {
         adjustments: existingEntry.adjustments || [],
         note: existingEntry.note || '',
         transferSlipUrl: existingEntry.transferSlipUrl || '',
-        transferSlips: existingEntry.transferSlips || (existingEntry.transferSlipUrl ? [existingEntry.transferSlipUrl] : []),
+        transferSlips: (existingEntry.transferSlips && existingEntry.transferSlips.length > 0) ? existingEntry.transferSlips : (existingEntry.transferSlipUrl ? [existingEntry.transferSlipUrl] : []),
         tollReceiptUrl: existingEntry.tollReceiptUrl || '',
         tollDate: existingEntry.tollDate || dateStr,
         tolls: editTolls,
@@ -390,14 +393,15 @@ export function DailyEntryPage() {
       const publicUrl = publicUrlData.publicUrl;
 
       if (field === 'transferSlipUrl') {
-        setFormData(prev => {
-          const newSlips = [...prev.transferSlips, publicUrl];
-          return { ...prev, transferSlipUrl: newSlips[0] || '', transferSlips: newSlips };
-        });
-        if (editingId) await updateEntry(editingId, { 
-          transferSlipUrl: publicUrl, // fallback
-          transferSlips: [...formData.transferSlips, publicUrl] 
-        });
+        const newSlips = [...formData.transferSlips, publicUrl];
+        setFormData(prev => ({ ...prev, transferSlipUrl: newSlips[0] || '', transferSlips: newSlips }));
+        
+        if (editingId) {
+          await updateEntry(editingId, { 
+            transferSlipUrl: newSlips[0] || '',
+            transferSlips: newSlips 
+          });
+        }
       } else if (field === 'tollReceiptUrl') {
         setFormData(prev => ({ ...prev, tollReceiptUrl: publicUrl }));
         if (editingId) await updateEntry(editingId, { tollReceiptUrl: publicUrl });
@@ -409,6 +413,51 @@ export function DailyEntryPage() {
         const newTolls = formData.tolls.map(t => t.id === adjId ? { ...t, receiptUrl: publicUrl } : t);
         setFormData(prev => ({ ...prev, tolls: newTolls }));
         if (editingId) await updateEntry(editingId, { tolls: newTolls });
+      }
+
+      // Auto-save logic if it's a new entry (not yet saved)
+      if (!editingId) {
+        // Build the latest data representation mixing stale form + new slip
+        const updatedTransferSlips = field === 'transferSlipUrl' ? [...formData.transferSlips, publicUrl] : formData.transferSlips;
+        const updatedTollReceiptUrl = field === 'tollReceiptUrl' ? publicUrl : formData.tollReceiptUrl;
+        const updatedAdjustments = field === 'adjustments' && adjId ? formData.adjustments.map(a => a.id === adjId ? { ...a, receiptUrl: publicUrl } : a) : formData.adjustments;
+        const updatedTolls = field === 'tolls' && adjId ? formData.tolls.map(t => t.id === adjId ? { ...t, receiptUrl: publicUrl } : t) : formData.tolls;
+        
+        const otRatePerHour = 100;
+        const otPay = (formData.overtimeHours * otRatePerHour) + (formData.overtimeMinutes / 60 * otRatePerHour);
+        const tollTotal = updatedTolls.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+        
+        const entryData = {
+          workerId: formData.workerId,
+          date: dateStr,
+          clockIn: formData.clockIn,
+          clockOut: formData.clockOut,
+          baseWage: formData.baseWage,
+          travelAllowance: formData.travelAllowance,
+          tollFee: tollTotal,
+          tolls: updatedTolls,
+          lateDeduction: formData.lateDeduction,
+          overtimeHours: formData.overtimeHours,
+          overtimeMinutes: formData.overtimeMinutes,
+          overtimePay: otPay,
+          adjustments: updatedAdjustments,
+          totalPay: formData.baseWage + formData.travelAllowance + tollTotal + otPay + updatedAdjustments.reduce((s, a) => s + (a.type==='add'?Number(a.amount):-Number(a.amount)), 0) - formData.lateDeduction - (formData.hasGuaranteeDeduction ? formData.guaranteeDeductionAmount : 0),
+          note: formData.note,
+          isDraft: true, // AUTO DRAFT!
+          isLeave: formData.isLeave,
+          leaveType: formData.isLeave ? formData.leaveType : undefined,
+          leaveNote: formData.isLeave ? formData.leaveNote : undefined,
+          transferSlipUrl: updatedTransferSlips[0] || '',
+          transferSlips: updatedTransferSlips,
+          tollReceiptUrl: updatedTollReceiptUrl,
+          tollDate: formData.tollDate,
+          guaranteeDeduction: formData.hasGuaranteeDeduction ? formData.guaranteeDeductionAmount : 0,
+          lateRateRule: formData.lateRateRule,
+        };
+        
+        // This avoids useStore adding multiple duplicate drafts by checking if we just added it.
+        const newId = await addEntry(entryData);
+        setEditingId(newId);
       }
     } catch (error) {
       console.error('Error uploading image:', error);
@@ -1251,8 +1300,11 @@ export function DailyEntryPage() {
                     {/* Per-slip thumbnail strip — one thumbnail + copy button per image */}
                     {(() => {
                       const slips: { url: string; isOrange: boolean }[] = [];
-                      if (activeEntry?.transferSlipUrl) slips.push({ url: activeEntry.transferSlipUrl, isOrange: false });
-                      if (activeEntry?.transferSlips) activeEntry.transferSlips.forEach(url => slips.push({ url, isOrange: false }));
+                      if (activeEntry?.transferSlips && activeEntry.transferSlips.length > 0) {
+                        activeEntry.transferSlips.forEach(url => slips.push({ url, isOrange: false }));
+                      } else if (activeEntry?.transferSlipUrl) { // Fallback for old data not migrated
+                        slips.push({ url: activeEntry.transferSlipUrl, isOrange: false });
+                      }
                       if (activeEntry?.tollReceiptUrl) slips.push({ url: activeEntry.tollReceiptUrl, isOrange: true });
                       if (activeEntry?.tolls) activeEntry.tolls.forEach(t => { if (t.receiptUrl) slips.push({ url: t.receiptUrl, isOrange: true }); });
                       if (activeEntry?.adjustments) activeEntry.adjustments.forEach(a => { if (a.receiptUrl) slips.push({ url: a.receiptUrl, isOrange: false }); });
