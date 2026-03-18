@@ -402,6 +402,27 @@ export function DailyEntryPage() {
             transferSlips: newSlips 
           });
         }
+
+        // --- GOOGLE DRIVE WEBHOOK TRIGGER ---
+        const webhookUrl = import.meta.env.VITE_GOOGLE_DRIVE_WEBHOOK_URL;
+        if (webhookUrl) {
+          try {
+            const driveFormData = new URLSearchParams();
+            driveFormData.append('workerName', formData.workerName || 'Unknown');
+            driveFormData.append('date', dateStr);
+            driveFormData.append('imageUrl', publicUrl);
+            
+            fetch(webhookUrl, {
+              method: 'POST',
+              mode: 'no-cors', // Ignore CORS block from Google Apps Script
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: driveFormData.toString()
+            }).catch(e => console.error("Webhook error:", e));
+          } catch(e) {
+            console.error("Webhook setup error:", e);
+          }
+        }
+        // -------------------------------------
       } else if (field === 'tollReceiptUrl') {
         setFormData(prev => ({ ...prev, tollReceiptUrl: publicUrl }));
         if (editingId) await updateEntry(editingId, { tollReceiptUrl: publicUrl });
