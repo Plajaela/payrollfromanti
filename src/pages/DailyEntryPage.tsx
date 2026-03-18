@@ -1236,43 +1236,39 @@ export function DailyEntryPage() {
                       {copiedId === activeEntry.id ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5" />}
                       <span className="ml-1 text-sm font-semibold pr-1">พิมพ์ข้อความ</span>
                     </Button>
-                    <Button
-                      variant="secondary"
-                      onClick={(e) => handleCopySlipImage(activeWorker, activeEntry, e)}
-                      disabled={isCopyingImageId === activeEntry.id || isCopyingPreviewUrl === activeEntry?.transferSlipUrl}
-                      className={`p-2.5 h-auto rounded-xl transition-all border min-w-[100px] ${lastCopiedUrl === activeEntry?.transferSlipUrl || lastCopiedUrl === activeEntry?.tollReceiptUrl ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-violet-50 text-violet-600 hover:bg-violet-100 border-violet-100'}`}
-                      title="คัดลอกรูปสลิปภาพแรก"
-                    >
-                      {isCopyingImageId === activeEntry.id || isCopyingPreviewUrl === activeEntry?.transferSlipUrl ? (
-                         <Loader2 className="w-5 h-5 animate-spin mx-auto text-violet-600" />
-                      ) : (lastCopiedUrl === activeEntry?.transferSlipUrl || lastCopiedUrl === activeEntry?.tollReceiptUrl) ? (
-                         <Check className="w-5 h-5 text-emerald-600" />
-                      ) : (
-                         <ImagePlus className="w-5 h-5" />
-                      )}
-                      {(isCopyingImageId !== activeEntry.id && isCopyingPreviewUrl !== activeEntry?.transferSlipUrl) && (
-                        <span className="ml-1 text-sm font-semibold pr-1">
-                          {lastCopiedUrl === activeEntry?.transferSlipUrl || lastCopiedUrl === activeEntry?.tollReceiptUrl ? 'คัดลอกแล้ว' : 'คัดลอกรูป'}
-                        </span>
-                      )}
-                    </Button>
-                    {/* Toll receipt shortcut copy button */}
-                    {(activeEntry?.tollReceiptUrl || activeEntry?.tolls?.some(t => t.receiptUrl)) && (
-                      <Button
-                        variant="secondary"
-                        onClick={(e) => handleCopyTollSlip(activeEntry!, e)}
-                        className={`p-2.5 h-auto rounded-xl transition-all border min-w-[100px] ${lastCopiedUrl === activeEntry?.tollReceiptUrl || activeEntry?.tolls?.some(t => t.receiptUrl && lastCopiedUrl === t.receiptUrl) ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-orange-50 text-orange-600 hover:bg-orange-100 border-orange-100'}`}
-                        title="\u0e04\u0e31\u0e14\u0e25\u0e2d\u0e01\u0e1a\u0e34\u0e25\u0e17\u0e32\u0e07\u0e14\u0e48\u0e27\u0e19"
-                      >
-                        {lastCopiedUrl === activeEntry?.tollReceiptUrl || activeEntry?.tolls?.some(t => t.receiptUrl && lastCopiedUrl === t.receiptUrl)
-                          ? <Check className="w-5 h-5 text-emerald-600" />
-                          : <Wallet className="w-5 h-5" />
-                        }
-                        <span className="ml-1 text-sm font-semibold pr-1">
-                          {lastCopiedUrl === activeEntry?.tollReceiptUrl || activeEntry?.tolls?.some(t => t.receiptUrl && lastCopiedUrl === t.receiptUrl) ? '\u0e04\u0e31\u0e14\u0e25\u0e2d\u0e01\u0e41\u0e25\u0e49\u0e27' : '\u0e1a\u0e34\u0e25\u0e14\u0e48\u0e27\u0e19'}
-                        </span>
-                      </Button>
-                    )}
+                    {/* Per-slip thumbnail strip — one thumbnail + copy button per image */}
+                    {(() => {
+                      const slips: { url: string; isOrange: boolean }[] = [];
+                      if (activeEntry?.transferSlipUrl) slips.push({ url: activeEntry.transferSlipUrl, isOrange: false });
+                      if (activeEntry?.tollReceiptUrl) slips.push({ url: activeEntry.tollReceiptUrl, isOrange: true });
+                      if (activeEntry?.tolls) activeEntry.tolls.forEach(t => { if (t.receiptUrl) slips.push({ url: t.receiptUrl, isOrange: true }); });
+                      if (activeEntry?.adjustments) activeEntry.adjustments.forEach(a => { if (a.receiptUrl) slips.push({ url: a.receiptUrl, isOrange: false }); });
+                      if (slips.length === 0) return null;
+                      return slips.map((slip, i) => (
+                        <div key={i} className="flex flex-col items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setPreviewImageUrl(slip.url)}
+                            className="w-10 h-10 rounded-lg overflow-hidden border-2 border-gray-200 shadow-sm hover:scale-105 transition-transform"
+                          >
+                            <img src={slip.url} alt="slip" className="w-full h-full object-cover" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => handleCopySingleImage(slip.url, e)}
+                            className={`flex items-center justify-center w-10 h-6 rounded-lg border transition-all ${
+                              lastCopiedUrl === slip.url
+                                ? 'bg-emerald-50 border-emerald-200 text-emerald-600'
+                                : slip.isOrange
+                                  ? 'bg-orange-50 border-orange-100 text-orange-500 hover:bg-orange-100'
+                                  : 'bg-violet-50 border-violet-100 text-violet-500 hover:bg-violet-100'
+                            }`}
+                          >
+                            {lastCopiedUrl === slip.url ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                          </button>
+                        </div>
+                      ));
+                    })()}
                     <Button
                       variant="danger"
                       onClick={(e) => {
