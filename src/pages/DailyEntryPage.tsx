@@ -1045,10 +1045,19 @@ export function DailyEntryPage() {
                       <div className="flex items-center gap-1 ml-2">
                         {/* Transfer slip indicator */}
                         {entry.transferSlipUrl && <Paperclip className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-white/80' : 'text-sky-400'}`} />}
-                        {/* Toll receipt indicator — orange to distinguish */}
-                        {(entry.tollReceiptUrl || entry.tolls?.some(t => t.receiptUrl)) && (
-                          <Wallet className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-orange-200' : 'text-orange-400'}`} />
-                        )}
+                        {/* Toll status indicator */}
+                        {(() => {
+                          const hasTollFee = (entry.tollFee > 0) || entry.tolls?.some(t => t.amount > 0);
+                          const hasTollReceipt = !!(entry.tollReceiptUrl || entry.tolls?.some(t => t.receiptUrl));
+                          if (!hasTollFee) return null;
+                          if (hasTollReceipt) {
+                            // Uploaded ✓
+                            return <Wallet className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-orange-200' : 'text-orange-400'}`} />;
+                          } else {
+                            // Missing receipt ?
+                            return <AlertTriangle className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-yellow-200' : 'text-yellow-500'}`} />;
+                          }
+                        })()}
                         {entry.isLeave ?
                           <X className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-red-100' : 'text-red-500'}`} /> :
                           isDraft ?
