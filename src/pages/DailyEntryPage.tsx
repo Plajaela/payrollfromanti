@@ -1613,6 +1613,18 @@ export function DailyEntryPage() {
                             <button type="button" onClick={(e) => handleCopySingleImage(toll.receiptUrl!, e)} className={`p-1.5 rounded-lg transition-all border ${lastCopiedUrl === toll.receiptUrl ? 'text-emerald-600 bg-emerald-50 border-emerald-200' : 'text-violet-600 bg-violet-50 hover:bg-violet-100 border-violet-100'}`} title="คัดลอกรูป">
                               {lastCopiedUrl === toll.receiptUrl ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                             </button>
+                            <button
+                              type="button"
+                              title="ลบรูปบิล"
+                              className="p-1.5 rounded-lg text-red-400 bg-red-50 hover:bg-red-100 border border-red-100 transition-colors"
+                              onClick={async () => {
+                                const newTolls = formData.tolls.map(t => t.id === toll.id ? { ...t, receiptUrl: undefined } : t);
+                                setFormData(p => ({ ...p, tolls: newTolls }));
+                                if (editingId) await updateEntry(editingId, { tolls: newTolls });
+                              }}
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
                           </>
                         )}
                       </div>
