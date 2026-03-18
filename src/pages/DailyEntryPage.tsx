@@ -32,6 +32,7 @@ export function DailyEntryPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [isCopyingAllSlips, setIsCopyingAllSlips] = useState(false);
+  const [shareProgress, setShareProgress] = useState<{current: number, total: number} | null>(null);
   const [isAdvanceModalOpen, setIsAdvanceModalOpen] = useState(false);
   const [advanceFormData, setAdvanceFormData] = useState({
     workerId: '',
@@ -593,101 +594,108 @@ export function DailyEntryPage() {
         });
       });
 
-      // Load all images using the Image() tag (more CORS-friendly than fetch)
-      const fileResults = await Promise.all(
-        slipsToProcess.map(async (slip) => {
-          try {
-            const img = new Image();
-            if (!slip.url.startsWith('data:')) {
-              img.crossOrigin = "anonymous";
-            }
-            
-            await new Promise((resolve, reject) => {
-              img.onload = resolve;
-              img.onerror = () => reject(new Error(`โหลดรูปภาพไม่สำเร็จ: ${slip.workerName}`));
-              img.src = slip.url;
-            });
+      const fileResults: File[] = [];
+      setShareProgress({ current: 0, total: slipsToProcess.length });
 
-            // Cap image size to avoid massive processing time and memory
-            const MAX_DIMENSION = 1200;
-            let targetWidth = img.width;
-            let targetHeight = img.height;
-
-            if (targetWidth > MAX_DIMENSION || targetHeight > MAX_DIMENSION) {
-              if (targetWidth > targetHeight) {
-                targetHeight = (targetHeight / targetWidth) * MAX_DIMENSION;
-                targetWidth = MAX_DIMENSION;
-              } else {
-                targetWidth = (targetWidth / targetHeight) * MAX_DIMENSION;
-                targetHeight = MAX_DIMENSION;
-              }
-            }
-
-            // Draw to a temporary canvas to get the blob
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = targetWidth;
-            tempCanvas.height = targetHeight;
-            const tempCtx = tempCanvas.getContext('2d');
-            if (!tempCtx) throw new Error('Could not get canvas context');
-            
-            // Fill with white background (in case of transparent PNG to JPEG)
-            tempCtx.fillStyle = '#ffffff';
-            tempCtx.fillRect(0, 0, targetWidth, targetHeight);
-            tempCtx.drawImage(img, 0, 0, targetWidth, targetHeight);
-
-            const blob = await new Promise<Blob>((resolve, reject) => {
-              tempCanvas.toBlob((b) => {
-                if (b) resolve(b);
-                else reject(new Error('บีบอัดรูปภาพไม่สำเร็จ'));
-              // Use JPEG format with 0.85 quality for ~10x faster encoding than PNG
-              }, 'image/jpeg', 0.85);
-            });
-
-            return new File([blob], `${slip.workerName}.jpg`, { type: 'image/jpeg' });
-          } catch (err) {
-            console.error(`Failed to process image for ${slip.workerName}:`, err);
-            return null;
+      // Process images sequentially to avoid freezing the browser main thread
+      for (let i = 0; i < slipsToProcess.length; i++) {
+        const slip = slipsToProcess[i];
+        try {
+          // Update progress
+          setShareProgress({ current: i + 1, total: slipsToProcess.length });
+          
+          const img = new Image();
+          if (!slip.url.startsWith('data:')) {
+            img.crossOrigin = "anonymous";
           }
-        })
-      );
+          
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = () => reject(new Error(`โหลดรูปภาพไม่สำเร็จ: ${slip.workerName}`));
+            img.src = slip.url;
+          });
 
-      const filesToShare = fileResults.filter((f): f is File => f !== null);
+          const MAX_DIMENSION = 1200;
+          let targetWidth = img.width;
+          let targetHeight = img.height;
 
-      if (filesToShare.length === 0) {
+          if (targetWidth > MAX_DIMENSION || targetHeight > MAX_DIMENSION) {
+            if (targetWidth > targetHeight) {
+              targetHeight = (targetHeight / targetWidth) * MAX_DIMENSION;
+              targetWidth = MAX_DIMENSION;
+            } else {
+              targetWidth = (targetWidth / targetHeight) * MAX_DIMENSION;
+              targetHeight = MAX_DIMENSION;
+            }
+          }
+
+          const tempCanvas = document.createElement('canvas');
+          tempCanvas.width = targetWidth;
+          tempCanvas.height = targetHeight;
+          const tempCtx = tempCanvas.getContext('2d');
+          if (!tempCtx) throw new Error('Could not get canvas context');
+          
+          tempCtx.fillStyle = '#ffffff';
+          tempCtx.fillRect(0, 0, targetWidth, targetHeight);
+          tempCtx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+          const blob = await new Promise<Blob>((resolve, reject) => {
+            tempCanvas.toBlob((b) => {
+              if (b) resolve(b);
+              else reject(new Error('บีบอัดรูปภาพไม่สำเร็จ'));
+            }, 'image/jpeg', 0.85);
+          });
+
+          fileResults.push(new File([blob], `${slip.workerName}.jpg`, { type: 'image/jpeg' }));
+          
+          // Yield to main thread so UI can update progress
+          await new Promise(resolve => setTimeout(resolve, 0));
+        } catch (err) {
+          console.error(`Failed to process image for ${slip.workerName}:`, err);
+          // Continue processing other images even if one fails
+        }
+      }
+
+      if (fileResults.length === 0) {
         throw new Error('ไม่สามารถโหลดรูปภาพได้เลย โปรดเช็คการเชื่อมต่ออินเทอร์เน็ต');
       }
 
       // 1. Try Web Share API (Best for LINE/Mobile)
-      if (typeof navigator !== 'undefined' && navigator.canShare && navigator.canShare({ files: filesToShare })) {
+      if (typeof navigator !== 'undefined' && navigator.canShare && navigator.canShare({ files: fileResults })) {
         await navigator.share({
-          files: filesToShare,
+          files: fileResults,
           title: 'สลิปประจำวัน',
           text: `สลิปทั้งหมดประจำวันที่ ${format(selectedDate, 'dd/MM/yyyy')}`
         });
         setLastCopiedUrl('shared_slips_daily');
         setCopiedId('all_slips');
-      } 
-      else {
-        const loadedImagesResults = await Promise.all(
-          slipsToProcess.map(async (slip) => {
-            try {
-              const img = new Image();
-              if (!slip.url.startsWith('data:')) {
-                img.crossOrigin = "anonymous";
-              }
-              await new Promise((resolve, reject) => {
-                img.onload = resolve;
-                img.onerror = reject;
-                img.src = slip.url;
-              });
-              return { name: slip.workerName, img };
-            } catch (err) {
-              return null;
+      } else {
+        setShareProgress({ current: 0, total: fileResults.length });
+        
+        let loadedCount = 0;
+        const loadedImagesResults = [];
+        
+        for (const slip of slipsToProcess) {
+          try {
+            loadedCount++;
+            setShareProgress({ current: loadedCount, total: fileResults.length });
+            
+            const img = new Image();
+            if (!slip.url.startsWith('data:')) {
+              img.crossOrigin = "anonymous";
             }
-          })
-        );
+            await new Promise((resolve, reject) => {
+              img.onload = resolve;
+              img.onerror = reject;
+              img.src = slip.url;
+            });
+            loadedImagesResults.push({ name: slip.workerName, img });
+          } catch (err) {
+            // ignore failure
+          }
+        }
 
-        const loadedImages = loadedImagesResults.filter((li): li is { name: string, img: HTMLImageElement } => li !== null);
+        const loadedImages = loadedImagesResults;
         if (loadedImages.length === 0) throw new Error('ไม่สามารถโหลดรูปภาพเพื่อรวมได้');
 
         const canvas = document.createElement('canvas');
@@ -753,6 +761,7 @@ export function DailyEntryPage() {
       }
     } finally {
       setIsCopyingAllSlips(false);
+      setShareProgress(null);
     }
   };
 
@@ -995,15 +1004,16 @@ export function DailyEntryPage() {
   return (
     <div className="space-y-6 pb-20 relative">
       <Toast 
-        isVisible={!!lastCopiedUrl || !!copiedId} 
+        isVisible={!!lastCopiedUrl || !!copiedId || !!shareProgress} 
         message={
-          lastCopiedUrl === 'shared_slips_daily' ? 'ส่งไฟล์รูปภาพสำเร็จ!' :
+          shareProgress ? `กำลังเตรียมรูป ${shareProgress.current}/${shareProgress.total} ⏳` :
+          lastCopiedUrl === 'shared_slips_daily' ? 'เตรียมไฟล์สำเร็จ! พร้อมส่ง' :
           lastCopiedUrl === 'merged_slips_daily' ? 'คัดลอกรูปภาพทุกคนสำเร็จ!' :
           lastCopiedUrl ? 'คัดลอกรูปภาพสำเร็จ!' : 
           copiedId === 'all_slips_loading' ? 'กำลังประมวลผลรูปภาพ...' :
           'คัดลอกข้อความสำเร็จ!'
         }
-        icon={copiedId === 'all_slips_loading' ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
+        icon={(copiedId === 'all_slips_loading' || shareProgress) ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
       />
       {/* Date Selector */}
       <div className="flex items-center justify-between bg-white p-2 rounded-3xl shadow-sm border border-gray-100">
