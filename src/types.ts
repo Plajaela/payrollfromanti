@@ -46,7 +46,8 @@ export interface DailyEntry {
   isLeave?: boolean;
   leaveType?: 'ลาป่วย' | 'ลากิจ' | 'ขาดงาน';
   leaveNote?: string;
-  transferSlipUrl?: string;
+  transferSlipUrl?: string; // Legacy
+  transferSlips?: string[];
   tollReceiptUrl?: string;
   tollDate?: string;
   tolls?: TollEntry[];

@@ -64,6 +64,7 @@ export function DailyEntryPage() {
     adjustments: [] as Adjustment[],
     note: '',
     transferSlipUrl: '',
+    transferSlips: [] as string[],
     tollReceiptUrl: '',
     tollDate: '',
     tolls: [] as { id: string; amount: number; receiptUrl?: string; date?: string; }[],
@@ -90,6 +91,7 @@ export function DailyEntryPage() {
       const images: string[] = [];
       // Collect all possible slip types
       if (entry.transferSlipUrl) images.push(entry.transferSlipUrl);
+      if (entry.transferSlips) images.push(...entry.transferSlips);
       if (entry.tollReceiptUrl) images.push(entry.tollReceiptUrl);
       if (entry.tolls) entry.tolls.forEach(t => { if (t.receiptUrl) images.push(t.receiptUrl); });
       if (entry.adjustments) entry.adjustments.forEach(a => { if (a.receiptUrl) images.push(a.receiptUrl); });
@@ -259,6 +261,7 @@ export function DailyEntryPage() {
         adjustments: existingEntry.adjustments || [],
         note: existingEntry.note || '',
         transferSlipUrl: existingEntry.transferSlipUrl || '',
+        transferSlips: existingEntry.transferSlips || (existingEntry.transferSlipUrl ? [existingEntry.transferSlipUrl] : []),
         tollReceiptUrl: existingEntry.tollReceiptUrl || '',
         tollDate: existingEntry.tollDate || dateStr,
         tolls: editTolls,
@@ -287,6 +290,7 @@ export function DailyEntryPage() {
         adjustments: [],
         note: '',
         transferSlipUrl: '',
+        transferSlips: [],
         tollReceiptUrl: '',
         tollDate: dateStr,
         tolls: [],
@@ -386,8 +390,14 @@ export function DailyEntryPage() {
       const publicUrl = publicUrlData.publicUrl;
 
       if (field === 'transferSlipUrl') {
-        setFormData(prev => ({ ...prev, transferSlipUrl: publicUrl }));
-        if (editingId) await updateEntry(editingId, { transferSlipUrl: publicUrl });
+        setFormData(prev => {
+          const newSlips = [...prev.transferSlips, publicUrl];
+          return { ...prev, transferSlipUrl: newSlips[0] || '', transferSlips: newSlips };
+        });
+        if (editingId) await updateEntry(editingId, { 
+          transferSlipUrl: publicUrl, // fallback
+          transferSlips: [...formData.transferSlips, publicUrl] 
+        });
       } else if (field === 'tollReceiptUrl') {
         setFormData(prev => ({ ...prev, tollReceiptUrl: publicUrl }));
         if (editingId) await updateEntry(editingId, { tollReceiptUrl: publicUrl });
@@ -438,7 +448,8 @@ export function DailyEntryPage() {
       isLeave: formData.isLeave,
       leaveType: formData.isLeave ? formData.leaveType : undefined,
       leaveNote: formData.isLeave ? formData.leaveNote : undefined,
-      transferSlipUrl: formData.transferSlipUrl,
+      transferSlipUrl: formData.transferSlips[0] || formData.transferSlipUrl || '', // fallback legacy string
+      transferSlips: formData.transferSlips,
       tollReceiptUrl: formData.tollReceiptUrl,
       tollDate: formData.tollDate,
       guaranteeDeduction: formData.hasGuaranteeDeduction ? formData.guaranteeDeductionAmount : 0,
@@ -583,6 +594,7 @@ export function DailyEntryPage() {
 
     const images: string[] = [];
     if (entry?.transferSlipUrl) images.push(entry.transferSlipUrl);
+    if (entry?.transferSlips) images.push(...entry.transferSlips);
     if (entry?.tollReceiptUrl) images.push(entry.tollReceiptUrl);
     if (entry?.tolls) {
       entry.tolls.forEach(t => { if (t.receiptUrl) images.push(t.receiptUrl); });
@@ -1240,6 +1252,7 @@ export function DailyEntryPage() {
                     {(() => {
                       const slips: { url: string; isOrange: boolean }[] = [];
                       if (activeEntry?.transferSlipUrl) slips.push({ url: activeEntry.transferSlipUrl, isOrange: false });
+                      if (activeEntry?.transferSlips) activeEntry.transferSlips.forEach(url => slips.push({ url, isOrange: false }));
                       if (activeEntry?.tollReceiptUrl) slips.push({ url: activeEntry.tollReceiptUrl, isOrange: true });
                       if (activeEntry?.tolls) activeEntry.tolls.forEach(t => { if (t.receiptUrl) slips.push({ url: t.receiptUrl, isOrange: true }); });
                       if (activeEntry?.adjustments) activeEntry.adjustments.forEach(a => { if (a.receiptUrl) slips.push({ url: a.receiptUrl, isOrange: false }); });
@@ -1841,44 +1854,60 @@ export function DailyEntryPage() {
                 <div className="text-3xl font-bold text-red-600">฿{calculateTotal()}</div>
               </div>
               <div className="flex flex-col items-end gap-2">
-                <div className="flex items-center gap-2">
-                  {formData.transferSlipUrl && (
-                    <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-emerald-100 shadow-sm">
-                      <button type="button" onClick={() => setPreviewImageUrl(formData.transferSlipUrl)} className="shrink-0 group relative rounded-lg overflow-hidden border border-emerald-200" title="คลิกเพื่อดูสลิปโอนเงิน">
-                        <img src={formData.transferSlipUrl} alt="slip" className="w-10 h-10 object-cover group-hover:scale-110 transition-transform duration-300" />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
-                          <span className="text-[9px] text-white font-bold tracking-wide">ดูสลิป</span>
-                        </div>
-                      </button>
-                      <div className="flex flex-col gap-1 shrink-0 p-1 text-center bg-gray-50 rounded-lg border border-gray-100">
-                        <button type="button" onClick={(e) => handleCopySingleImage(formData.transferSlipUrl, e)} className={`flex items-center justify-center w-8 h-8 rounded-lg transition-all border ${lastCopiedUrl === formData.transferSlipUrl ? 'text-emerald-600 bg-emerald-50 border-emerald-200' : 'text-violet-600 bg-violet-50 hover:bg-violet-100 border-violet-100'}`} title="คัดลอกรูปสลิป">
-                          {lastCopiedUrl === formData.transferSlipUrl ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                <div className="flex flex-col gap-2 relative">
+                  <div className="flex flex-wrap items-center gap-2 justify-end">
+                    {/* Map all transfer slips */}
+                    {formData.transferSlips && formData.transferSlips.map((slipUrl, idx) => (
+                      <div key={idx} className="flex items-center gap-1 bg-white p-1 rounded-xl border border-emerald-100 shadow-sm relative pr-2">
+                        <button type="button" onClick={() => setPreviewImageUrl(slipUrl)} className="shrink-0 group relative rounded-lg overflow-hidden border border-emerald-200" title="คลิกเพื่อดูสลิปโอนเงิน">
+                          <img src={slipUrl} alt={`slip-${idx}`} className="w-10 h-10 object-cover group-hover:scale-110 transition-transform duration-300" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
+                            <span className="text-[9px] text-white font-bold tracking-wide">ดูสลิป</span>
+                          </div>
                         </button>
-                        <button type="button" onClick={() => setFormData(p => ({ ...p, transferSlipUrl: '' }))} className="flex items-center justify-center w-8 h-8 rounded-lg text-red-500 bg-red-50 hover:bg-red-100 border border-red-100 transition-colors" title="ลบสลิปโอนเงิน">
-                          <X className="w-4 h-4" />
+                        <button type="button" onClick={(e) => handleCopySingleImage(slipUrl, e)} className={`flex items-center justify-center w-8 h-8 rounded-lg ml-1 transition-all border ${lastCopiedUrl === slipUrl ? 'text-emerald-600 bg-emerald-50 border-emerald-200' : 'text-violet-600 bg-violet-50 hover:bg-violet-100 border-violet-100'}`} title="คัดลอกรูปสลิป">
+                          {lastCopiedUrl === slipUrl ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        </button>
+                        <button 
+                          type="button" 
+                          onClick={() => {
+                            if (window.confirm('ต้องการลบสลิปโอนเงินรูปนี้ใช่หรือไม่?')) {
+                              const newSlips = formData.transferSlips.filter((_, index) => index !== idx);
+                              setFormData(p => ({ 
+                                ...p, 
+                                transferSlips: newSlips,
+                                transferSlipUrl: newSlips[0] || ''
+                              }));
+                            }
+                          }} 
+                          className="absolute -top-1 -right-1 bg-white flex items-center justify-center w-5 h-5 rounded-full text-red-500 border border-gray-100 shadow-sm hover:bg-red-50 hover:text-red-600 hover:scale-110 transition-all z-10" 
+                          title="ลบสลิปนี้"
+                        >
+                          <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                    </div>
-                  )}
-                  <label className={`flex items-center gap-2 px-3 py-1.5 rounded-xl cursor-pointer transition-all border ${isUploading ? 'bg-amber-50 border-amber-200 text-amber-700 cursor-not-allowed' : formData.transferSlipUrl ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-sky-50 hover:border-sky-200 hover:text-sky-600'}`}>
-                    {isUploading ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span className="text-sm font-semibold">กำลังอัพโหลด...</span>
-                      </>
-                    ) : formData.transferSlipUrl ? (
-                      <>
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span className="text-sm font-semibold">แนบสลิปโอนเงินแล้ว</span>
-                      </>
-                    ) : (
-                      <>
-                        <Paperclip className="w-4 h-4" />
-                        <span className="text-sm font-medium">แนบสลิปโอนเงิน</span>
-                      </>
-                    )}
-                    <input disabled={isUploading} type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'transferSlipUrl')} />
-                  </label>
+                    ))}
+                    
+                    <label className={`flex shrink-0 items-center justify-center gap-2 h-[50px] px-3 rounded-xl cursor-pointer transition-all border ${isUploading ? 'bg-amber-50 border-amber-200 text-amber-700 cursor-not-allowed' : formData.transferSlips.length > 0 ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-sky-50 hover:border-sky-200 hover:text-sky-600'}`} title="เพิ่มสลิปโอนเงิน">
+                      {isUploading ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span className="text-sm font-semibold whitespace-nowrap hidden sm:inline">กำลังอัพ...</span>
+                        </>
+                      ) : formData.transferSlips.length > 0 ? (
+                        <>
+                          <Plus className="w-4 h-4" />
+                          <span className="text-sm font-semibold whitespace-nowrap">เพิ่มสลิป</span>
+                        </>
+                      ) : (
+                        <>
+                          <ImagePlus className="w-4 h-4" />
+                          <span className="text-sm font-medium whitespace-nowrap">แนบสลิปโอนเงิน</span>
+                        </>
+                      )}
+                      <input disabled={isUploading} type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'transferSlipUrl')} />
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>

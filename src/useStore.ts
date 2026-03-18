@@ -186,6 +186,7 @@ export function useStore() {
                   is_draft: e.isDraft || false,
                   is_leave: e.isLeave || false,
                   transfer_slip_url: e.transferSlipUrl,
+                  transfer_slips: e.transferSlips || [],
                   toll_receipt_url: e.tollReceiptUrl,
                   toll_date: e.tollDate,
                   tolls: e.tolls || [],
@@ -227,6 +228,7 @@ export function useStore() {
             leaveType: e.leave_type,
             leaveNote: e.leave_note,
             transferSlipUrl: e.transfer_slip_url,
+            transferSlips: e.transfer_slips || (e.transfer_slip_url ? [e.transfer_slip_url] : []),
             tollReceiptUrl: e.toll_receipt_url,
             tollDate: e.toll_date,
             tolls: e.tolls || [],
@@ -420,6 +422,7 @@ export function useStore() {
         leave_type: entry.leaveType,
         leave_note: entry.leaveNote,
         transfer_slip_url: entry.transferSlipUrl,
+        transfer_slips: entry.transferSlips || [],
         toll_receipt_url: entry.tollReceiptUrl,
         toll_date: entry.tollDate,
         tolls: entry.tolls || [],
@@ -459,6 +462,7 @@ export function useStore() {
       if (updated.leaveType !== undefined) updateData.leave_type = updated.leaveType;
       if (updated.leaveNote !== undefined) updateData.leave_note = updated.leaveNote;
       if (updated.transferSlipUrl !== undefined) updateData.transfer_slip_url = updated.transferSlipUrl;
+      if (updated.transferSlips !== undefined) updateData.transfer_slips = updated.transferSlips;
       if (updated.tollReceiptUrl !== undefined) updateData.toll_receipt_url = updated.tollReceiptUrl;
       if (updated.tollDate !== undefined) updateData.toll_date = updated.tollDate;
       if (updated.tolls !== undefined) updateData.tolls = updated.tolls;
