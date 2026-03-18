@@ -15,7 +15,15 @@ CREATE TABLE IF NOT EXISTS public.daily_entries (
   total_pay numeric NOT NULL,
   note text,
   is_draft boolean DEFAULT false,
+  is_leave boolean DEFAULT false,
+  leave_type text,
+  leave_note text,
   transfer_slip_url text,
+  transfer_slips jsonb DEFAULT '[]'::jsonb,
   toll_receipt_url text,
+  tolls jsonb DEFAULT '[]'::jsonb,
+  toll_date text,
+  guarantee_deduction numeric DEFAULT 0,
+  late_rate_rule text DEFAULT 'normal',
   created_at timestamp with time zone DEFAULT now() NOT NULL
 );
