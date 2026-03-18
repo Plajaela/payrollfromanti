@@ -387,22 +387,18 @@ export function DailyEntryPage() {
 
       if (field === 'transferSlipUrl') {
         setFormData(prev => ({ ...prev, transferSlipUrl: publicUrl }));
-        if (editingId) updateEntry(editingId, { transferSlipUrl: publicUrl });
+        if (editingId) await updateEntry(editingId, { transferSlipUrl: publicUrl });
       } else if (field === 'tollReceiptUrl') {
         setFormData(prev => ({ ...prev, tollReceiptUrl: publicUrl }));
-        if (editingId) updateEntry(editingId, { tollReceiptUrl: publicUrl });
+        if (editingId) await updateEntry(editingId, { tollReceiptUrl: publicUrl });
       } else if (field === 'adjustments' && adjId) {
-        setFormData(prev => {
-          const updated = { ...prev, adjustments: prev.adjustments.map(a => a.id === adjId ? { ...a, receiptUrl: publicUrl } : a) };
-          if (editingId) updateEntry(editingId, { adjustments: updated.adjustments });
-          return updated;
-        });
+        const newAdjustments = formData.adjustments.map(a => a.id === adjId ? { ...a, receiptUrl: publicUrl } : a);
+        setFormData(prev => ({ ...prev, adjustments: newAdjustments }));
+        if (editingId) await updateEntry(editingId, { adjustments: newAdjustments });
       } else if (field === 'tolls' && adjId) {
-        setFormData(prev => {
-          const updated = { ...prev, tolls: prev.tolls.map(t => t.id === adjId ? { ...t, receiptUrl: publicUrl } : t) };
-          if (editingId) updateEntry(editingId, { tolls: updated.tolls });
-          return updated;
-        });
+        const newTolls = formData.tolls.map(t => t.id === adjId ? { ...t, receiptUrl: publicUrl } : t);
+        setFormData(prev => ({ ...prev, tolls: newTolls }));
+        if (editingId) await updateEntry(editingId, { tolls: newTolls });
       }
     } catch (error) {
       console.error('Error uploading image:', error);
