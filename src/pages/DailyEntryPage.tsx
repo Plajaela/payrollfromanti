@@ -1117,30 +1117,30 @@ export function DailyEntryPage() {
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {/* Copy general slip button */}
-                        {entry && (entry.transferSlipUrl || (entry.tolls?.some(t => t.receiptUrl)) || (entry.adjustments?.some(a => a.receiptUrl))) && (
+                      <div className="flex items-center gap-1.5">
+                        {/* Slip image copy — icon only */}
+                        {entry && (entry.transferSlipUrl || entry.tolls?.some(t => t.receiptUrl) || entry.adjustments?.some(a => a.receiptUrl)) && (
                           <button
                             type="button"
                             onClick={(e) => handleCopySlipImage(worker, entry, e)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all ${lastCopiedUrl === entry.transferSlipUrl || lastCopiedUrl === entry.tollReceiptUrl ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-violet-50 border-violet-100 text-violet-600 hover:bg-violet-100'}`}
+                            className={`flex items-center justify-center w-8 h-8 rounded-xl border transition-all ${lastCopiedUrl === entry.transferSlipUrl ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-violet-50 border-violet-100 text-violet-600 hover:bg-violet-100'}`}
+                            title="คัดลอกรูปสลิป"
                           >
                             {isCopyingImageId === entry.id || isCopyingPreviewUrl === entry.transferSlipUrl ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : lastCopiedUrl === entry.transferSlipUrl ? <Check className="w-3.5 h-3.5" /> : <ImagePlus className="w-3.5 h-3.5" />}
-                            {lastCopiedUrl === entry.transferSlipUrl ? 'คัดลอกแล้ว' : 'คัดลอกรูป'}
                           </button>
                         )}
-                        {/* Copy toll slip button — only when there are toll receipts */}
+                        {/* Toll receipt copy — icon only, show when any toll receipt exists */}
                         {entry && (entry.tollReceiptUrl || entry.tolls?.some(t => t.receiptUrl)) && (
                           <button
                             type="button"
                             onClick={(e) => handleCopyTollSlip(entry, e)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all ${lastCopiedUrl === entry.tollReceiptUrl || entry.tolls?.some(t => t.receiptUrl && lastCopiedUrl === t.receiptUrl) ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-orange-50 border-orange-100 text-orange-600 hover:bg-orange-100'}`}
+                            className={`flex items-center justify-center w-8 h-8 rounded-xl border transition-all ${lastCopiedUrl === entry.tollReceiptUrl || entry.tolls?.some(t => t.receiptUrl && lastCopiedUrl === t.receiptUrl) ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-orange-50 border-orange-100 text-orange-600 hover:bg-orange-100'}`}
+                            title="คัดลอกบิลทางด่วน"
                           >
                             {lastCopiedUrl === entry.tollReceiptUrl || entry.tolls?.some(t => t.receiptUrl && lastCopiedUrl === t.receiptUrl) ? <Check className="w-3.5 h-3.5" /> : <Paperclip className="w-3.5 h-3.5" />}
-                            {lastCopiedUrl === entry.tollReceiptUrl || entry.tolls?.some(t => t.receiptUrl && lastCopiedUrl === t.receiptUrl) ? 'คัดลอกแล้ว' : 'บิลด่วน'}
                           </button>
                         )}
-                        <div className={`font-bold text-lg transition-colors ${entry?.isDraft ? 'text-amber-500 group-hover:text-amber-600' : 'text-red-500 group-hover:text-red-600'}`}>
+                        <div className={`font-bold text-lg transition-colors ml-1 ${entry?.isDraft ? 'text-amber-500 group-hover:text-amber-600' : 'text-red-500 group-hover:text-red-600'}`}>
                           ฿{totalPay}
                         </div>
                       </div>
