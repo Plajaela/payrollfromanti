@@ -1550,12 +1550,13 @@ export function DailyEntryPage() {
                     <div key={toll.id} className="flex gap-2 items-center bg-white p-2 text-sm rounded-xl border border-sky-100 shadow-sm animate-in fade-in slide-in-from-top-1">
                       <div className="flex-1 relative">
                         <Input
-                          type="number"
-                          min="0"
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
                           value={toll.amount || ''}
                           onChange={(e) => setFormData(p => ({
                             ...p,
-                            tolls: p.tolls.map(t => t.id === toll.id ? { ...t, amount: Number(e.target.value) } : t)
+                            tolls: p.tolls.map(t => t.id === toll.id ? { ...t, amount: Number(e.target.value.replace(/[^0-9]/g, '')) } : t)
                           }))}
                           className="font-semibold text-sm h-9 px-2"
                           placeholder="ค่าทางด่วน (บาท)"
