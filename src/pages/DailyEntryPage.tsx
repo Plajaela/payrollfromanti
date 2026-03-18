@@ -608,22 +608,42 @@ export function DailyEntryPage() {
               img.src = slip.url;
             });
 
+            // Cap image size to avoid massive processing time and memory
+            const MAX_DIMENSION = 1200;
+            let targetWidth = img.width;
+            let targetHeight = img.height;
+
+            if (targetWidth > MAX_DIMENSION || targetHeight > MAX_DIMENSION) {
+              if (targetWidth > targetHeight) {
+                targetHeight = (targetHeight / targetWidth) * MAX_DIMENSION;
+                targetWidth = MAX_DIMENSION;
+              } else {
+                targetWidth = (targetWidth / targetHeight) * MAX_DIMENSION;
+                targetHeight = MAX_DIMENSION;
+              }
+            }
+
             // Draw to a temporary canvas to get the blob
             const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = img.width;
-            tempCanvas.height = img.height;
+            tempCanvas.width = targetWidth;
+            tempCanvas.height = targetHeight;
             const tempCtx = tempCanvas.getContext('2d');
             if (!tempCtx) throw new Error('Could not get canvas context');
-            tempCtx.drawImage(img, 0, 0);
+            
+            // Fill with white background (in case of transparent PNG to JPEG)
+            tempCtx.fillStyle = '#ffffff';
+            tempCtx.fillRect(0, 0, targetWidth, targetHeight);
+            tempCtx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
             const blob = await new Promise<Blob>((resolve, reject) => {
               tempCanvas.toBlob((b) => {
                 if (b) resolve(b);
                 else reject(new Error('บีบอัดรูปภาพไม่สำเร็จ'));
-              }, 'image/png');
+              // Use JPEG format with 0.85 quality for ~10x faster encoding than PNG
+              }, 'image/jpeg', 0.85);
             });
 
-            return new File([blob], `${slip.workerName}.png`, { type: 'image/png' });
+            return new File([blob], `${slip.workerName}.jpg`, { type: 'image/jpeg' });
           } catch (err) {
             console.error(`Failed to process image for ${slip.workerName}:`, err);
             return null;
@@ -676,8 +696,8 @@ export function DailyEntryPage() {
 
         const padding = 40;
         const labelHeight = 60;
-        // Use maximum native width for fallback to ensure readability
-        const targetWidth = Math.max(1200, ...loadedImages.map(li => li.img.width));
+        // Keep target width fixed at 1200 to prevent massive canvas crashes and slow PNG encoding
+        const targetWidth = 1200;
         
         const totalHeight = loadedImages.reduce((sum, li) => {
           const aspectRatio = li.img.height / li.img.width;
