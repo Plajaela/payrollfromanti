@@ -568,6 +568,11 @@ export function DailyEntryPage() {
 
     text += `\n✅ ยอดสุทธิวันนี้: ฿${totalPay}`;
 
+    // Payment type note
+    const paymentType = worker.paymentType || 'day';
+    if (paymentType === 'month') text += `\n*รับเงินทุกสิ้นเดือน*`;
+    else if (paymentType === 'half-month') text += `\n*รับเงินกลางเดือน*`;
+
     handleCopy(text, idToUse);
   };
 
@@ -837,7 +842,14 @@ export function DailyEntryPage() {
         });
       }
 
-      text += `✅ ยอดสุทธิ: ฿${totalPay}\n\n`;
+      text += `✅ ยอดสุทธิ: ฿${totalPay}`;
+
+      // Payment type note
+      const paymentType = worker.paymentType || 'day';
+      if (paymentType === 'month') text += `\n*รับเงินทุกสิ้นเดือน*`;
+      else if (paymentType === 'half-month') text += `\n*รับเงินกลางเดือน*`;
+
+      text += `\n\n`;
     });
 
     handleCopy(text, 'all_detailed');
