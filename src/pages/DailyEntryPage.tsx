@@ -624,10 +624,10 @@ export function DailyEntryPage() {
         const ctx = canvas.getContext('2d');
         if (!ctx) throw new Error('Could not get canvas context');
 
-        const padding = 40;
-        const labelHeight = 60;
-        // Keep target width fixed at 1200 to prevent massive canvas crashes and slow PNG encoding
-        const targetWidth = 1200;
+        const padding = 20;
+        const labelHeight = 40;
+        // Reduce target width to 600 to enable instant PNG encoding and prevent browser freezes
+        const targetWidth = 600;
         
         const totalHeight = loadedImages.reduce((sum, li) => {
           const aspectRatio = li.img.height / li.img.width;
@@ -646,10 +646,10 @@ export function DailyEntryPage() {
           const aspectRatio = li.img.height / li.img.width;
           const drawHeight = targetWidth * aspectRatio;
           ctx.fillStyle = '#f1f5f9'; 
-          ctx.fillRect(padding - 10, currentY - 5, targetWidth + 20, 50);
+          ctx.fillRect(padding - 10, currentY - 5, targetWidth + 20, 36);
           ctx.fillStyle = '#1e293b'; 
-          ctx.font = 'bold 32px sans-serif';
-          ctx.fillText(`👤 ${li.name.replace('_', ' ')}`, padding, currentY + 32);
+          ctx.font = 'bold 24px sans-serif';
+          ctx.fillText(`👤 ${li.name.replace('_', ' ')}`, padding, currentY + 22);
           ctx.drawImage(li.img, padding, currentY + labelHeight, targetWidth, drawHeight);
           currentY += drawHeight + labelHeight + padding;
         });
