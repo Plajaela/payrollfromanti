@@ -578,7 +578,7 @@ export function DailyEntryPage() {
     await handleCopySingleImage(uniqueImages[0], e);
   };
 
-  const handleShareAllSlips = async () => {
+  const handleCopyAllSlips = async () => {
     if (workersWithSlips.length === 0) return;
     
     setIsCopyingAllSlips(true);
@@ -594,91 +594,13 @@ export function DailyEntryPage() {
         });
       });
 
-      const fileResults: File[] = [];
-      setShareProgress({ current: 0, total: slipsToProcess.length });
-
-      // Process images sequentially to avoid freezing the browser main thread
-      for (let i = 0; i < slipsToProcess.length; i++) {
-        const slip = slipsToProcess[i];
-        try {
-          // Update progress
-          setShareProgress({ current: i + 1, total: slipsToProcess.length });
-          
-          const img = new Image();
-          if (!slip.url.startsWith('data:')) {
-            img.crossOrigin = "anonymous";
-          }
-          
-          await new Promise((resolve, reject) => {
-            img.onload = resolve;
-            img.onerror = () => reject(new Error(`โหลดรูปภาพไม่สำเร็จ: ${slip.workerName}`));
-            img.src = slip.url;
-          });
-
-          const MAX_DIMENSION = 1200;
-          let targetWidth = img.width;
-          let targetHeight = img.height;
-
-          if (targetWidth > MAX_DIMENSION || targetHeight > MAX_DIMENSION) {
-            if (targetWidth > targetHeight) {
-              targetHeight = (targetHeight / targetWidth) * MAX_DIMENSION;
-              targetWidth = MAX_DIMENSION;
-            } else {
-              targetWidth = (targetWidth / targetHeight) * MAX_DIMENSION;
-              targetHeight = MAX_DIMENSION;
-            }
-          }
-
-          const tempCanvas = document.createElement('canvas');
-          tempCanvas.width = targetWidth;
-          tempCanvas.height = targetHeight;
-          const tempCtx = tempCanvas.getContext('2d');
-          if (!tempCtx) throw new Error('Could not get canvas context');
-          
-          tempCtx.fillStyle = '#ffffff';
-          tempCtx.fillRect(0, 0, targetWidth, targetHeight);
-          tempCtx.drawImage(img, 0, 0, targetWidth, targetHeight);
-
-          const blob = await new Promise<Blob>((resolve, reject) => {
-            tempCanvas.toBlob((b) => {
-              if (b) resolve(b);
-              else reject(new Error('บีบอัดรูปภาพไม่สำเร็จ'));
-            }, 'image/jpeg', 0.85);
-          });
-
-          fileResults.push(new File([blob], `${slip.workerName}.jpg`, { type: 'image/jpeg' }));
-          
-          // Yield to main thread so UI can update progress
-          await new Promise(resolve => setTimeout(resolve, 0));
-        } catch (err) {
-          console.error(`Failed to process image for ${slip.workerName}:`, err);
-          // Continue processing other images even if one fails
-        }
-      }
-
-      if (fileResults.length === 0) {
-        throw new Error('ไม่สามารถโหลดรูปภาพได้เลย โปรดเช็คการเชื่อมต่ออินเทอร์เน็ต');
-      }
-
-      // 1. Try Web Share API (Best for LINE/Mobile)
-      if (typeof navigator !== 'undefined' && navigator.canShare && navigator.canShare({ files: fileResults })) {
-        await navigator.share({
-          files: fileResults,
-          title: 'สลิปประจำวัน',
-          text: `สลิปทั้งหมดประจำวันที่ ${format(selectedDate, 'dd/MM/yyyy')}`
-        });
-        setLastCopiedUrl('shared_slips_daily');
-        setCopiedId('all_slips');
-      } else {
-        setShareProgress({ current: 0, total: fileResults.length });
-        
         let loadedCount = 0;
         const loadedImagesResults = [];
         
         for (const slip of slipsToProcess) {
           try {
             loadedCount++;
-            setShareProgress({ current: loadedCount, total: fileResults.length });
+            setShareProgress({ current: loadedCount, total: slipsToProcess.length });
             
             const img = new Image();
             if (!slip.url.startsWith('data:')) {
@@ -735,7 +657,7 @@ export function DailyEntryPage() {
         const blobPromise = new Promise<Blob>((resolve, reject) => {
           canvas.toBlob((blob) => {
             if (blob) resolve(blob);
-            else reject(new Error('Blob creation failed'));
+            else reject(new Error('บีบอัดรูปภาพไม่สำเร็จ'));
           }, 'image/png');
         });
 
@@ -744,7 +666,6 @@ export function DailyEntryPage() {
         
         setLastCopiedUrl('merged_slips_daily');
         setCopiedId('all_slips');
-      }
 
       setTimeout(() => {
         setLastCopiedUrl(null);
@@ -1007,7 +928,6 @@ export function DailyEntryPage() {
         isVisible={!!lastCopiedUrl || !!copiedId || !!shareProgress} 
         message={
           shareProgress ? `กำลังเตรียมรูป ${shareProgress.current}/${shareProgress.total} ⏳` :
-          lastCopiedUrl === 'shared_slips_daily' ? 'เตรียมไฟล์สำเร็จ! พร้อมส่ง' :
           lastCopiedUrl === 'merged_slips_daily' ? 'คัดลอกรูปภาพทุกคนสำเร็จ!' :
           lastCopiedUrl ? 'คัดลอกรูปภาพสำเร็จ!' : 
           copiedId === 'all_slips_loading' ? 'กำลังประมวลผลรูปภาพ...' :
@@ -1126,12 +1046,12 @@ export function DailyEntryPage() {
                 </Button>
 
                 <Button
-                  onClick={handleShareAllSlips}
+                  onClick={handleCopyAllSlips}
                   disabled={isCopyingAllSlips || totalSlipsCount === 0}
-                  className={`w-full sm:w-auto px-6 py-3 rounded-xl shadow-md gap-2 transition-all ${lastCopiedUrl === 'shared_slips_daily' || lastCopiedUrl === 'merged_slips_daily' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200' : 'bg-violet-600 hover:bg-violet-700 shadow-violet-200'} text-white`}
+                  className={`w-full sm:w-auto px-6 py-3 rounded-xl shadow-md gap-2 transition-all ${lastCopiedUrl === 'merged_slips_daily' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200' : 'bg-violet-600 hover:bg-violet-700 shadow-violet-200'} text-white`}
                 >
-                  {isCopyingAllSlips ? <Loader2 className="w-5 h-5 animate-spin" /> : (lastCopiedUrl === 'shared_slips_daily' || lastCopiedUrl === 'merged_slips_daily') ? <Check className="w-5 h-5" /> : <Send className="w-5 h-5" />}
-                  ส่งรูปทุกคน ({totalSlipsCount} รูป)
+                  {isCopyingAllSlips ? <Loader2 className="w-5 h-5 animate-spin" /> : lastCopiedUrl === 'merged_slips_daily' ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                  คัดลอกรูปทุกคน ({totalSlipsCount} รูป)
                 </Button>
               </div>
 
