@@ -20,6 +20,9 @@ export default defineConfig(({ mode }) => {
           theme_color: '#dc2626',
           background_color: '#ffffff',
           display: 'standalone',
+          start_url: '/',
+          scope: '/',
+          id: '/',
           icons: [
             {
               src: 'pwa-192x192.png',

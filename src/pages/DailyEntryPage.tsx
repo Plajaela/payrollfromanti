@@ -1231,10 +1231,10 @@ export function DailyEntryPage() {
                           <button
                             type="button"
                             onClick={(e) => handleCopySlipImage(worker, entry, e)}
-                            className={`flex items-center justify-center w-8 h-8 rounded-xl border transition-all ${lastCopiedUrl === entry.transferSlipUrl ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-violet-50 border-violet-100 text-violet-600 hover:bg-violet-100'}`}
+                            className={`flex items-center justify-center w-10 h-10 rounded-xl border transition-all ${lastCopiedUrl === entry.transferSlipUrl ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-violet-50 border-violet-100 text-violet-600 hover:bg-violet-100'}`}
                             title="คัดลอกรูปสลิป"
                           >
-                            {isCopyingImageId === entry.id || isCopyingPreviewUrl === entry.transferSlipUrl ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : lastCopiedUrl === entry.transferSlipUrl ? <Check className="w-3.5 h-3.5" /> : <ImagePlus className="w-3.5 h-3.5" />}
+                            {isCopyingImageId === entry.id || isCopyingPreviewUrl === entry.transferSlipUrl ? <Loader2 className="w-5 h-5 animate-spin" /> : lastCopiedUrl === entry.transferSlipUrl ? <Check className="w-5 h-5" /> : <ImagePlus className="w-5 h-5" />}
                           </button>
                         )}
                         {/* Toll receipt copy — icon only, show when any toll receipt exists */}
@@ -1242,10 +1242,10 @@ export function DailyEntryPage() {
                           <button
                             type="button"
                             onClick={(e) => handleCopyTollSlip(entry, e)}
-                            className={`flex items-center justify-center w-8 h-8 rounded-xl border transition-all ${lastCopiedUrl === entry.tollReceiptUrl || entry.tolls?.some(t => t.receiptUrl && lastCopiedUrl === t.receiptUrl) ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-orange-50 border-orange-100 text-orange-600 hover:bg-orange-100'}`}
+                            className={`flex items-center justify-center w-10 h-10 rounded-xl border transition-all ${lastCopiedUrl === entry.tollReceiptUrl || entry.tolls?.some(t => t.receiptUrl && lastCopiedUrl === t.receiptUrl) ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-orange-50 border-orange-100 text-orange-600 hover:bg-orange-100'}`}
                             title="คัดลอกบิลทางด่วน"
                           >
-                            {lastCopiedUrl === entry.tollReceiptUrl || entry.tolls?.some(t => t.receiptUrl && lastCopiedUrl === t.receiptUrl) ? <Check className="w-3.5 h-3.5" /> : <Paperclip className="w-3.5 h-3.5" />}
+                            {lastCopiedUrl === entry.tollReceiptUrl || entry.tolls?.some(t => t.receiptUrl && lastCopiedUrl === t.receiptUrl) ? <Check className="w-5 h-5" /> : <Paperclip className="w-5 h-5" />}
                           </button>
                         )}
                         <div className={`font-bold text-lg transition-colors ml-1 ${entry?.isDraft ? 'text-amber-500 group-hover:text-amber-600' : 'text-red-500 group-hover:text-red-600'}`}>
@@ -1331,21 +1331,21 @@ export function DailyEntryPage() {
                       if (activeEntry?.adjustments) activeEntry.adjustments.forEach(a => { if (a.receiptUrl) slips.push({ url: a.receiptUrl, isOrange: false }); });
                       if (slips.length === 0) return null;
                       return slips.map((slip, i) => (
-                        <div key={i} className="flex flex-col items-center gap-1">
+                        <div key={i} className="flex flex-col items-center gap-1.5">
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               setPreviewImageUrl(slip.url);
                             }}
-                            className="w-10 h-10 rounded-lg overflow-hidden border-2 border-gray-200 shadow-sm hover:scale-105 transition-transform"
+                            className="w-12 h-12 rounded-xl overflow-hidden border-2 border-gray-200 shadow-sm hover:scale-105 transition-transform"
                           >
                             <img src={slip.url} alt="slip" className="w-full h-full object-cover" />
                           </button>
                           <button
                             type="button"
                             onClick={(e) => handleCopySingleImage(slip.url, e)}
-                            className={`flex items-center justify-center w-10 h-6 rounded-lg border transition-all ${
+                            className={`flex items-center justify-center h-9 px-2.5 rounded-xl border transition-all ${
                               lastCopiedUrl === slip.url
                                 ? 'bg-emerald-50 border-emerald-200 text-emerald-600'
                                 : slip.isOrange
@@ -1353,7 +1353,8 @@ export function DailyEntryPage() {
                                   : 'bg-violet-50 border-violet-100 text-violet-500 hover:bg-violet-100'
                             }`}
                           >
-                            {lastCopiedUrl === slip.url ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                            {lastCopiedUrl === slip.url ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                            <span className="ml-1 text-[11px] font-bold">คัดลอกรูป</span>
                           </button>
                         </div>
                       ));
@@ -1707,8 +1708,8 @@ export function DailyEntryPage() {
                             <button type="button" onClick={() => setPreviewImageUrl(toll.receiptUrl || '')} className="text-emerald-600 bg-emerald-50 p-1.5 rounded-lg hover:bg-emerald-100 transition-colors border border-emerald-100" title="ดูใบเสร็จ">
                               <ImagePlus className="w-4 h-4" />
                             </button>
-                            <button type="button" onClick={(e) => handleCopySingleImage(toll.receiptUrl!, e)} className={`p-1.5 rounded-lg transition-all border ${lastCopiedUrl === toll.receiptUrl ? 'text-emerald-600 bg-emerald-50 border-emerald-200' : 'text-violet-600 bg-violet-50 hover:bg-violet-100 border-violet-100'}`} title="คัดลอกรูป">
-                              {lastCopiedUrl === toll.receiptUrl ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                            <button type="button" onClick={(e) => handleCopySingleImage(toll.receiptUrl!, e)} className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all border ${lastCopiedUrl === toll.receiptUrl ? 'text-emerald-600 bg-emerald-50 border-emerald-200' : 'text-violet-600 bg-violet-50 hover:bg-violet-100 border-violet-100'}`} title="คัดลอกรูป">
+                              {lastCopiedUrl === toll.receiptUrl ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
                             </button>
                             <button
                               type="button"
@@ -1941,8 +1942,8 @@ export function DailyEntryPage() {
                             <span className="text-[9px] text-white font-bold tracking-wide">ดูสลิป</span>
                           </div>
                         </button>
-                        <button type="button" onClick={(e) => handleCopySingleImage(slipUrl, e)} className={`flex items-center justify-center w-8 h-8 rounded-lg ml-1 transition-all border ${lastCopiedUrl === slipUrl ? 'text-emerald-600 bg-emerald-50 border-emerald-200' : 'text-violet-600 bg-violet-50 hover:bg-violet-100 border-violet-100'}`} title="คัดลอกรูปสลิป">
-                          {lastCopiedUrl === slipUrl ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        <button type="button" onClick={(e) => handleCopySingleImage(slipUrl, e)} className={`flex items-center justify-center w-10 h-10 rounded-xl ml-1 transition-all border ${lastCopiedUrl === slipUrl ? 'text-emerald-600 bg-emerald-50 border-emerald-200' : 'text-violet-600 bg-violet-50 hover:bg-violet-100 border-violet-100'}`} title="คัดลอกรูปสลิป">
+                          {lastCopiedUrl === slipUrl ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
                         </button>
                         <button 
                           type="button" 

@@ -741,17 +741,17 @@ export function ReportsPage() {
                               setSelectedSlipData(row);
                               setIsSlipModalOpen(true);
                             }}
-                            className="inline-flex items-center justify-center text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 p-2 rounded-xl transition-colors min-w-[36px] min-h-[36px]"
+                            className="inline-flex items-center justify-center text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 p-2.5 rounded-xl transition-colors min-w-[40px] min-h-[40px]"
                             title="สร้างรูปสลิป"
                           >
-                            <ImageIcon className="w-4 h-4" />
+                            <ImageIcon className="w-5 h-5" />
                           </button>
                           <button
                             onClick={() => handleCopySingle(row)}
-                            className="inline-flex items-center justify-center text-red-600 hover:text-gray-900 bg-sky-50 p-2 rounded-xl transition-colors min-w-[36px] min-h-[36px]"
+                            className="inline-flex items-center justify-center text-red-600 hover:text-gray-900 bg-sky-50 p-2.5 rounded-xl transition-colors min-w-[40px] min-h-[40px]"
                             title="คัดลอกสรุป"
                           >
-                            {copiedId === row.worker.id ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                            {copiedId === row.worker.id ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5" />}
                           </button>
                         </div>
                       </td>
@@ -819,10 +819,10 @@ export function ReportsPage() {
                         <button 
                           onClick={(e) => handleCopySingleImage(adj.receiptUrl!, e)}
                           disabled={isCopyingPreviewUrl === adj.receiptUrl}
-                          className={`p-2 rounded-lg transition-all border ${lastCopiedUrl === adj.receiptUrl ? 'text-emerald-600 bg-emerald-50 border-emerald-200' : 'text-violet-600 bg-violet-50 hover:bg-violet-100 border-violet-100'}`}
+                          className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all border ${lastCopiedUrl === adj.receiptUrl ? 'text-emerald-600 bg-emerald-50 border-emerald-200' : 'text-violet-600 bg-violet-50 hover:bg-violet-100 border-violet-100'}`}
                           title="คัดลอกรูป"
                         >
-                          {isCopyingPreviewUrl === adj.receiptUrl ? <Loader2 className="w-4 h-4 animate-spin" /> : lastCopiedUrl === adj.receiptUrl ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                          {isCopyingPreviewUrl === adj.receiptUrl ? <Loader2 className="w-5 h-5 animate-spin" /> : lastCopiedUrl === adj.receiptUrl ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
                         </button>
                       </div>
                     )}
