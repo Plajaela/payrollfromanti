@@ -1143,134 +1143,8 @@ export function DailyEntryPage() {
     }
   };
 
-  return (
-    <div className="space-y-6 pb-20 relative">
-      <Toast 
-        isVisible={!!lastCopiedUrl || !!copiedId || !!shareProgress} 
-        message={
-          shareProgress ? `กำลังเตรียมรูป ${shareProgress.current}/${shareProgress.total} ⏳` :
-          lastCopiedUrl === 'merged_slips_daily' ? 'คัดลอกรูปภาพทุกคนสำเร็จ!' :
-          lastCopiedUrl ? 'คัดลอกรูปภาพสำเร็จ!' : 
-          copiedId === 'all_slips_loading' ? 'กำลังประมวลผลรูปภาพ...' :
-          'คัดลอกข้อความสำเร็จ!'
-        }
-        icon={(copiedId === 'all_slips_loading' || shareProgress) ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
-      />
-      {/* Date Selector */}
-      <div className="flex items-center justify-between bg-white p-2 rounded-3xl shadow-sm border border-gray-100">
-        <button onClick={() => setSelectedDate(subDays(selectedDate, 1))} className="p-3 hover:bg-gray-100 rounded-2xl transition-colors">
-          <ChevronLeft className="w-6 h-6 text-gray-600" />
-        </button>
-        <div className="text-center flex-1 relative">
-          <Input
-            type="date"
-            value={dateStr}
-            onChange={(e) => setSelectedDate(new Date(e.target.value))}
-            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
-          />
-          <div className="text-sm text-red-600 font-semibold">{format(selectedDate, 'EEEE', { locale: th })}</div>
-          <div className="text-lg font-bold text-gray-900">{format(selectedDate, 'd MMM yyyy', { locale: th })}</div>
-        </div>
-        <button onClick={() => setSelectedDate(addDays(selectedDate, 1))} className="p-3 hover:bg-gray-100 rounded-2xl transition-colors">
-          <ChevronRight className="w-6 h-6 text-gray-600" />
-        </button>
-      </div>
-
-      {isSunday(selectedDate) && (
-        <div className="bg-orange-50 border border-orange-200 text-orange-700 p-4 rounded-3xl shadow-sm flex items-start gap-3 text-sm">
-          <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
-          <div>
-            <p className="font-bold text-base mb-0.5">วันนี้คือวันอาทิตย์ (วันหยุดประจำสัปดาห์)</p>
-            <p className="text-orange-600/90 leading-relaxed">ปกติแล้วไม่ต้องบันทึกเวลาทำงาน แต่หากมีการเข้ามาทำงาน สามารถบันทึกเวลาที่นี่ และบวก "โบนัสพิเศษ" หรือ "ค่าแรงวันหยุด" ในช่อง <span className="font-semibold underline">รายการปรับปรุง</span> ได้เลยครับ</p>
-          </div>
-        </div>
-      )}
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-gradient-to-br from-red-500 to-red-600 text-white p-5 rounded-3xl shadow-lg shadow-red-200 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-          <div className="text-red-100 text-sm font-medium mb-1">ยอดรวมวันนี้</div>
-          <div className="text-3xl font-bold tracking-tight">฿{totalPayForDay}</div>
-        </div>
-        <div className="bg-gradient-to-br from-sky-50 to-white p-5 rounded-3xl border border-sky-100 shadow-lg shadow-sky-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
-          <div className="absolute -right-4 -top-4 w-24 h-24 bg-sky-200 rounded-full opacity-30 blur-2xl transition-all duration-500 group-hover:scale-150"></div>
-          <div className="text-sky-700 text-sm font-medium mb-1 relative z-10">ช่างที่มาทำงาน</div>
-          <div className="text-3xl font-bold text-gray-800 relative z-10">
-            {entriesForDate.length} <span className="text-lg font-normal text-gray-400">/ {workers.length}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Workers List / Tabs */}
-      <div className="flex flex-col md:flex-row gap-4 lg:gap-6 items-start">
-        {/* Left Tabs (Workers List) */}
-        <div className="w-full md:w-1/3 lg:w-1/4 flex flex-col gap-2 overflow-y-auto pb-4 md:pb-0 md:max-h-[calc(100vh-250px)]">
-          {workers.length === 0 ? (
-            <div className="text-center py-10 md:py-6 text-sm text-gray-400 bg-white rounded-3xl md:rounded-2xl border border-dashed border-gray-200">
-              ไม่มีข้อมูลช่าง
-            </div>
-          ) : (
-            <>
-              <button
-                onClick={() => setActiveTabWorkerId('all')}
-                className={`flex items-center justify-between p-3.5 md:p-3 rounded-2xl md:rounded-xl text-left transition-all duration-300 flex-shrink-0 border hover:scale-[1.02] active:scale-[0.98] ${activeTabWorkerId === 'all' ? 'bg-gradient-to-r from-sky-500 to-sky-600 border-sky-500 text-white shadow-md shadow-sky-200' : 'bg-white border-gray-100 text-gray-700 hover:bg-sky-50 hover:border-sky-200'}`}
-              >
-                <span className="font-semibold text-[15px]">📋 ข้อมูลทุกคน</span>
-              </button>
-              {workers.map(worker => {
-                const entry = entriesForDate.find(e => e.workerId === worker.id);
-                const isActive = worker.id === activeTabWorkerId;
-                const isDraft = entry?.isDraft;
-                return (
-                  <button
-                    key={worker.id}
-                    onClick={() => {
-                      setActiveTabWorkerId(worker.id);
-                      if (window.innerWidth < 768) {
-                        setTimeout(() => {
-                          activeCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }, 50);
-                      }
-                    }}
-                    className={`flex items-center justify-between p-3.5 md:p-3 rounded-2xl md:rounded-xl text-left transition-all duration-300 flex-shrink-0 border hover:scale-[1.02] active:scale-[0.98] ${isActive ? (entry?.isLeave ? 'bg-gradient-to-r from-red-500 to-red-600 border-red-500 text-white shadow-md shadow-red-200' : isDraft ? 'bg-gradient-to-r from-amber-500 to-amber-600 border-amber-500 text-white shadow-md shadow-amber-200' : 'bg-gradient-to-r from-sky-500 to-sky-600 border-sky-500 text-white shadow-md shadow-sky-200') : (entry?.isLeave ? 'bg-red-50 border-red-200 text-red-900 hover:bg-red-100 shadow-sm' : isDraft ? 'bg-amber-50 border-amber-200 text-amber-900 hover:bg-amber-100 shadow-sm' : 'bg-white border-gray-100 text-gray-700 hover:bg-sky-50 hover:border-sky-200')}`}
-                  >
-                    <span className="font-semibold text-[15px]">{worker.name}</span>
-                    {entry && (
-                      <div className="flex items-center gap-1 ml-2">
-                        {/* Transfer slip indicator */}
-                        {entry.transferSlipUrl && <Paperclip className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-white/80' : 'text-sky-400'}`} />}
-                        {/* Toll status indicator */}
-                        {(() => {
-                          const hasTollFee = (entry.tollFee > 0) || entry.tolls?.some(t => t.amount > 0);
-                          const hasTollReceipt = !!(entry.tollReceiptUrl || entry.tolls?.some(t => t.receiptUrl));
-                          if (!hasTollFee) return null;
-                          if (hasTollReceipt) {
-                            // Uploaded ✓
-                            return <Wallet className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-orange-200' : 'text-orange-400'}`} />;
-                          } else {
-                            // Missing receipt ?
-                            return <AlertTriangle className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-yellow-200' : 'text-yellow-500'}`} />;
-                          }
-                        })()}
-                        {entry.isLeave ?
-                          <X className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-red-100' : 'text-red-500'}`} /> :
-                          isDraft ?
-                            <Clock className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-amber-100' : 'text-amber-500'}`} /> :
-                            <CheckCircle2 className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-sky-100' : 'text-emerald-500'}`} />
-                        }
-                      </div>
-                    )}
-                  </button>
-                )
-              })}
-            </>
-          )}
-        </div>
-
-        {/* Right Active Content */}
-        <div className="w-full md:w-2/3 lg:w-3/4" ref={activeCardRef}>
-          {activeTabWorkerId === 'all' ? (
-            <Card className="p-6 md:p-8 flex flex-col items-center justify-center min-h-[200px] text-center bg-white border-gray-100 shadow-sm">
+  const renderAllSummaryCard = () => (
+            <Card className="p-6 md:p-8 flex flex-col items-center justify-center min-h-[200px] text-center bg-white border-gray-100 shadow-sm animate-in fade-in zoom-in-95 duration-200 mt-2 mb-4 md:mt-0 md:mb-0">
               <div className="mb-6">
                 <div className="font-bold text-gray-900 text-2xl mb-2">สรุปข้อมูลช่างทุกคน</div>
                 <div className="text-gray-500 text-sm">
@@ -1364,11 +1238,15 @@ export function DailyEntryPage() {
                 })}
               </div>
             </Card>
-          ) : workers.length > 0 && activeWorker && (
-            <Card
-              key={activeWorker.id}
-              onClick={() => openModal(activeWorker, activeEntry)}
-              className={`p-6 md:p-8 flex flex-col items-center justify-center min-h-[200px] text-center active:scale-[0.99] transition-all duration-300 cursor-pointer hover:-translate-y-1 hover:shadow-xl ${activeEntry ? (activeEntry.isLeave ? 'border-red-200 bg-gradient-to-b from-red-50/50 to-white shadow-red-100' : activeEntry.isDraft ? 'border-amber-200 bg-gradient-to-b from-amber-50/50 to-white shadow-amber-100' : 'border-sky-200 bg-gradient-to-b from-sky-50/50 to-white shadow-sky-100') : 'bg-white border-gray-100 hover:border-sky-300 shadow-sm'}`}
+  );
+
+  const renderActiveWorkerCard = () => {
+    if (!activeWorker) return null;
+    return (
+      <Card
+        key={activeWorker.id}
+        onClick={() => openModal(activeWorker, activeEntry)}
+              className={`p-6 md:p-8 mt-2 mb-4 md:mt-0 md:mb-0 animate-in fade-in zoom-in-95 duration-200 flex flex-col items-center justify-center min-h-[200px] text-center active:scale-[0.99] transition-all duration-300 cursor-pointer hover:-translate-y-1 hover:shadow-xl ${activeEntry ? (activeEntry.isLeave ? 'border-red-200 bg-gradient-to-b from-red-50/50 to-white shadow-red-100' : activeEntry.isDraft ? 'border-amber-200 bg-gradient-to-b from-amber-50/50 to-white shadow-amber-100' : 'border-sky-200 bg-gradient-to-b from-sky-50/50 to-white shadow-sky-100') : 'bg-white border-gray-100 hover:border-sky-300 shadow-sm'}`}
             >
               <div className="mb-4">
                 <div className="font-bold text-gray-900 text-2xl mb-2">{activeWorker.name}</div>
@@ -1533,7 +1411,140 @@ export function DailyEntryPage() {
                 )}
               </div>
             </Card>
+    );
+  };
+
+  return (
+    <div className="space-y-6 pb-20 relative">
+      <Toast 
+        isVisible={!!lastCopiedUrl || !!copiedId || !!shareProgress} 
+        message={
+          shareProgress ? `กำลังเตรียมรูป ${shareProgress.current}/${shareProgress.total} ⏳` :
+          lastCopiedUrl === 'merged_slips_daily' ? 'คัดลอกรูปภาพทุกคนสำเร็จ!' :
+          lastCopiedUrl ? 'คัดลอกรูปภาพสำเร็จ!' : 
+          copiedId === 'all_slips_loading' ? 'กำลังประมวลผลรูปภาพ...' :
+          'คัดลอกข้อความสำเร็จ!'
+        }
+        icon={(copiedId === 'all_slips_loading' || shareProgress) ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
+      />
+      {/* Date Selector */}
+      <div className="flex items-center justify-between bg-white p-2 rounded-3xl shadow-sm border border-gray-100">
+        <button onClick={() => setSelectedDate(subDays(selectedDate, 1))} className="p-3 hover:bg-gray-100 rounded-2xl transition-colors">
+          <ChevronLeft className="w-6 h-6 text-gray-600" />
+        </button>
+        <div className="text-center flex-1 relative">
+          <Input
+            type="date"
+            value={dateStr}
+            onChange={(e) => setSelectedDate(new Date(e.target.value))}
+            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+          />
+          <div className="text-sm text-red-600 font-semibold">{format(selectedDate, 'EEEE', { locale: th })}</div>
+          <div className="text-lg font-bold text-gray-900">{format(selectedDate, 'd MMM yyyy', { locale: th })}</div>
+        </div>
+        <button onClick={() => setSelectedDate(addDays(selectedDate, 1))} className="p-3 hover:bg-gray-100 rounded-2xl transition-colors">
+          <ChevronRight className="w-6 h-6 text-gray-600" />
+        </button>
+      </div>
+
+      {isSunday(selectedDate) && (
+        <div className="bg-orange-50 border border-orange-200 text-orange-700 p-4 rounded-3xl shadow-sm flex items-start gap-3 text-sm">
+          <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-bold text-base mb-0.5">วันนี้คือวันอาทิตย์ (วันหยุดประจำสัปดาห์)</p>
+            <p className="text-orange-600/90 leading-relaxed">ปกติแล้วไม่ต้องบันทึกเวลาทำงาน แต่หากมีการเข้ามาทำงาน สามารถบันทึกเวลาที่นี่ และบวก "โบนัสพิเศษ" หรือ "ค่าแรงวันหยุด" ในช่อง <span className="font-semibold underline">รายการปรับปรุง</span> ได้เลยครับ</p>
+          </div>
+        </div>
+      )}
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-gradient-to-br from-red-500 to-red-600 text-white p-5 rounded-3xl shadow-lg shadow-red-200 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+          <div className="text-red-100 text-sm font-medium mb-1">ยอดรวมวันนี้</div>
+          <div className="text-3xl font-bold tracking-tight">฿{totalPayForDay}</div>
+        </div>
+        <div className="bg-gradient-to-br from-sky-50 to-white p-5 rounded-3xl border border-sky-100 shadow-lg shadow-sky-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+          <div className="absolute -right-4 -top-4 w-24 h-24 bg-sky-200 rounded-full opacity-30 blur-2xl transition-all duration-500 group-hover:scale-150"></div>
+          <div className="text-sky-700 text-sm font-medium mb-1 relative z-10">ช่างที่มาทำงาน</div>
+          <div className="text-3xl font-bold text-gray-800 relative z-10">
+            {entriesForDate.length} <span className="text-lg font-normal text-gray-400">/ {workers.length}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Workers List / Tabs */}
+      <div className="flex flex-col md:flex-row gap-4 lg:gap-6 items-start">
+        {/* Left Tabs (Workers List) */}
+        <div className="w-full md:w-1/3 lg:w-1/4 flex flex-col gap-2 overflow-y-auto pb-4 md:pb-0 md:max-h-[calc(100vh-250px)]">
+          {workers.length === 0 ? (
+            <div className="text-center py-10 md:py-6 text-sm text-gray-400 bg-white rounded-3xl md:rounded-2xl border border-dashed border-gray-200">
+              ไม่มีข้อมูลช่าง
+            </div>
+          ) : (
+            <>
+              <button
+                onClick={() => setActiveTabWorkerId('all')}
+                className={`flex items-center justify-between p-3.5 md:p-3 rounded-2xl md:rounded-xl text-left transition-all duration-300 flex-shrink-0 border hover:scale-[1.02] active:scale-[0.98] ${activeTabWorkerId === 'all' ? 'bg-gradient-to-r from-sky-500 to-sky-600 border-sky-500 text-white shadow-md shadow-sky-200' : 'bg-white border-gray-100 text-gray-700 hover:bg-sky-50 hover:border-sky-200'}`}
+              >
+                <span className="font-semibold text-[15px]">📋 ข้อมูลทุกคน</span>
+              </button>
+              {activeTabWorkerId === 'all' && (
+                <div className="md:hidden relative z-10 w-full">
+                  {renderAllSummaryCard()}
+                </div>
+              )}
+              {workers.map(worker => {
+                const entry = entriesForDate.find(e => e.workerId === worker.id);
+                const isActive = worker.id === activeTabWorkerId;
+                const isDraft = entry?.isDraft;
+                return (
+                  <React.Fragment key={worker.id}>
+                    <button
+                    onClick={() => setActiveTabWorkerId(worker.id)}
+                    className={`flex items-center justify-between p-3.5 md:p-3 rounded-2xl md:rounded-xl text-left transition-all duration-300 flex-shrink-0 border hover:scale-[1.02] active:scale-[0.98] ${isActive ? (entry?.isLeave ? 'bg-gradient-to-r from-red-500 to-red-600 border-red-500 text-white shadow-md shadow-red-200' : isDraft ? 'bg-gradient-to-r from-amber-500 to-amber-600 border-amber-500 text-white shadow-md shadow-amber-200' : 'bg-gradient-to-r from-sky-500 to-sky-600 border-sky-500 text-white shadow-md shadow-sky-200') : (entry?.isLeave ? 'bg-red-50 border-red-200 text-red-900 hover:bg-red-100 shadow-sm' : isDraft ? 'bg-amber-50 border-amber-200 text-amber-900 hover:bg-amber-100 shadow-sm' : 'bg-white border-gray-100 text-gray-700 hover:bg-sky-50 hover:border-sky-200')}`}
+                  >
+                    <span className="font-semibold text-[15px]">{worker.name}</span>
+                    {entry && (
+                      <div className="flex items-center gap-1 ml-2">
+                        {/* Transfer slip indicator */}
+                        {entry.transferSlipUrl && <Paperclip className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-white/80' : 'text-sky-400'}`} />}
+                        {/* Toll status indicator */}
+                        {(() => {
+                          const hasTollFee = (entry.tollFee > 0) || entry.tolls?.some(t => t.amount > 0);
+                          const hasTollReceipt = !!(entry.tollReceiptUrl || entry.tolls?.some(t => t.receiptUrl));
+                          if (!hasTollFee) return null;
+                          if (hasTollReceipt) {
+                            // Uploaded ✓
+                            return <Wallet className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-orange-200' : 'text-orange-400'}`} />;
+                          } else {
+                            // Missing receipt ?
+                            return <AlertTriangle className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-yellow-200' : 'text-yellow-500'}`} />;
+                          }
+                        })()}
+                        {entry.isLeave ?
+                          <X className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-red-100' : 'text-red-500'}`} /> :
+                          isDraft ?
+                            <Clock className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-amber-100' : 'text-amber-500'}`} /> :
+                            <CheckCircle2 className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-sky-100' : 'text-emerald-500'}`} />
+                        }
+                      </div>
+                    )}
+                  </button>
+                  {isActive && (
+                    <div className="md:hidden relative z-10 w-full">
+                      {renderActiveWorkerCard()}
+                    </div>
+                  )}
+                  </React.Fragment>
+                )
+              })}
+            </>
           )}
+        </div>
+
+        {/* Right Active Content (Desktop Only) */}
+        <div className="hidden md:block w-full md:w-2/3 lg:w-3/4">
+          {activeTabWorkerId === 'all' ? renderAllSummaryCard() : (workers.length > 0 && activeWorker ? renderActiveWorkerCard() : null)}
         </div>
       </div>
 
