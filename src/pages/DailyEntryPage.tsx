@@ -41,6 +41,8 @@ export function DailyEntryPage() {
     note: ''
   });
 
+  const activeCardRef = useRef<HTMLDivElement>(null);
+
   // Set default tab when workers change or active tab is not set
   useEffect(() => {
     if (workers.length > 0 && (!activeTabWorkerId || (activeTabWorkerId !== 'all' && !workers.find(w => w.id === activeTabWorkerId)))) {
@@ -1225,7 +1227,9 @@ export function DailyEntryPage() {
                     onClick={() => {
                       setActiveTabWorkerId(worker.id);
                       if (window.innerWidth < 768) {
-                        openModal(worker, entry);
+                        setTimeout(() => {
+                          activeCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 50);
                       }
                     }}
                     className={`flex items-center justify-between p-3.5 md:p-3 rounded-2xl md:rounded-xl text-left transition-all duration-300 flex-shrink-0 border hover:scale-[1.02] active:scale-[0.98] ${isActive ? (entry?.isLeave ? 'bg-gradient-to-r from-red-500 to-red-600 border-red-500 text-white shadow-md shadow-red-200' : isDraft ? 'bg-gradient-to-r from-amber-500 to-amber-600 border-amber-500 text-white shadow-md shadow-amber-200' : 'bg-gradient-to-r from-sky-500 to-sky-600 border-sky-500 text-white shadow-md shadow-sky-200') : (entry?.isLeave ? 'bg-red-50 border-red-200 text-red-900 hover:bg-red-100 shadow-sm' : isDraft ? 'bg-amber-50 border-amber-200 text-amber-900 hover:bg-amber-100 shadow-sm' : 'bg-white border-gray-100 text-gray-700 hover:bg-sky-50 hover:border-sky-200')}`}
@@ -1264,7 +1268,7 @@ export function DailyEntryPage() {
         </div>
 
         {/* Right Active Content */}
-        <div className="w-full md:w-2/3 lg:w-3/4">
+        <div className="w-full md:w-2/3 lg:w-3/4" ref={activeCardRef}>
           {activeTabWorkerId === 'all' ? (
             <Card className="p-6 md:p-8 flex flex-col items-center justify-center min-h-[200px] text-center bg-white border-gray-100 shadow-sm">
               <div className="mb-6">
@@ -1301,7 +1305,9 @@ export function DailyEntryPage() {
                     <div key={worker.id} onClick={() => { 
                       setActiveTabWorkerId(worker.id); 
                       if (window.innerWidth < 768) {
-                        openModal(worker, entry); 
+                        setTimeout(() => {
+                          activeCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 50);
                       }
                     }} className="flex justify-between items-center p-4 bg-white hover:bg-sky-50 rounded-2xl border border-gray-100 cursor-pointer transition-all duration-300 hover:shadow-md hover:shadow-sky-100 hover:-translate-y-0.5 active:scale-[0.99] group">
                       <div>
