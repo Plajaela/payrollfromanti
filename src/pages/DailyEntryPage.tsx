@@ -317,57 +317,64 @@ export function DailyEntryPage() {
   };
 
   const handleQuickUploadSlip = async (e: React.ChangeEvent<HTMLInputElement>, worker: typeof workers[0], entry: typeof entries[0] | undefined) => {
-    let file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.type.startsWith('image/')) {
-      setIsUploading(true);
-      file = await compressImage(file);
-    }
+    e.stopPropagation();
+    const filesList = e.target.files;
+    if (!filesList || filesList.length === 0) return;
 
     try {
       setIsUploading(true);
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${uuidv4()}.${fileExt}`;
-      const filePath = `${worker.id}/${fileName}`;
+      const publicUrls: string[] = [];
+      const files = Array.from(filesList) as File[];
 
-      const { data, error } = await supabase.storage
-        .from('slips')
-        .upload(filePath, file);
-
-      if (error) {
-        throw error;
-      }
-
-      const { data: publicUrlData } = supabase.storage
-        .from('slips')
-        .getPublicUrl(filePath);
-
-      const publicUrl = publicUrlData.publicUrl;
-
-      // --- GOOGLE DRIVE WEBHOOK TRIGGER ---
-      const webhookUrl = import.meta.env.VITE_GOOGLE_DRIVE_WEBHOOK_URL;
-      if (webhookUrl) {
-        try {
-          const driveFormData = new URLSearchParams();
-          driveFormData.append('workerName', worker.name || 'Unknown');
-          driveFormData.append('date', dateStr);
-          driveFormData.append('imageUrl', publicUrl);
-          
-          fetch(webhookUrl, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: driveFormData.toString()
-          }).catch(err => console.error("Webhook error:", err));
-        } catch(err) {
-          console.error("Webhook setup error:", err);
+      for (let i = 0; i < files.length; i++) {
+        let file = files[i];
+        if (file.type.startsWith('image/')) {
+          file = await compressImage(file);
         }
+
+        const fileExt = file.name.split('.').pop() || 'jpg';
+        const fileName = `${uuidv4()}.${fileExt}`;
+        const filePath = `${worker.id}/${fileName}`;
+
+        const { error } = await supabase.storage
+          .from('slips')
+          .upload(filePath, file);
+
+        if (error) {
+          throw error;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from('slips')
+          .getPublicUrl(filePath);
+
+        const publicUrl = publicUrlData.publicUrl;
+        publicUrls.push(publicUrl);
+
+        // --- GOOGLE DRIVE WEBHOOK TRIGGER ---
+        const webhookUrl = import.meta.env.VITE_GOOGLE_DRIVE_WEBHOOK_URL;
+        if (webhookUrl) {
+          try {
+            const driveFormData = new URLSearchParams();
+            driveFormData.append('workerName', worker.name || 'Unknown');
+            driveFormData.append('date', dateStr);
+            driveFormData.append('imageUrl', publicUrl);
+            
+            fetch(webhookUrl, {
+              method: 'POST',
+              mode: 'no-cors',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: driveFormData.toString()
+            }).catch(err => console.error("Webhook error:", err));
+          } catch(err) {
+            console.error("Webhook setup error:", err);
+          }
+        }
+        // -------------------------------------
       }
-      // -------------------------------------
 
       if (entry) {
-        const newSlips = [...(entry.transferSlips || []), publicUrl];
+        const newSlips = [...(entry.transferSlips || []), ...publicUrls];
         await updateEntry(entry.id, { 
           transferSlipUrl: newSlips[0] || '',
           transferSlips: newSlips 
@@ -390,8 +397,8 @@ export function DailyEntryPage() {
           totalPay: worker.baseWage + (worker.defaultTravelAllowance || 0),
           note: '',
           isDraft: true,
-          transferSlipUrl: publicUrl,
-          transferSlips: [publicUrl],
+          transferSlipUrl: publicUrls[0] || '',
+          transferSlips: publicUrls,
           tollReceiptUrl: '',
           tollDate: dateStr,
           guaranteeDeduction: 0,
@@ -1287,7 +1294,9 @@ export function DailyEntryPage() {
                   </Button>
                   <input 
                     type="file" 
-                    accept="image/*" 
+                    accept="image/*"
+                    multiple
+                    onClick={(e) => e.stopPropagation()}
                     onChange={(e) => handleQuickUploadSlip(e, activeWorker, activeEntry)}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     disabled={isUploading}
