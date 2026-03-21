@@ -1224,7 +1224,9 @@ export function DailyEntryPage() {
                     key={worker.id}
                     onClick={() => {
                       setActiveTabWorkerId(worker.id);
-                      openModal(worker, entry);
+                      if (window.innerWidth < 768) {
+                        openModal(worker, entry);
+                      }
                     }}
                     className={`flex items-center justify-between p-3.5 md:p-3 rounded-2xl md:rounded-xl text-left transition-all duration-300 flex-shrink-0 border hover:scale-[1.02] active:scale-[0.98] ${isActive ? (entry?.isLeave ? 'bg-gradient-to-r from-red-500 to-red-600 border-red-500 text-white shadow-md shadow-red-200' : isDraft ? 'bg-gradient-to-r from-amber-500 to-amber-600 border-amber-500 text-white shadow-md shadow-amber-200' : 'bg-gradient-to-r from-sky-500 to-sky-600 border-sky-500 text-white shadow-md shadow-sky-200') : (entry?.isLeave ? 'bg-red-50 border-red-200 text-red-900 hover:bg-red-100 shadow-sm' : isDraft ? 'bg-amber-50 border-amber-200 text-amber-900 hover:bg-amber-100 shadow-sm' : 'bg-white border-gray-100 text-gray-700 hover:bg-sky-50 hover:border-sky-200')}`}
                   >
@@ -1296,7 +1298,12 @@ export function DailyEntryPage() {
                   const entry = entriesForDate.find(e => e.workerId === worker.id);
                   const totalPay = entry ? entry.totalPay : (worker.baseWage + (worker.defaultTravelAllowance || 0));
                   return (
-                    <div key={worker.id} onClick={() => { setActiveTabWorkerId(worker.id); openModal(worker, entry); }} className="flex justify-between items-center p-4 bg-white hover:bg-sky-50 rounded-2xl border border-gray-100 cursor-pointer transition-all duration-300 hover:shadow-md hover:shadow-sky-100 hover:-translate-y-0.5 active:scale-[0.99] group">
+                    <div key={worker.id} onClick={() => { 
+                      setActiveTabWorkerId(worker.id); 
+                      if (window.innerWidth < 768) {
+                        openModal(worker, entry); 
+                      }
+                    }} className="flex justify-between items-center p-4 bg-white hover:bg-sky-50 rounded-2xl border border-gray-100 cursor-pointer transition-all duration-300 hover:shadow-md hover:shadow-sky-100 hover:-translate-y-0.5 active:scale-[0.99] group">
                       <div>
                         <div className="font-bold text-gray-900 group-hover:text-sky-700 transition-colors">{worker.name}</div>
                         <div className="text-sm mt-0.5">
