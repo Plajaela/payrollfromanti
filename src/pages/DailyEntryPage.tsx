@@ -314,6 +314,97 @@ export function DailyEntryPage() {
     handleSave(false);
   };
 
+  const handleQuickUploadSlip = async (e: React.ChangeEvent<HTMLInputElement>, worker: typeof workers[0], entry: typeof entries[0] | undefined) => {
+    let file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type.startsWith('image/')) {
+      setIsUploading(true);
+      file = await compressImage(file);
+    }
+
+    try {
+      setIsUploading(true);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${uuidv4()}.${fileExt}`;
+      const filePath = `${worker.id}/${fileName}`;
+
+      const { data, error } = await supabase.storage
+        .from('slips')
+        .upload(filePath, file);
+
+      if (error) {
+        throw error;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('slips')
+        .getPublicUrl(filePath);
+
+      const publicUrl = publicUrlData.publicUrl;
+
+      // --- GOOGLE DRIVE WEBHOOK TRIGGER ---
+      const webhookUrl = import.meta.env.VITE_GOOGLE_DRIVE_WEBHOOK_URL;
+      if (webhookUrl) {
+        try {
+          const driveFormData = new URLSearchParams();
+          driveFormData.append('workerName', worker.name || 'Unknown');
+          driveFormData.append('date', dateStr);
+          driveFormData.append('imageUrl', publicUrl);
+          
+          fetch(webhookUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: driveFormData.toString()
+          }).catch(err => console.error("Webhook error:", err));
+        } catch(err) {
+          console.error("Webhook setup error:", err);
+        }
+      }
+      // -------------------------------------
+
+      if (entry) {
+        const newSlips = [...(entry.transferSlips || []), publicUrl];
+        await updateEntry(entry.id, { 
+          transferSlipUrl: newSlips[0] || '',
+          transferSlips: newSlips 
+        });
+      } else {
+        const entryData = {
+          workerId: worker.id,
+          date: dateStr,
+          clockIn: worker.shiftStart || '07:00',
+          clockOut: worker.shiftEnd || '16:00',
+          baseWage: worker.baseWage,
+          travelAllowance: worker.defaultTravelAllowance || 0,
+          tollFee: 0,
+          tolls: [],
+          lateDeduction: 0,
+          overtimeHours: 0,
+          overtimeMinutes: 0,
+          overtimePay: 0,
+          adjustments: [],
+          totalPay: worker.baseWage + (worker.defaultTravelAllowance || 0),
+          note: '',
+          isDraft: true,
+          transferSlipUrl: publicUrl,
+          transferSlips: [publicUrl],
+          tollReceiptUrl: '',
+          tollDate: dateStr,
+          guaranteeDeduction: 0,
+        };
+        await addEntry(entryData);
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('เกิดข้อผิดพลาดในการอัพโหลดรูปภาพ กรุณาลองใหม่อีกครั้ง');
+    } finally {
+      setIsUploading(false);
+      e.target.value = '';
+    }
+  };
+
   const compressImage = (file: File): Promise<File> => {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -1131,7 +1222,10 @@ export function DailyEntryPage() {
                 return (
                   <button
                     key={worker.id}
-                    onClick={() => setActiveTabWorkerId(worker.id)}
+                    onClick={() => {
+                      setActiveTabWorkerId(worker.id);
+                      openModal(worker, entry);
+                    }}
                     className={`flex items-center justify-between p-3.5 md:p-3 rounded-2xl md:rounded-xl text-left transition-all duration-300 flex-shrink-0 border hover:scale-[1.02] active:scale-[0.98] ${isActive ? (entry?.isLeave ? 'bg-gradient-to-r from-red-500 to-red-600 border-red-500 text-white shadow-md shadow-red-200' : isDraft ? 'bg-gradient-to-r from-amber-500 to-amber-600 border-amber-500 text-white shadow-md shadow-amber-200' : 'bg-gradient-to-r from-sky-500 to-sky-600 border-sky-500 text-white shadow-md shadow-sky-200') : (entry?.isLeave ? 'bg-red-50 border-red-200 text-red-900 hover:bg-red-100 shadow-sm' : isDraft ? 'bg-amber-50 border-amber-200 text-amber-900 hover:bg-amber-100 shadow-sm' : 'bg-white border-gray-100 text-gray-700 hover:bg-sky-50 hover:border-sky-200')}`}
                   >
                     <span className="font-semibold text-[15px]">{worker.name}</span>
@@ -1202,7 +1296,7 @@ export function DailyEntryPage() {
                   const entry = entriesForDate.find(e => e.workerId === worker.id);
                   const totalPay = entry ? entry.totalPay : (worker.baseWage + (worker.defaultTravelAllowance || 0));
                   return (
-                    <div key={worker.id} onClick={() => setActiveTabWorkerId(worker.id)} className="flex justify-between items-center p-4 bg-white hover:bg-sky-50 rounded-2xl border border-gray-100 cursor-pointer transition-all duration-300 hover:shadow-md hover:shadow-sky-100 hover:-translate-y-0.5 active:scale-[0.99] group">
+                    <div key={worker.id} onClick={() => { setActiveTabWorkerId(worker.id); openModal(worker, entry); }} className="flex justify-between items-center p-4 bg-white hover:bg-sky-50 rounded-2xl border border-gray-100 cursor-pointer transition-all duration-300 hover:shadow-md hover:shadow-sky-100 hover:-translate-y-0.5 active:scale-[0.99] group">
                       <div>
                         <div className="font-bold text-gray-900 group-hover:text-sky-700 transition-colors">{worker.name}</div>
                         <div className="text-sm mt-0.5">
@@ -1290,14 +1384,24 @@ export function DailyEntryPage() {
               </div>
 
               <div className="flex justify-center items-center w-full mb-3 pb-3 border-b border-gray-100 border-dashed">
-                <Button 
-                  variant="secondary" 
-                  onClick={(e) => handleOpenAdvanceModal(activeWorker, e)}
-                  className="px-4 py-2 text-sm rounded-xl bg-gradient-to-r from-orange-50 to-orange-100 text-orange-700 hover:from-orange-100 hover:to-orange-200 border-orange-200 shadow-sm flex items-center gap-1.5"
-                  title="เบิกเงินล่วงหน้า"
-                >
-                  <ArrowDownCircle className="w-4 h-4" /> เบิกเงินล่วงหน้า
-                </Button>
+                <div className="relative inline-block w-auto">
+                  <Button 
+                    variant="secondary" 
+                    className="px-4 py-2 text-sm rounded-xl bg-gradient-to-r from-sky-50 to-sky-100 text-sky-700 hover:from-sky-100 hover:to-sky-200 border-sky-200 shadow-sm flex items-center gap-1.5"
+                    disabled={isUploading}
+                    title="อัพโหลดสลิป"
+                  >
+                    {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />} 
+                    อัพโหลดสลิป
+                  </Button>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={(e) => handleQuickUploadSlip(e, activeWorker, activeEntry)}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    disabled={isUploading}
+                  />
+                </div>
               </div>
 
               <div className="flex flex-wrap justify-center items-center gap-2">
@@ -1988,6 +2092,22 @@ export function DailyEntryPage() {
                 </div>
               </div>
             </div>
+            
+            <div className="flex justify-center items-center w-full pb-3 mt-1">
+              <Button 
+                type="button"
+                variant="secondary" 
+                onClick={(e) => {
+                  const worker = workers.find(w => w.id === formData.workerId);
+                  if (worker) handleOpenAdvanceModal(worker, e);
+                }}
+                className="w-full px-4 py-3 text-sm rounded-xl bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200 shadow-sm flex items-center justify-center gap-1.5"
+                title="ทำรายการเบิกเงินล่วงหน้า"
+              >
+                <ArrowDownCircle className="w-5 h-5 mb-0.5" /> ทำรายการเบิกเงินล่วงหน้า
+              </Button>
+            </div>
+
             <div className="flex gap-2 w-full">
               {editingId && (
                 <Button
