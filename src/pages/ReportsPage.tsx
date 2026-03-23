@@ -51,10 +51,19 @@ export function ReportsPage() {
       const totalDeductions = workerEntries.reduce((sum, e) =>
         sum + (e.adjustments?.filter(a => a.type === 'deduct').reduce((s, a) => s + Number(a.amount), 0) || 0)
         , 0);
-      const netAdjustments = totalAdditions - totalDeductions;
+      const netAdjustments = totalAdditions - totalDeductions + totalToll;
 
       const adjustmentsList: { note: string, amount: number, type: 'add' | 'deduct', date: string, receiptUrl?: string }[] = [];
       workerEntries.forEach(e => {
+        if (e.tollFee > 0) {
+          adjustmentsList.push({
+             note: 'ค่าทางด่วน',
+             amount: Number(e.tollFee),
+             type: 'add',
+             date: e.date,
+             receiptUrl: e.tollReceiptUrl
+          });
+        }
         if (e.adjustments && e.adjustments.length > 0) {
           e.adjustments.forEach(a => {
             adjustmentsList.push({
@@ -71,12 +80,15 @@ export function ReportsPage() {
       const grandTotal = workerEntries.reduce((sum, e) => sum + e.totalPay, 0);
 
       const rangeGuaranteeDeduction = workerEntries.reduce((sum, e) => sum + (e.guaranteeDeduction || 0), 0);
-      const guaranteeTotal = rangeGuaranteeDeduction;
+      
+      const guaranteeTotal = (worker.historicalGuarantee || 0) + entries
+        .filter(e => e.workerId === worker.id && !e.isDraft && parseISO(e.date) <= parseISO(endDate))
+        .reduce((sum, e) => sum + (e.guaranteeDeduction || 0), 0);
 
-      // Current active advance debt for the worker (only count in this period)
+      // Current active advance debt for the worker (up to endDate)
       const workerAdvances = advances.filter(a => {
         const aDate = parseISO(a.date);
-        return a.workerId === worker.id && isWithinInterval(aDate, { start: parseISO(startDate), end: parseISO(endDate) });
+        return a.workerId === worker.id && aDate <= parseISO(endDate);
       });
       const advanceTotal = workerAdvances.reduce((sum, a) => sum + (a.type === 'borrow' ? a.amount : -a.amount), 0);
       const advanceDeduction = advanceTotal > 0 ? advanceTotal : 0;
@@ -225,7 +237,7 @@ export function ReportsPage() {
           workerText += ` (รวม ${row.grandTotal} หักเบิก ${row.advanceDeduction})`;
       }
       if (row.guaranteeTotal > 0) {
-        workerText += ` (ประกันสะสม ฿${row.guaranteeTotal})`;
+        workerText += ` (หักประกันสะสม ฿${row.guaranteeTotal})`;
       }
       text += workerText + '\n';
     });
@@ -692,7 +704,7 @@ export function ReportsPage() {
                     <th scope="col" className="px-3 py-3.5 text-right text-[13px] font-semibold text-zinc-900 uppercase tracking-wide">โอที</th>
                     <th scope="col" className="px-3 py-3.5 text-right text-[13px] font-semibold text-red-600 uppercase tracking-wide">หักสาย</th>
                     <th scope="col" className="px-3 py-3.5 text-right text-[13px] font-semibold text-zinc-900 uppercase tracking-wide">อื่นๆ</th>
-                    <th scope="col" className="py-3.5 px-3 text-right text-[13px] font-semibold text-orange-600 uppercase tracking-wide">หักประกันสะสม</th>
+                    <th scope="col" className="py-3.5 px-3 text-right text-[13px] font-semibold text-orange-600 uppercase tracking-wide">ประกันสะสมรวม</th>
                     <th scope="col" className="py-3.5 px-3 text-right text-[13px] font-semibold text-red-600 uppercase tracking-wide">หักเบิก</th>
                     <th scope="col" className="py-3.5 px-3 text-right text-[13px] font-semibold text-blue-600 uppercase tracking-wide">สุทธิ</th>
                     <th scope="col" className="py-3.5 px-3 text-center text-[13px] font-semibold text-violet-600 uppercase tracking-wide">คัดลอกรูป</th>
@@ -749,7 +761,7 @@ export function ReportsPage() {
                         )}
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm font-bold text-right">
-                        <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'หักประกันสะสม', metricType: 'guarantee' })} className={`hover:underline cursor-pointer transition-colors px-2 py-1 -mr-2 rounded-md hover:bg-orange-50 text-orange-600 ${row.guaranteeTotal > 0 ? '' : 'text-zinc-300 font-normal hover:bg-transparent cursor-default'}`} disabled={row.guaranteeTotal === 0}>
+                        <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'ประกันสะสมรวม', metricType: 'guarantee' })} className={`hover:underline cursor-pointer transition-colors px-2 py-1 -mr-2 rounded-md hover:bg-orange-50 text-orange-600 ${row.guaranteeTotal > 0 ? '' : 'text-zinc-300 font-normal hover:bg-transparent cursor-default'}`} disabled={row.guaranteeTotal === 0}>
                           {row.guaranteeTotal > 0 ? `฿${row.guaranteeTotal}` : '-'}
                         </button>
                       </td>
@@ -932,16 +944,47 @@ export function ReportsPage() {
                   } else if (selectedMetric.metricType === 'guarantee' && !e.isLeave && e.guaranteeDeduction > 0) {
                     items.push({ date: e.date, label: 'หักประกันสะสมรอบนี้', amount: e.guaranteeDeduction, isDeduct: false });
                   } else if (selectedMetric.metricType === 'net' && e.totalPay !== 0) {
-                    items.push({ date: e.date, label: e.isLeave ? (e.leaveType || 'ลาหยุด') : 'ยอดสุทธิ', amount: e.totalPay });
+                    items.push({ date: e.date, label: e.isLeave ? (e.leaveType || 'ลาหยุด') : 'ยอดสุทธิรายวัน', amount: e.totalPay });
                   }
                 });
+
+                if (selectedMetric.metricType === 'guarantee') {
+                  const worker = workers.find(w => w.id === selectedMetric.workerId);
+                  const priorEntries = entries.filter(e => e.workerId === selectedMetric.workerId && !e.isDraft && parseISO(e.date) < parseISO(startDate));
+                  const priorDeductions = priorEntries.reduce((sum, e) => sum + (e.guaranteeDeduction || 0), 0);
+                  const carriedBalance = (worker?.historicalGuarantee || 0) + priorDeductions;
+
+                  if (carriedBalance > 0) {
+                     items.unshift({ date: '', label: 'ยอดยกมา', amount: carriedBalance });
+                  }
+                }
+
+                if (selectedMetric.metricType === 'net') {
+                   const workerAdvances = advances.filter(a => {
+                     const aDate = parseISO(a.date);
+                     return a.workerId === selectedMetric.workerId && aDate <= parseISO(endDate);
+                   });
+                   const advanceTotal = workerAdvances.reduce((sum, a) => sum + (a.type === 'borrow' ? a.amount : -a.amount), 0);
+                   const advanceDeduction = advanceTotal > 0 ? advanceTotal : 0;
+                   if (advanceDeduction > 0) {
+                      items.push({ date: '', label: 'หักหนี้เบิกสะสม', amount: advanceDeduction, isDeduct: true });
+                   }
+                }
 
                 if (selectedMetric.metricType === 'advance') {
                    const workerAdvances = advances.filter(a => {
                      const aDate = parseISO(a.date);
-                     return a.workerId === selectedMetric.workerId && isWithinInterval(aDate, { start: parseISO(startDate), end: parseISO(endDate) });
+                     return a.workerId === selectedMetric.workerId && aDate <= parseISO(endDate);
                    });
-                   workerAdvances.forEach(a => {
+                   const priorAdvances = workerAdvances.filter(a => parseISO(a.date) < parseISO(startDate));
+                   const carriedAdvanceBalance = priorAdvances.reduce((sum, a) => sum + (a.type === 'borrow' ? a.amount : -a.amount), 0);
+
+                   if (carriedAdvanceBalance > 0) {
+                      items.push({ date: '', label: 'ยอดยกมา (หนี้ค้างชำระ)', amount: carriedAdvanceBalance, isDeduct: true });
+                   }
+
+                   const periodAdvances = workerAdvances.filter(a => parseISO(a.date) >= parseISO(startDate));
+                   periodAdvances.forEach(a => {
                       items.push({ date: a.date, label: a.type === 'borrow' ? 'เบิกเงินล่วงหน้า' : 'คืนเงิน', amount: a.amount, isDeduct: a.type === 'borrow' });
                    });
                 }
