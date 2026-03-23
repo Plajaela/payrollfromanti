@@ -14,7 +14,7 @@ export function ReportsPage() {
 
   // Default to current month
   const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
-  const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
+  const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedSlipData, setSelectedSlipData] = useState<any>(null);
   const [isSlipModalOpen, setIsSlipModalOpen] = useState(false);
@@ -70,15 +70,14 @@ export function ReportsPage() {
 
       const grandTotal = workerEntries.reduce((sum, e) => sum + e.totalPay, 0);
 
-      const guaranteeTotal = (worker.historicalGuarantee || 0) + entries
-        .filter(e => e.workerId === worker.id && !e.isDraft)
-        .reduce((sum, e) => sum + (e.guaranteeDeduction || 0), 0);
-
-      // Extract guarantee deduction specifically within current range (just for reference if needed, though they want accumulated)
       const rangeGuaranteeDeduction = workerEntries.reduce((sum, e) => sum + (e.guaranteeDeduction || 0), 0);
+      const guaranteeTotal = rangeGuaranteeDeduction;
 
-      // Current active advance debt for the worker
-      const workerAdvances = advances.filter(a => a.workerId === worker.id);
+      // Current active advance debt for the worker (only count in this period)
+      const workerAdvances = advances.filter(a => {
+        const aDate = parseISO(a.date);
+        return a.workerId === worker.id && isWithinInterval(aDate, { start: parseISO(startDate), end: parseISO(endDate) });
+      });
       const advanceTotal = workerAdvances.reduce((sum, a) => sum + (a.type === 'borrow' ? a.amount : -a.amount), 0);
       const advanceDeduction = advanceTotal > 0 ? advanceTotal : 0;
       const finalPay = grandTotal - advanceDeduction;
@@ -693,7 +692,7 @@ export function ReportsPage() {
                     <th scope="col" className="px-3 py-3.5 text-right text-[13px] font-semibold text-zinc-900 uppercase tracking-wide">โอที</th>
                     <th scope="col" className="px-3 py-3.5 text-right text-[13px] font-semibold text-red-600 uppercase tracking-wide">หักสาย</th>
                     <th scope="col" className="px-3 py-3.5 text-right text-[13px] font-semibold text-zinc-900 uppercase tracking-wide">อื่นๆ</th>
-                    <th scope="col" className="py-3.5 px-3 text-right text-[13px] font-semibold text-orange-600 uppercase tracking-wide">ประกันสะสมรวม</th>
+                    <th scope="col" className="py-3.5 px-3 text-right text-[13px] font-semibold text-orange-600 uppercase tracking-wide">หักประกันสะสม</th>
                     <th scope="col" className="py-3.5 px-3 text-right text-[13px] font-semibold text-red-600 uppercase tracking-wide">หักเบิก</th>
                     <th scope="col" className="py-3.5 px-3 text-right text-[13px] font-semibold text-blue-600 uppercase tracking-wide">สุทธิ</th>
                     <th scope="col" className="py-3.5 px-3 text-center text-[13px] font-semibold text-violet-600 uppercase tracking-wide">คัดลอกรูป</th>
@@ -750,7 +749,7 @@ export function ReportsPage() {
                         )}
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm font-bold text-right">
-                        <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'ประกันสะสมรวม', metricType: 'guarantee' })} className={`hover:underline cursor-pointer transition-colors px-2 py-1 -mr-2 rounded-md hover:bg-orange-50 text-orange-600 ${row.guaranteeTotal > 0 ? '' : 'text-zinc-300 font-normal hover:bg-transparent cursor-default'}`} disabled={row.guaranteeTotal === 0}>
+                        <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'หักประกันสะสม', metricType: 'guarantee' })} className={`hover:underline cursor-pointer transition-colors px-2 py-1 -mr-2 rounded-md hover:bg-orange-50 text-orange-600 ${row.guaranteeTotal > 0 ? '' : 'text-zinc-300 font-normal hover:bg-transparent cursor-default'}`} disabled={row.guaranteeTotal === 0}>
                           {row.guaranteeTotal > 0 ? `฿${row.guaranteeTotal}` : '-'}
                         </button>
                       </td>
@@ -937,15 +936,11 @@ export function ReportsPage() {
                   }
                 });
 
-                if (selectedMetric.metricType === 'guarantee') {
-                  const worker = workers.find(w => w.id === selectedMetric.workerId);
-                  if (worker && worker.historicalGuarantee > 0) {
-                     items.unshift({ date: '', label: 'ยอดยกมา (เก่า)', amount: worker.historicalGuarantee });
-                  }
-                }
-
                 if (selectedMetric.metricType === 'advance') {
-                   const workerAdvances = advances.filter(a => a.workerId === selectedMetric.workerId);
+                   const workerAdvances = advances.filter(a => {
+                     const aDate = parseISO(a.date);
+                     return a.workerId === selectedMetric.workerId && isWithinInterval(aDate, { start: parseISO(startDate), end: parseISO(endDate) });
+                   });
                    workerAdvances.forEach(a => {
                       items.push({ date: a.date, label: a.type === 'borrow' ? 'เบิกเงินล่วงหน้า' : 'คืนเงิน', amount: a.amount, isDeduct: a.type === 'borrow' });
                    });
