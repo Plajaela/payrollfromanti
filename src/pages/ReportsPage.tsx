@@ -3,6 +3,8 @@ import { useStore } from '../useStore';
 import { Button, Input, Card, Label, Toast } from '../components/ui';
 import { parseISO, startOfMonth, endOfMonth, isWithinInterval, format, isSunday, eachDayOfInterval } from 'date-fns';
 import { FileSpreadsheet, Copy, Check, Image as ImageIcon, X, ImagePlus, Loader2 } from 'lucide-react';
+import { motion } from 'motion/react';
+import { cn } from '../components/ui';
 import * as XLSX from 'xlsx-js-style';
 import { SlipModal } from '../components/SlipModal';
 
@@ -638,17 +640,19 @@ export function ReportsPage() {
       />
       <div className="max-w-6xl mx-auto px-4 pt-4 md:pt-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            <Button onClick={handleCopyAll} disabled={reportData.length === 0} className="w-full sm:w-auto gap-2 bg-red-600 hover:bg-red-700 shadow-red-200 text-white">
-              {copiedId === 'all' ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
-              {copiedId === 'all' ? 'คัดลอกแล้ว' : 'คัดลอกสรุปทุกคน'}
-            </Button>
-            <div className="flex gap-2">
-              <Button onClick={handleExportExcel} disabled={reportData.length === 0} className="flex-1 sm:w-auto gap-2 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200 text-white border-0 px-4">
-                <FileSpreadsheet className="w-5 h-5" /> Export Excel
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="w-full sm:w-auto">
+              <Button onClick={handleCopyAll} disabled={reportData.length === 0} className="w-full sm:w-auto gap-2 bg-red-600 hover:bg-red-700 shadow-red-200 text-white rounded-2xl">
+                {copiedId === 'all' ? <Check className="w-5 h-5 stroke-[2.5px]" /> : <Copy className="w-5 h-5 stroke-[2.2px]" />}
+                {copiedId === 'all' ? 'คัดลอกแล้ว' : 'คัดลอกสรุปทุกคน'}
               </Button>
+            </motion.div>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1 sm:w-auto">
+                <Button onClick={handleExportExcel} disabled={reportData.length === 0} className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200 text-white border-0 px-4 rounded-2xl">
+                  <FileSpreadsheet className="w-5 h-5 stroke-[2.2px]" /> Export Excel
+                </Button>
+              </motion.div>
             </div>
-          </div>
         </div>
 
       <Card className="p-4 sm:p-6 bg-white">
@@ -736,23 +740,36 @@ export function ReportsPage() {
                       </td>
                       <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                         <div className="flex justify-end gap-1">
-                          <button
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
                             onClick={() => {
                               setSelectedSlipData(row);
                               setIsSlipModalOpen(true);
                             }}
-                            className="inline-flex items-center justify-center text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 p-2.5 rounded-xl transition-colors min-w-[40px] min-h-[40px]"
+                            className="inline-flex items-center justify-center text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 p-2.5 rounded-2xl transition-all min-w-[42px] min-h-[42px] shadow-sm"
                             title="สร้างรูปสลิป"
                           >
-                            <ImageIcon className="w-5 h-5" />
-                          </button>
-                          <button
+                            <ImageIcon className="w-5 h-5 stroke-[2.2px]" fill="currentColor" fillOpacity={0.1} />
+                          </motion.button>
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
                             onClick={() => handleCopySingle(row)}
-                            className="inline-flex items-center justify-center text-red-600 hover:text-gray-900 bg-sky-50 p-2.5 rounded-xl transition-colors min-w-[40px] min-h-[40px]"
+                            className={cn(
+                              "inline-flex items-center justify-center p-2.5 rounded-2xl transition-all min-w-[42px] min-h-[42px] shadow-sm",
+                              copiedId === row.worker.id 
+                                ? "text-emerald-600 bg-emerald-50 shadow-emerald-100" 
+                                : "text-red-600 bg-red-50 hover:bg-red-100"
+                            )}
                             title="คัดลอกสรุป"
                           >
-                            {copiedId === row.worker.id ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5" />}
-                          </button>
+                            {copiedId === row.worker.id ? (
+                              <Check className="w-5 h-5 stroke-[2.5px]" />
+                            ) : (
+                              <Copy className="w-5 h-5 stroke-[2.2px]" fill="currentColor" fillOpacity={0.1} />
+                            )}
+                          </motion.button>
                         </div>
                       </td>
                     </tr>

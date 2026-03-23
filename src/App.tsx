@@ -4,6 +4,7 @@ import { DailyEntryPage } from './pages/DailyEntryPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { WalletPage } from './pages/WalletPage';
 import { Users, CalendarDays, FileText, Wallet, Moon, Sun, Snowflake, RefreshCw } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import Snowfall from 'react-snowfall';
 import { cn } from './components/ui';
 
@@ -74,27 +75,38 @@ export default function App() {
             {activeTab === 'reports' && 'รายงาน'}
           </h1>
           <div className="flex items-center gap-2">
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => window.location.reload()}
-              className="p-2 rounded-xl bg-emerald-100/50 text-emerald-600 hover:bg-emerald-200/50 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-800/50 transition-colors"
+              className="p-2.5 rounded-2xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 transition-colors"
               title="Refresh / อัปเดตข้อมูล"
             >
-              <RefreshCw className="w-5 h-5" />
-            </button>
-            <button
+              <RefreshCw className="w-5 h-5 stroke-[2.2px]" />
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05, rotate: isSnowing ? 12 : 0 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => setIsSnowing(!isSnowing)}
-              className={cn("p-2 rounded-xl transition-all duration-300", isSnowing ? "bg-sky-100 text-sky-600 dark:bg-sky-900/50 dark:text-sky-400 rotate-12 scale-110" : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700")}
+              className={cn(
+                "p-2.5 rounded-2xl transition-all duration-300", 
+                isSnowing 
+                  ? "bg-sky-100 text-sky-600 dark:bg-sky-900/40 dark:text-sky-400 shadow-sm" 
+                  : "bg-gray-50 text-gray-500 hover:bg-gray-100 dark:bg-zinc-800 dark:text-zinc-400"
+              )}
               title="Let it snow!"
             >
-              <Snowflake className="w-5 h-5" />
-            </button>
-            <button
+              <Snowflake className={cn("w-5 h-5 stroke-[2.2px]", isSnowing && "animate-pulse")} />
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => setIsDarkMode(!isDarkMode)}
-              className="p-2 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700 transition-colors"
+              className="p-2.5 rounded-2xl bg-gray-50 text-gray-600 hover:bg-gray-100 dark:bg-zinc-800 dark:text-zinc-400 transition-colors"
               title="Toggle Dark Mode"
             >
-              {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </button>
+              {isDarkMode ? <Sun className="w-5 h-5 stroke-[2.2px]" /> : <Moon className="w-5 h-5 stroke-[2.2px]" />}
+            </motion.button>
           </div>
         </div>
       </header>
@@ -108,56 +120,62 @@ export default function App() {
       </main>
 
       {/* Bottom Navigation for Mobile */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-lg border-t border-gray-100 dark:border-zinc-800 z-20 pb-safe transition-colors duration-300">
-        <div className="max-w-5xl mx-auto flex justify-around px-2 py-2">
-          <button
-            onClick={() => setActiveTab('daily')}
-            className={cn(
-              "flex flex-col items-center p-2 rounded-2xl w-20 transition-all",
-              activeTab === 'daily' ? "text-red-600" : "text-gray-400 hover:text-gray-600"
-            )}
-          >
-            <div className={cn("p-1.5 rounded-xl mb-1 transition-colors", activeTab === 'daily' ? "bg-sky-50" : "")}>
-              <CalendarDays className="w-6 h-6" />
-            </div>
-            <span className="text-[10px] font-semibold">รายวัน</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('workers')}
-            className={cn(
-              "flex flex-col items-center p-2 rounded-2xl w-20 transition-all",
-              activeTab === 'workers' ? "text-red-600" : "text-gray-400 hover:text-gray-600"
-            )}
-          >
-            <div className={cn("p-1.5 rounded-xl mb-1 transition-colors", activeTab === 'workers' ? "bg-sky-50" : "")}>
-              <Users className="w-6 h-6" />
-            </div>
-            <span className="text-[10px] font-semibold">ช่าง</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('wallet')}
-            className={cn(
-              "flex flex-col items-center p-2 rounded-2xl w-20 transition-all",
-              activeTab === 'wallet' ? "text-red-600" : "text-gray-400 hover:text-gray-600"
-            )}
-          >
-            <div className={cn("p-1.5 rounded-xl mb-1 transition-colors", activeTab === 'wallet' ? "bg-sky-50" : "")}>
-              <Wallet className="w-6 h-6" />
-            </div>
-            <span className="text-[10px] font-semibold">บัญชีสะสม</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('reports')}
-            className={cn(
-              "flex flex-col items-center p-2 rounded-2xl w-20 transition-all",
-              activeTab === 'reports' ? "text-red-600" : "text-gray-400 hover:text-gray-600"
-            )}
-          >
-            <div className={cn("p-1.5 rounded-xl mb-1 transition-colors", activeTab === 'reports' ? "bg-sky-50" : "")}>
-              <FileText className="w-6 h-6" />
-            </div>
-            <span className="text-[10px] font-semibold">รายงาน</span>
-          </button>
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-t border-gray-100 dark:border-zinc-800 z-20 pb-safe transition-all duration-500">
+        <div className="max-w-5xl mx-auto flex justify-around px-2 py-3">
+          {[
+            { id: 'daily', label: 'รายวัน', icon: CalendarDays },
+            { id: 'workers', label: 'ช่าง', icon: Users },
+            { id: 'wallet', label: 'บัญชีสะสม', icon: Wallet },
+            { id: 'reports', label: 'รายงาน', icon: FileText },
+          ].map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id as any)}
+                className="relative flex flex-col items-center group w-20 transition-all active:scale-90"
+              >
+                <div className={cn(
+                  "relative p-2 rounded-2xl mb-1.5 transition-all duration-300 overflow-hidden",
+                  isActive 
+                    ? "bg-red-50 dark:bg-red-900/20 shadow-[0_0_20px_rgba(239,68,68,0.15)] scale-110" 
+                    : "bg-transparent text-gray-400 group-hover:bg-gray-50 dark:group-hover:bg-zinc-800/50"
+                )}>
+                  {isActive && (
+                    <motion.div
+                      layoutId="nav-glow"
+                      className="absolute inset-0 bg-gradient-to-br from-red-100/50 to-orange-100/50 dark:from-red-900/40 dark:to-orange-900/40"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.3 }}
+                    />
+                  )}
+                  <Icon 
+                    className={cn(
+                      "w-6 h-6 relative z-10 transition-all duration-300",
+                      isActive ? "text-red-600 stroke-[2.2px]" : "text-gray-400 group-hover:text-gray-600"
+                    )} 
+                    fill={isActive ? "currentColor" : "none"}
+                    fillOpacity={isActive ? 0.15 : 0}
+                  />
+                </div>
+                <span className={cn(
+                  "text-[11px] font-bold tracking-tight transition-all duration-300 relative z-10",
+                  isActive ? "text-red-600 translate-y-[-2px]" : "text-gray-400 group-hover:text-gray-600"
+                )}>
+                  {item.label}
+                </span>
+                {isActive && (
+                  <motion.div
+                    layoutId="nav-indicator"
+                    className="absolute -bottom-1 w-1.5 h-1.5 rounded-full bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.5)]"
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  />
+                )}
+              </button>
+            );
+          })}
         </div>
       </nav>
     </div>

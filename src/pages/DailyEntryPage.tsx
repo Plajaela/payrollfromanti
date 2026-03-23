@@ -4,6 +4,8 @@ import { Button, Input, Label, Card, Modal, Toast } from '../components/ui';
 import { format, addDays, subDays, isSunday, parseISO } from 'date-fns';
 import { th } from 'date-fns/locale';
 import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Settings2, RefreshCw, Copy, Check, Paperclip, ImagePlus, X, AlertTriangle, Loader2, Share2, Wallet, ArrowDownCircle, Send } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { cn } from '../components/ui';
 import { v4 as uuidv4 } from 'uuid';
 import { Adjustment } from '../types';
 import { supabase } from '../lib/supabase';
@@ -1164,7 +1166,7 @@ export function DailyEntryPage() {
                   onClick={handleCopyAllDetailed}
                   className="w-full sm:w-auto px-6 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white shadow-md shadow-red-200 gap-2"
                 >
-                  {copiedId === 'all_detailed' ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                  {copiedId === 'all_detailed' ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5 stroke-[2.2px]" fill="currentColor" fillOpacity={0.1} />}
                   คัดลอกรายละเอียดทุกคน ({workers.length} คน)
                 </Button>
 
@@ -1173,7 +1175,7 @@ export function DailyEntryPage() {
                   disabled={isCopyingAllSlips || totalSlipsCount === 0}
                   className={`w-full sm:w-auto px-6 py-3 rounded-xl shadow-md gap-2 transition-all ${lastCopiedUrl === 'merged_slips_daily' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200' : 'bg-violet-600 hover:bg-violet-700 shadow-violet-200'} text-white`}
                 >
-                  {isCopyingAllSlips ? <Loader2 className="w-5 h-5 animate-spin" /> : lastCopiedUrl === 'merged_slips_daily' ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                  {isCopyingAllSlips ? <Loader2 className="w-5 h-5 animate-spin" /> : lastCopiedUrl === 'merged_slips_daily' ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5 stroke-[2.2px]" fill="currentColor" fillOpacity={0.1} />}
                   คัดลอกรูปทุกคน ({totalSlipsCount} รูป)
                 </Button>
               </div>
@@ -1222,7 +1224,7 @@ export function DailyEntryPage() {
                             className={`flex items-center justify-center w-10 h-10 rounded-xl border transition-all ${lastCopiedUrl === entry.transferSlipUrl ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-violet-50 border-violet-100 text-violet-600 hover:bg-violet-100'}`}
                             title="คัดลอกรูปสลิป"
                           >
-                            {isCopyingImageId === entry.id || isCopyingPreviewUrl === entry.transferSlipUrl ? <Loader2 className="w-5 h-5 animate-spin" /> : lastCopiedUrl === entry.transferSlipUrl ? <Check className="w-5 h-5" /> : <ImagePlus className="w-5 h-5" />}
+                            {isCopyingImageId === entry.id || isCopyingPreviewUrl === entry.transferSlipUrl ? <Loader2 className="w-5 h-5 animate-spin" /> : lastCopiedUrl === entry.transferSlipUrl ? <Check className="w-5 h-5" /> : <ImagePlus className="w-5 h-5 stroke-[2.2px]" fill="currentColor" fillOpacity={0.1} />}
                           </button>
                         )}
                         {/* Toll receipt copy — icon only, show when any toll receipt exists */}
@@ -1289,7 +1291,7 @@ export function DailyEntryPage() {
                     disabled={isUploading}
                     title="อัพโหลดสลิป"
                   >
-                    {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />} 
+                    {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4 stroke-[2.2px]" fill="currentColor" fillOpacity={0.1} />} 
                     อัพโหลดสลิป
                   </Button>
                   <input 
@@ -1319,7 +1321,7 @@ export function DailyEntryPage() {
                       className="p-2.5 h-auto rounded-xl bg-sky-50 text-sky-600 hover:bg-sky-100 border-sky-100 min-w-[90px]"
                       title="คัดลอกสรุปรายการเป็นข้อความ"
                     >
-                      {copiedId === activeEntry.id ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5" />}
+                      {copiedId === activeEntry.id ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5 stroke-[2.2px]" fill="currentColor" fillOpacity={0.1} />}
                       <span className="ml-1 text-sm font-semibold pr-1">พิมพ์ข้อความ</span>
                     </Button>
                     {/* Per-slip thumbnail strip — one thumbnail + copy button per image */}
@@ -1374,7 +1376,7 @@ export function DailyEntryPage() {
                       className="p-2.5 h-auto rounded-xl bg-red-50 text-red-600 hover:bg-red-100"
                       title="ลบรายการ"
                     >
-                      <Trash2 className="w-5 h-5" />
+                      <Trash2 className="w-5 h-5 stroke-[2.2px]" fill="currentColor" fillOpacity={0.1} />
                     </Button>
                   </>
                 ) : (
@@ -1388,7 +1390,7 @@ export function DailyEntryPage() {
                       className="p-3 h-auto rounded-xl bg-sky-50 text-red-600 hover:bg-sky-100 border-sky-100"
                       title="คัดลอกสรุปรายการ (ค่าแรงปกติ)"
                     >
-                      {copiedId === activeWorker.id ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5" />}
+                      {copiedId === activeWorker.id ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5 stroke-[2.2px]" fill="currentColor" fillOpacity={0.1} />}
                     </Button>
                     <div className="flex gap-2 flex-wrap items-center">
                       <Button
@@ -1434,26 +1436,36 @@ export function DailyEntryPage() {
           copiedId === 'all_slips_loading' ? 'กำลังประมวลผลรูปภาพ...' :
           'คัดลอกข้อความสำเร็จ!'
         }
-        icon={(copiedId === 'all_slips_loading' || shareProgress) ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
+        icon={(copiedId === 'all_slips_loading' || shareProgress) ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5 stroke-[2.5px]" />}
       />
       {/* Date Selector */}
-      <div className="flex items-center justify-between bg-white p-2 rounded-3xl shadow-sm border border-gray-100">
-        <button onClick={() => setSelectedDate(subDays(selectedDate, 1))} className="p-3 hover:bg-gray-100 rounded-2xl transition-colors">
-          <ChevronLeft className="w-6 h-6 text-gray-600" />
-        </button>
-        <div className="text-center flex-1 relative">
+      <div className="flex items-center justify-between bg-white/80 backdrop-blur-md p-2 rounded-[2rem] shadow-sm border border-white">
+        <motion.button 
+          whileHover={{ scale: 1.1, x: -2 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setSelectedDate(subDays(selectedDate, 1))} 
+          className="p-3 hover:bg-red-50 text-gray-700 hover:text-red-600 rounded-2xl transition-colors"
+        >
+          <ChevronLeft className="w-6 h-6 stroke-[2.2px]" />
+        </motion.button>
+        <div className="text-center flex-1 relative group py-1">
           <Input
             type="date"
             value={dateStr}
             onChange={(e) => setSelectedDate(new Date(e.target.value))}
-            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
           />
-          <div className="text-sm text-red-600 font-semibold">{format(selectedDate, 'EEEE', { locale: th })}</div>
-          <div className="text-lg font-bold text-gray-900">{format(selectedDate, 'd MMM yyyy', { locale: th })}</div>
+          <div className="text-[11px] text-red-500 font-bold uppercase tracking-wider mb-0.5">{format(selectedDate, 'EEEE', { locale: th })}</div>
+          <div className="text-lg font-extrabold text-gray-900 group-hover:scale-105 transition-transform">{format(selectedDate, 'd MMM yyyy', { locale: th })}</div>
         </div>
-        <button onClick={() => setSelectedDate(addDays(selectedDate, 1))} className="p-3 hover:bg-gray-100 rounded-2xl transition-colors">
-          <ChevronRight className="w-6 h-6 text-gray-600" />
-        </button>
+        <motion.button 
+          whileHover={{ scale: 1.1, x: 2 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setSelectedDate(addDays(selectedDate, 1))} 
+          className="p-3 hover:bg-red-50 text-gray-700 hover:text-red-600 rounded-2xl transition-colors"
+        >
+          <ChevronRight className="w-6 h-6 stroke-[2.2px]" />
+        </motion.button>
       </div>
 
       {isSunday(selectedDate) && (
@@ -1516,7 +1528,7 @@ export function DailyEntryPage() {
                     {entry && (
                       <div className="flex items-center gap-1 ml-2">
                         {/* Transfer slip indicator */}
-                        {entry.transferSlipUrl && <Paperclip className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-white/80' : 'text-sky-400'}`} />}
+                        {entry.transferSlipUrl && <Paperclip className={`w-3.5 h-3.5 flex-shrink-0 stroke-[2.5px] ${isActive ? 'text-white/80' : 'text-sky-400'}`} />}
                         {/* Toll status indicator */}
                         {(() => {
                           const hasTollFee = (entry.tollFee > 0) || entry.tolls?.some(t => t.amount > 0);
@@ -1524,17 +1536,17 @@ export function DailyEntryPage() {
                           if (!hasTollFee) return null;
                           if (hasTollReceipt) {
                             // Uploaded ✓
-                            return <Wallet className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-orange-200' : 'text-orange-400'}`} />;
+                            return <Wallet className="w-3.5 h-3.5 flex-shrink-0 stroke-[2.5px] " />;
                           } else {
                             // Missing receipt ?
-                            return <AlertTriangle className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-yellow-200' : 'text-yellow-500'}`} />;
+                            return <AlertTriangle className={`w-3.5 h-3.5 flex-shrink-0 stroke-[2.5px] ${isActive ? 'text-yellow-200' : 'text-yellow-500'}`} />;
                           }
                         })()}
                         {entry.isLeave ?
-                          <X className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-red-100' : 'text-red-500'}`} /> :
+                          <X className={`w-4 h-4 flex-shrink-0 stroke-[3px] ${isActive ? 'text-red-100' : 'text-red-500'}`} /> :
                           isDraft ?
-                            <Clock className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-amber-100' : 'text-amber-500'}`} /> :
-                            <CheckCircle2 className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-sky-100' : 'text-emerald-500'}`} />
+                            <Clock className={`w-4 h-4 flex-shrink-0 stroke-[3px] ${isActive ? 'text-amber-100' : 'text-amber-500'}`} /> :
+                            <CheckCircle2 className={`w-4 h-4 flex-shrink-0 stroke-[3px] ${isActive ? 'text-sky-100' : 'text-emerald-500'}`} />
                         }
                       </div>
                     )}
@@ -1800,7 +1812,7 @@ export function DailyEntryPage() {
                       tolls: [...p.tolls, { id: uuidv4(), amount: 0, date: dateStr }]
                     }))}
                   >
-                    <Plus className="w-3 h-3 mr-1" /> เพิ่มบิล
+                    <Plus className="w-3 h-3 mr-1 stroke-[2.5px]" /> เพิ่มบิล
                   </Button>
                 </div>
                 {formData.tolls.length === 0 && (
@@ -1823,7 +1835,7 @@ export function DailyEntryPage() {
                           placeholder="ค่าทางด่วน (บาท)"
                         />
                         <label className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400 hover:text-sky-500 transition-colors" title="แนบใบเสร็จ">
-                          <ImagePlus className="w-5 h-5" />
+                          <ImagePlus className="w-5 h-5 stroke-[2.2px]" fill="currentColor" fillOpacity={0.1} />
                           <input disabled={isUploading} type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'tolls', toll.id)} />
                         </label>
                       </div>
@@ -1843,10 +1855,10 @@ export function DailyEntryPage() {
                         {toll.receiptUrl && (
                           <>
                             <button type="button" onClick={() => setPreviewImageUrl(toll.receiptUrl || '')} className="text-emerald-600 bg-emerald-50 p-1.5 rounded-lg hover:bg-emerald-100 transition-colors border border-emerald-100" title="ดูใบเสร็จ">
-                              <ImagePlus className="w-4 h-4" />
+                              <ImagePlus className="w-4 h-4 stroke-[2.2px]" fill="currentColor" fillOpacity={0.1} />
                             </button>
                             <button type="button" onClick={(e) => handleCopySingleImage(toll.receiptUrl!, e)} className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all border ${lastCopiedUrl === toll.receiptUrl ? 'text-emerald-600 bg-emerald-50 border-emerald-200' : 'text-violet-600 bg-violet-50 hover:bg-violet-100 border-violet-100'}`} title="คัดลอกรูป">
-                              {lastCopiedUrl === toll.receiptUrl ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                              {lastCopiedUrl === toll.receiptUrl ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5 stroke-[2.2px]" fill="currentColor" fillOpacity={0.1} />}
                             </button>
                             <button
                               type="button"
@@ -1915,7 +1927,7 @@ export function DailyEntryPage() {
                       adjustments: [...p.adjustments, { id: uuidv4(), type: 'add', amount: 0, note: '' }]
                     }))}
                   >
-                    <Plus className="w-3 h-3 mr-1" /> เพิ่มรายการ
+                    <Plus className="w-3 h-3 mr-1 stroke-[2.5px]" /> เพิ่มรายการ
                   </Button>
                 </div>
 
@@ -2029,7 +2041,7 @@ export function DailyEntryPage() {
                           </div>
                         )}
                         <label className={`absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer transition-colors text-gray-400 hover:text-sky-500 ${adj.receiptUrl ? 'bg-white p-1 rounded-md' : ''} z-0`} title={adj.receiptUrl ? 'อัพโหลดรูปใหม่' : 'แนบสลิป/ใบเสร็จ'}>
-                          <ImagePlus className="w-4 h-4" />
+                          <ImagePlus className="w-4 h-4 stroke-[2.2px]" fill="currentColor" fillOpacity={0.1} />
                           <input disabled={isUploading} type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'adjustments', adj.id)} />
                         </label>
                       </div>
@@ -2048,7 +2060,7 @@ export function DailyEntryPage() {
                       }}
                       className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors mt-1"
                     >
-                      <Trash2 className="w-5 h-5" />
+                      <Trash2 className="w-5 h-5 stroke-[2.2px]" fill="currentColor" fillOpacity={0.1} />
                     </button>
                   </div>
                 ))}
@@ -2080,7 +2092,7 @@ export function DailyEntryPage() {
                           </div>
                         </button>
                         <button type="button" onClick={(e) => handleCopySingleImage(slipUrl, e)} className={`flex items-center justify-center w-10 h-10 rounded-xl ml-1 transition-all border ${lastCopiedUrl === slipUrl ? 'text-emerald-600 bg-emerald-50 border-emerald-200' : 'text-violet-600 bg-violet-50 hover:bg-violet-100 border-violet-100'}`} title="คัดลอกรูปสลิป">
-                          {lastCopiedUrl === slipUrl ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                          {lastCopiedUrl === slipUrl ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5 stroke-[2.2px]" fill="currentColor" fillOpacity={0.1} />}
                         </button>
                         <button 
                           type="button" 
@@ -2115,7 +2127,7 @@ export function DailyEntryPage() {
                         </>
                       ) : (
                         <>
-                          <ImagePlus className="w-4 h-4" />
+                          <ImagePlus className="w-4 h-4 stroke-[2.2px]" fill="currentColor" fillOpacity={0.1} />
                           <span className="text-sm font-medium whitespace-nowrap">แนบสลิปโอนเงิน</span>
                         </>
                       )}
@@ -2154,7 +2166,7 @@ export function DailyEntryPage() {
                   }}
                   className="px-4 rounded-2xl bg-red-50 text-red-600 hover:bg-red-100"
                 >
-                  <Trash2 className="w-5 h-5" />
+                  <Trash2 className="w-5 h-5 stroke-[2.2px]" fill="currentColor" fillOpacity={0.1} />
                 </Button>
               )}
               <Button
@@ -2193,7 +2205,7 @@ export function DailyEntryPage() {
                 disabled={isCopyingPreviewUrl === previewImageUrl}
                 className={`flex-1 py-3 rounded-2xl shadow-sm transition-all flex items-center justify-center gap-2 font-semibold ${lastCopiedUrl === previewImageUrl ? 'bg-emerald-100 text-emerald-700' : 'bg-violet-100 hover:bg-violet-200 text-violet-700'}`}
               >
-                {isCopyingPreviewUrl === previewImageUrl ? <Loader2 className="w-5 h-5 animate-spin" /> : lastCopiedUrl === previewImageUrl ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                {isCopyingPreviewUrl === previewImageUrl ? <Loader2 className="w-5 h-5 animate-spin" /> : lastCopiedUrl === previewImageUrl ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5 stroke-[2.2px]" fill="currentColor" fillOpacity={0.1} />}
                 {lastCopiedUrl === previewImageUrl ? 'คัดลอกแล้ว!' : 'คัดลอกรูปภาพ'}
               </Button>
               <Button

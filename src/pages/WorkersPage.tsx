@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useStore } from '../useStore';
 import { Button, Input, Label, Card, Modal } from '../components/ui';
 import { Plus, Trash2, UserPlus } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { cn } from '../components/ui';
 
 export function WorkersPage() {
   const { workers, addWorker, updateWorker, deleteWorker } = useStore();
@@ -116,9 +118,10 @@ export function WorkersPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1 pl-2 border-l border-gray-100 ml-2">
-                        <Button
-                          variant="danger"
-                          className="p-2 h-auto rounded-xl bg-red-50 text-red-600 hover:bg-red-100"
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          className="p-2.5 rounded-2xl bg-red-50 text-red-600 hover:bg-red-100 transition-colors shadow-sm"
                           onClick={(e) => {
                             e.stopPropagation();
                             if (window.confirm(`ต้องการลบช่าง ${worker.name} ใช่หรือไม่?`)) {
@@ -126,8 +129,8 @@ export function WorkersPage() {
                             }
                           }}
                         >
-                          <Trash2 className="w-5 h-5" />
-                        </Button>
+                          <Trash2 className="w-5 h-5 stroke-[2.2px]" fill="currentColor" fillOpacity={0.1} />
+                        </motion.button>
                       </div>
                     </Card>
                   ))}
@@ -139,15 +142,17 @@ export function WorkersPage() {
       </div>
 
       {/* Floating Action Button */}
-      <button
+      <motion.button
+        whileHover={{ scale: 1.1, rotate: 90 }}
+        whileTap={{ scale: 0.9 }}
         onClick={() => {
           resetForm();
           setIsModalOpen(true);
         }}
-        className="fixed bottom-24 right-4 w-14 h-14 bg-red-600 text-white rounded-full shadow-lg shadow-red-200 flex items-center justify-center hover:bg-red-700 active:scale-95 transition-all z-10"
+        className="fixed bottom-28 right-6 w-16 h-16 bg-red-600 text-white rounded-[2rem] shadow-xl shadow-red-200 flex items-center justify-center hover:bg-red-700 transition-all z-10 border-4 border-white dark:border-zinc-900"
       >
-        <Plus className="w-6 h-6" />
-      </button>
+        <Plus className="w-8 h-8 stroke-[2.5px]" />
+      </motion.button>
 
       <Modal
         isOpen={isModalOpen}
