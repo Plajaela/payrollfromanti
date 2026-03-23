@@ -50,7 +50,13 @@ export default function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50/50 dark:bg-zinc-950 font-sans text-gray-900 pb-24 transition-colors duration-300">
+    <div className="min-h-screen relative bg-gray-50/50 dark:bg-zinc-950 font-sans text-gray-900 pb-24 transition-colors duration-300 isolate">
+      {/* Background patterns */}
+      <div className="fixed inset-0 pointer-events-none z-[-1] opacity-40 dark:opacity-20 overflow-hidden">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-red-200/20 dark:bg-red-900/10 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-sky-200/20 dark:bg-sky-900/10 rounded-full blur-[120px]" />
+        <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#1f2937_1px,transparent_1px)] [background-size:20px_20px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)]" />
+      </div>
       {isSnowing && (
         <Snowfall
           snowflakeCount={isDarkMode ? 150 : 80}
@@ -68,12 +74,25 @@ export default function App() {
       {/* Header */}
       <header className="bg-white dark:bg-zinc-900 sticky top-0 z-10 border-b border-gray-100/80 dark:border-zinc-800 backdrop-blur-md transition-colors duration-300">
         <div className="max-w-5xl mx-auto px-5 py-4 flex items-center justify-between">
-          <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-zinc-100">
-            {activeTab === 'daily' && 'บันทึกรายวัน'}
-            {activeTab === 'workers' && 'จัดการช่าง'}
-            {activeTab === 'wallet' && 'บัญชีสะสม'}
-            {activeTab === 'reports' && 'รายงาน'}
-          </h1>
+          <div className="flex items-center gap-3">
+            <motion.div 
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.5, type: 'spring' }}
+              className="w-10 h-10 rounded-2xl bg-gradient-to-br from-red-500 to-red-600 shadow-md shadow-red-200 flex items-center justify-center border-2 border-white dark:border-zinc-800"
+            >
+              <span className="text-white font-black text-xl italic select-none">P</span>
+            </motion.div>
+            <div className="flex flex-col">
+              <h1 className="text-lg font-black tracking-tight text-gray-900 dark:text-zinc-100 leading-none">
+                {activeTab === 'daily' && 'บันทึกรายวัน'}
+                {activeTab === 'workers' && 'จัดการช่าง'}
+                {activeTab === 'wallet' && 'บัญชีสะสม'}
+                {activeTab === 'reports' && 'รายงาน'}
+              </h1>
+              <span className="text-[10px] font-bold text-red-500 uppercase tracking-widest mt-0.5 opacity-80">Padlomdee Payroll</span>
+            </div>
+          </div>
           <div className="flex items-center gap-2">
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -113,10 +132,20 @@ export default function App() {
 
       {/* Main Content */}
       <main className="max-w-5xl mx-auto px-4 py-6">
-        {activeTab === 'daily' && <DailyEntryPage />}
-        {activeTab === 'workers' && <WorkersPage />}
-        {activeTab === 'wallet' && <WalletPage />}
-        {activeTab === 'reports' && <ReportsPage />}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 10, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.98 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+          >
+            {activeTab === 'daily' && <DailyEntryPage />}
+            {activeTab === 'workers' && <WorkersPage />}
+            {activeTab === 'wallet' && <WalletPage />}
+            {activeTab === 'reports' && <ReportsPage />}
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       {/* Bottom Navigation for Mobile */}
