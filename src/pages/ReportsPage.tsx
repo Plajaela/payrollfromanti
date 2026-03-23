@@ -20,6 +20,7 @@ export function ReportsPage() {
   const [isSlipModalOpen, setIsSlipModalOpen] = useState(false);
   const [selectedAdjustments, setSelectedAdjustments] = useState<{ workerName: string, list: { note: string, amount: number, type: 'add' | 'deduct', date: string, receiptUrl?: string }[] } | null>(null);
   const [lastCopiedUrl, setLastCopiedUrl] = useState<string | null>(null);
+  const [selectedMetric, setSelectedMetric] = useState<{ workerId: string, workerName: string, metricName: string, metricType: 'days' | 'leave' | 'baseWage' | 'travel' | 'ot' | 'late' | 'guarantee' | 'advance' | 'net' } | null>(null);
 
   const reportData = useMemo(() => {
     const filteredEntries = entries.filter(entry => {
@@ -703,14 +704,36 @@ export function ReportsPage() {
                   {reportData.map((row) => (
                     <tr key={row.worker.id} className="hover:bg-zinc-50/50 transition-colors">
                       <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-zinc-900 sm:pl-6">{row.worker.name}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-zinc-500 text-center">
-                        {row.totalDays}
-                        {row.leaveDays > 0 && <span className="text-red-500 ml-1 text-xs">(ลา {row.leaveDays})</span>}
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-center">
+                        <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'วันทำงาน', metricType: 'days' })} className="hover:underline cursor-pointer transition-colors px-2 py-1 -mr-2 rounded-md hover:bg-zinc-100 text-zinc-500">
+                          {row.totalDays}
+                        </button>
+                        {row.leaveDays > 0 && (
+                          <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'วันลาหยุด', metricType: 'leave' })} className="hover:underline cursor-pointer transition-colors px-1 py-1 rounded-md hover:bg-red-50 text-red-500 ml-1 text-xs">
+                            (ลา {row.leaveDays})
+                          </button>
+                        )}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-zinc-500 text-right">฿{row.totalBaseWage}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-zinc-500 text-right">฿{row.totalTravel}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-zinc-500 text-right">฿{row.totalOT}</td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-red-500 text-right">-฿{row.totalLate}</td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-right">
+                        <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'ค่าแรง', metricType: 'baseWage' })} className="hover:underline cursor-pointer transition-colors px-2 py-1 -mr-2 rounded-md hover:bg-zinc-100 text-zinc-500">
+                          ฿{row.totalBaseWage}
+                        </button>
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-right">
+                        <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'ค่ารถ', metricType: 'travel' })} className="hover:underline cursor-pointer transition-colors px-2 py-1 -mr-2 rounded-md hover:bg-zinc-100 text-zinc-500">
+                          ฿{row.totalTravel}
+                        </button>
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-right">
+                        <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'โอที', metricType: 'ot' })} className="hover:underline cursor-pointer transition-colors px-2 py-1 -mr-2 rounded-md hover:bg-zinc-100 text-zinc-500">
+                          ฿{row.totalOT}
+                        </button>
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-right">
+                        <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'หักสาย', metricType: 'late' })} className="hover:underline cursor-pointer transition-colors px-2 py-1 -mr-2 rounded-md hover:bg-red-50 text-red-500 font-medium">
+                          -฿{row.totalLate}
+                        </button>
+                      </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-zinc-500 text-right">
                         {row.adjustmentsList && row.adjustmentsList.length > 0 ? (
                           <button
@@ -726,17 +749,23 @@ export function ReportsPage() {
                           </span>
                         )}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm font-bold text-orange-600 text-right">
-                        {row.guaranteeTotal > 0 ? `฿${row.guaranteeTotal}` : '-'}
+                      <td className="whitespace-nowrap px-3 py-4 text-sm font-bold text-right">
+                        <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'ประกันสะสมรวม', metricType: 'guarantee' })} className={`hover:underline cursor-pointer transition-colors px-2 py-1 -mr-2 rounded-md hover:bg-orange-50 text-orange-600 ${row.guaranteeTotal > 0 ? '' : 'text-zinc-300 font-normal hover:bg-transparent cursor-default'}`} disabled={row.guaranteeTotal === 0}>
+                          {row.guaranteeTotal > 0 ? `฿${row.guaranteeTotal}` : '-'}
+                        </button>
                       </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm font-bold text-red-500 text-right">
-                        {row.advanceDeduction > 0 ? `-฿${row.advanceDeduction}` : '-'}
+                      <td className="whitespace-nowrap px-3 py-4 text-sm font-bold text-right">
+                        <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'หักเบิก', metricType: 'advance' })} className={`hover:underline cursor-pointer transition-colors px-2 py-1 -mr-2 rounded-md hover:bg-red-50 text-red-500 ${row.advanceDeduction > 0 ? '' : 'text-zinc-300 font-normal hover:bg-transparent cursor-default'}`} disabled={row.advanceDeduction === 0}>
+                          {row.advanceDeduction > 0 ? `-฿${row.advanceDeduction}` : '-'}
+                        </button>
                       </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm font-bold text-blue-600 text-right">
-                        <div className="flex flex-col items-end">
-                            {row.advanceDeduction > 0 && <span className="text-[10px] text-zinc-400 line-through">฿{row.grandTotal}</span>}
-                            <span>฿{row.finalPay}</span>
-                        </div>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm font-bold text-right">
+                        <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'สุทธิ', metricType: 'net' })} className="hover:underline cursor-pointer transition-colors px-2 py-1 -mr-2 rounded-md hover:bg-blue-50 text-blue-600">
+                          <div className="flex flex-col items-end">
+                              {row.advanceDeduction > 0 && <span className="text-[10px] text-zinc-400 line-through">฿{row.grandTotal}</span>}
+                              <span>฿{row.finalPay}</span>
+                          </div>
+                        </button>
                       </td>
                       <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                         <div className="flex justify-end gap-1">
@@ -858,6 +887,102 @@ export function ReportsPage() {
                     ฿{selectedAdjustments.list.reduce((acc, curr) => acc + (curr.type === 'add' ? curr.amount : -curr.amount), 0)}
                  </span>
                </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Metric Details Modal */}
+      {selectedMetric && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-sm max-h-[80vh] flex flex-col shadow-xl animate-in zoom-in-95 duration-200">
+            <div className="p-4 border-b border-zinc-100 flex justify-between items-center bg-zinc-50 rounded-t-2xl">
+              <div>
+                <h3 className="font-semibold text-lg text-zinc-900">{selectedMetric.metricName}</h3>
+                <p className="text-xs text-zinc-500 mt-0.5">{selectedMetric.workerName}</p>
+              </div>
+              <button 
+                onClick={() => setSelectedMetric(null)}
+                className="p-2 bg-white hover:bg-zinc-200 rounded-full text-zinc-500 transition-colors border border-zinc-200 focus:outline-none"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto flex-1 space-y-3 bg-white">
+              {(() => {
+                const metricEntries = entries.filter(e => {
+                  const ed = parseISO(e.date);
+                  return e.workerId === selectedMetric.workerId && isWithinInterval(ed, { start: parseISO(startDate), end: parseISO(endDate) });
+                }).sort((a, b) => a.date.localeCompare(b.date));
+
+                const items: { date: string; label: string; amount: number; isDeduct?: boolean }[] = [];
+
+                metricEntries.forEach(e => {
+                  if (selectedMetric.metricType === 'days' && !e.isLeave) {
+                    items.push({ date: e.date, label: 'มาทำงาน', amount: 1 });
+                  } else if (selectedMetric.metricType === 'leave' && e.isLeave) {
+                    items.push({ date: e.date, label: e.leaveType || 'ลาหยุด', amount: 1, isDeduct: true });
+                  } else if (selectedMetric.metricType === 'baseWage' && !e.isLeave && e.baseWage > 0) {
+                    items.push({ date: e.date, label: 'ค่าแรง', amount: e.baseWage });
+                  } else if (selectedMetric.metricType === 'travel' && !e.isLeave && e.travelAllowance > 0) {
+                    items.push({ date: e.date, label: 'ค่ารถ', amount: e.travelAllowance });
+                  } else if (selectedMetric.metricType === 'ot' && !e.isLeave && e.overtimePay > 0) {
+                    items.push({ date: e.date, label: `โอที (${e.overtimeHours}ช.ม. ${e.overtimeMinutes}น.)`, amount: e.overtimePay });
+                  } else if (selectedMetric.metricType === 'late' && !e.isLeave && e.lateDeduction > 0) {
+                    items.push({ date: e.date, label: 'หักสาย', amount: e.lateDeduction, isDeduct: true });
+                  } else if (selectedMetric.metricType === 'guarantee' && !e.isLeave && e.guaranteeDeduction > 0) {
+                    items.push({ date: e.date, label: 'หักประกันสะสมรอบนี้', amount: e.guaranteeDeduction, isDeduct: false });
+                  } else if (selectedMetric.metricType === 'net' && e.totalPay !== 0) {
+                    items.push({ date: e.date, label: e.isLeave ? (e.leaveType || 'ลาหยุด') : 'ยอดสุทธิ', amount: e.totalPay });
+                  }
+                });
+
+                if (selectedMetric.metricType === 'guarantee') {
+                  const worker = workers.find(w => w.id === selectedMetric.workerId);
+                  if (worker && worker.historicalGuarantee > 0) {
+                     items.unshift({ date: '', label: 'ยอดยกมา (เก่า)', amount: worker.historicalGuarantee });
+                  }
+                }
+
+                if (selectedMetric.metricType === 'advance') {
+                   const workerAdvances = advances.filter(a => a.workerId === selectedMetric.workerId);
+                   workerAdvances.forEach(a => {
+                      items.push({ date: a.date, label: a.type === 'borrow' ? 'เบิกเงินล่วงหน้า' : 'คืนเงิน', amount: a.amount, isDeduct: a.type === 'borrow' });
+                   });
+                }
+
+                if (items.length === 0) {
+                  return <div className="text-center text-zinc-500 py-8 text-sm bg-zinc-50 rounded-xl border border-dashed border-zinc-200">ไม่พบรายการย่อย</div>
+                }
+
+                return (
+                  <>
+                    <div className="space-y-2">
+                        {items.map((item, i) => (
+                        <div key={i} className="flex justify-between items-center p-3 bg-zinc-50 rounded-xl border border-zinc-100/80 hover:border-zinc-200 transition-colors">
+                            <div>
+                            <div className="text-[13px] font-medium text-zinc-800">{item.label}</div>
+                            {item.date && <div className="text-[11px] text-zinc-500 mt-1">{format(parseISO(item.date), 'dd/MM/yyyy')}</div>}
+                            </div>
+                            <div className={`font-bold text-sm ${item.isDeduct ? 'text-red-500' : 'text-emerald-600'}`}>
+                            {selectedMetric.metricType === 'days' || selectedMetric.metricType === 'leave' ? '' : (item.isDeduct ? '-' : '+')}
+                            {selectedMetric.metricType === 'days' || selectedMetric.metricType === 'leave' ? `${item.amount} วัน` : `฿${item.amount}`}
+                            </div>
+                        </div>
+                        ))}
+                    </div>
+                    
+                    <div className="mt-4 pt-3 border-t border-zinc-100 flex justify-between items-center font-bold px-1">
+                        <span className="text-zinc-700">รวมทั้งหมด</span>
+                        <span className={selectedMetric.metricType === 'advance' ? 'text-red-600' : 'text-blue-600'}>
+                            {selectedMetric.metricType === 'days' || selectedMetric.metricType === 'leave' 
+                            ? `${items.reduce((s, i) => s + i.amount, 0)} วัน` 
+                            : `฿${items.reduce((s, i) => s + (i.isDeduct ? -i.amount : i.amount), 0)}`}
+                        </span>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
         </div>

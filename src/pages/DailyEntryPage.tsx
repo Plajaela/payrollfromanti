@@ -138,7 +138,7 @@ export function DailyEntryPage() {
       return sum + (adj.type === 'add' ? Number(adj.amount) : -Number(adj.amount));
     }, 0);
     const tollTotal = formData.tolls.reduce((sum, t) => sum + Number(t.amount || 0), 0);
-    const guaranteeDed = formData.hasGuaranteeDeduction ? formData.guaranteeDeductionAmount : 0;
+    const guaranteeDed = (formData.hasGuaranteeDeduction && !formData.isLeave) ? formData.guaranteeDeductionAmount : 0;
     return formData.baseWage + formData.travelAllowance + tollTotal + otPay + adjustmentsTotal - formData.lateDeduction - guaranteeDed;
   };
 
@@ -564,7 +564,7 @@ export function DailyEntryPage() {
           overtimeMinutes: formData.overtimeMinutes,
           overtimePay: otPay,
           adjustments: updatedAdjustments,
-          totalPay: formData.baseWage + formData.travelAllowance + tollTotal + otPay + updatedAdjustments.reduce((s, a) => s + (a.type==='add'?Number(a.amount):-Number(a.amount)), 0) - formData.lateDeduction - (formData.hasGuaranteeDeduction ? formData.guaranteeDeductionAmount : 0),
+          totalPay: formData.baseWage + formData.travelAllowance + tollTotal + otPay + updatedAdjustments.reduce((s, a) => s + (a.type==='add'?Number(a.amount):-Number(a.amount)), 0) - formData.lateDeduction - ((formData.hasGuaranteeDeduction && !formData.isLeave) ? formData.guaranteeDeductionAmount : 0),
           note: formData.note,
           isDraft: true, // AUTO DRAFT!
           isLeave: formData.isLeave,
@@ -574,7 +574,7 @@ export function DailyEntryPage() {
           transferSlips: updatedTransferSlips,
           tollReceiptUrl: updatedTollReceiptUrl,
           tollDate: formData.tollDate,
-          guaranteeDeduction: formData.hasGuaranteeDeduction ? formData.guaranteeDeductionAmount : 0,
+          guaranteeDeduction: (formData.hasGuaranteeDeduction && !formData.isLeave) ? formData.guaranteeDeductionAmount : 0,
           lateRateRule: formData.lateRateRule,
         };
         
@@ -624,7 +624,7 @@ export function DailyEntryPage() {
       transferSlips: formData.transferSlips,
       tollReceiptUrl: formData.tollReceiptUrl,
       tollDate: formData.tollDate,
-      guaranteeDeduction: formData.hasGuaranteeDeduction ? formData.guaranteeDeductionAmount : 0,
+      guaranteeDeduction: (formData.hasGuaranteeDeduction && !formData.isLeave) ? formData.guaranteeDeductionAmount : 0,
       lateRateRule: formData.lateRateRule,
     };
 
