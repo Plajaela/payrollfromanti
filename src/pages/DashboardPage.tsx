@@ -134,8 +134,8 @@ export function DashboardPage() {
       {/* Main Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Daily Wage Trend */}
-        <Card className="lg:col-span-2 p-6 border-none shadow-sm">
-          <div className="flex items-center justify-between mb-8">
+        <Card className="lg:col-span-2 p-6 border-none shadow-sm overflow-hidden flex flex-col">
+          <div className="flex items-center justify-between mb-8 shrink-0">
             <div>
               <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
                 <Activity className="w-5 h-5 text-red-500" />
@@ -151,30 +151,32 @@ export function DashboardPage() {
             </div>
           </div>
           
-          <div className="h-64 flex items-end justify-between gap-1 sm:gap-4 relative">
-            <div className="absolute inset-x-0 top-0 border-t border-gray-50 h-px" />
-            <div className="absolute inset-x-0 top-1/4 border-t border-gray-50 h-px" />
-            <div className="absolute inset-x-0 top-2/4 border-t border-gray-50 h-px" />
-            <div className="absolute inset-x-0 top-3/4 border-t border-gray-50 h-px" />
-            
-            {stats.dailyTrail.map((day, i) => (
-              <div key={day.date} className="flex-1 flex flex-col items-center group relative h-full justify-end">
-                <motion.div
-                  initial={{ height: 0 }}
-                  animate={{ height: `${(day.value / maxDaily) * 100}%` }}
-                  transition={{ delay: 0.5 + i * 0.05, type: 'spring', bounce: 0.2 }}
-                  className="w-full bg-gradient-to-t from-red-600 to-orange-400 rounded-t-lg relative group-hover:from-red-700 group-hover:to-orange-500 transition-all cursor-pointer min-h-[4px]"
-                >
-                   {/* Tooltip on hover */}
-                   <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none">
-                    ฿{day.value.toLocaleString()}
-                   </div>
-                </motion.div>
-                <div className="text-[10px] font-bold text-gray-400 mt-3 rotate-[-45deg] origin-top-left sm:rotate-0 whitespace-nowrap">
-                  {day.label}
+          <div className="flex-1 min-h-[300px] pb-8 overflow-x-auto overflow-y-hidden scrollbar-none">
+            <div className="h-full min-w-[500px] flex items-end justify-between gap-2 relative px-2">
+              <div className="absolute inset-x-0 top-0 border-t border-gray-100/50 h-px" />
+              <div className="absolute inset-x-0 top-1/4 border-t border-gray-100/50 h-px" />
+              <div className="absolute inset-x-0 top-2/4 border-t border-gray-100/50 h-px" />
+              <div className="absolute inset-x-0 top-3/4 border-t border-gray-100/50 h-px" />
+              
+              {stats.dailyTrail.map((day, i) => (
+                <div key={day.date} className="flex-1 flex flex-col items-center group relative h-full justify-end">
+                  <motion.div
+                    initial={{ height: 0 }}
+                    animate={{ height: `${(day.value / maxDaily) * 100}%` }}
+                    transition={{ delay: 0.5 + i * 0.05, type: 'spring', bounce: 0.2 }}
+                    className="w-full max-w-[32px] bg-gradient-to-t from-red-600 to-orange-400 rounded-t-lg relative group-hover:from-red-700 group-hover:to-orange-500 transition-all cursor-pointer min-h-[4px] shadow-sm"
+                  >
+                    {/* Tooltip on hover */}
+                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none shadow-xl border border-white/10">
+                      ฿{day.value.toLocaleString()}
+                    </div>
+                  </motion.div>
+                  <div className="absolute -bottom-6 whitespace-nowrap text-[10px] font-bold text-gray-400 group-hover:text-gray-600 transition-colors">
+                    {day.label}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </Card>
 
