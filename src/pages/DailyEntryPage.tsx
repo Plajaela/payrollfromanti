@@ -144,7 +144,7 @@ export function DailyEntryPage() {
     }, 0);
     const tollTotal = formData.tolls.reduce((sum, t) => sum + Number(t.amount || 0), 0);
     const guaranteeDed = (formData.hasGuaranteeDeduction && (!formData.isLeave || formData.leaveType === 'ลาครึ่งวัน')) 
-      ? (formData.isLeave && formData.leaveType === 'ลาครึ่งวัน' ? formData.guaranteeDeductionAmount / 2 : formData.guaranteeDeductionAmount)
+      ? formData.guaranteeDeductionAmount
       : 0;
     
     return effectiveBaseWage + formData.travelAllowance + tollTotal + otPay + adjustmentsTotal - formData.lateDeduction - guaranteeDed;
@@ -633,7 +633,7 @@ export function DailyEntryPage() {
       tollReceiptUrl: formData.tollReceiptUrl,
       tollDate: formData.tollDate,
       guaranteeDeduction: (!isDraft && formData.hasGuaranteeDeduction && (!formData.isLeave || formData.leaveType === 'ลาครึ่งวัน')) 
-        ? (formData.isLeave && formData.leaveType === 'ลาครึ่งวัน' ? formData.guaranteeDeductionAmount / 2 : formData.guaranteeDeductionAmount)
+        ? formData.guaranteeDeductionAmount
         : 0, 
       lateRateRule: formData.lateRateRule,
     };
@@ -685,7 +685,7 @@ export function DailyEntryPage() {
       if (leaveStr === 'ลาครึ่งวัน') {
         text += `ลาครึ่งวัน: ค่าแรง ฿${baseWage / 2}\n`;
         if (entry.guaranteeDeduction > 0) {
-          text += `- หักสะสมครึ่งวัน: ฿${entry.guaranteeDeduction}\n`;
+          text += `- หักสะสม: ฿${entry.guaranteeDeduction}\n`;
         }
       } else {
         if (entry.leaveNote) leaveStr += ` (${entry.leaveNote})`;
@@ -971,7 +971,7 @@ export function DailyEntryPage() {
         if (leaveStr === 'ลาครึ่งวัน') {
           text += `ลาครึ่งวัน: ค่าแรง ฿${baseWage / 2}\n`;
           if (entry.guaranteeDeduction > 0) {
-            text += `- หักสะสมครึ่งวัน: ฿${entry.guaranteeDeduction}\n`;
+            text += `- หักสะสม: ฿${entry.guaranteeDeduction}\n`;
           }
         } else {
           if (entry.leaveNote) leaveStr += ` (${entry.leaveNote})`;
@@ -1115,7 +1115,7 @@ export function DailyEntryPage() {
       overtimeMinutes: 0,
       overtimePay: 0,
       adjustments: [],
-      totalPay: leaveType === 'ลาครึ่งวัน' ? (activeWorker.baseWage / 2) - (activeWorker.hasGuarantee ? (activeWorker.guaranteeDeductionAmount || 100) / 2 : 0) : 0,
+      totalPay: leaveType === 'ลาครึ่งวัน' ? (activeWorker.baseWage / 2) - (activeWorker.hasGuarantee ? (activeWorker.guaranteeDeductionAmount || 100) : 0) : 0,
       note: '',
       isDraft: false,
       isLeave: true,
@@ -1125,7 +1125,7 @@ export function DailyEntryPage() {
       transferSlips: [],
       tollReceiptUrl: '',
       tollDate: dateStr,
-      guaranteeDeduction: leaveType === 'ลาครึ่งวัน' ? (activeWorker.hasGuarantee ? (activeWorker.guaranteeDeductionAmount || 100) / 2 : 0) : 0,
+      guaranteeDeduction: leaveType === 'ลาครึ่งวัน' ? (activeWorker.hasGuarantee ? (activeWorker.guaranteeDeductionAmount || 100) : 0) : 0,
       lateRateRule: activeWorker.lateRateRule || 'normal',
     };
     addEntry(entryData);
