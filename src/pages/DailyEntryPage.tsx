@@ -73,7 +73,7 @@ export function DailyEntryPage() {
     tollDate: '',
     tolls: [] as { id: string; amount: number; receiptUrl?: string; date?: string; }[],
     isLeave: false,
-    leaveType: 'ลากิจ' as 'ลาป่วย' | 'ลากิจ' | 'ขาดงาน',
+    leaveType: 'ลากิจ' as 'ลาป่วย' | 'ลากิจ' | 'ขาดงาน' | 'ลาครึ่งวัน',
     leaveNote: '',
     hasGuaranteeDeduction: false,
     guaranteeDeductionAmount: 100,
@@ -131,7 +131,12 @@ export function DailyEntryPage() {
   }, [workersWithSlips]);
 
   const calculateTotal = () => {
-    if (formData.isLeave) return 0;
+    if (formData.isLeave && formData.leaveType !== 'ลาครึ่งวัน') return 0;
+    
+    const effectiveBaseWage = (formData.isLeave && formData.leaveType === 'ลาครึ่งวัน') 
+      ? formData.baseWage / 2 
+      : formData.baseWage;
+
     const otRatePerHour = 100;
     const otPay = (formData.overtimeHours * otRatePerHour) + (formData.overtimeMinutes / 60 * otRatePerHour);
     const adjustmentsTotal = formData.adjustments.reduce((sum, adj) => {
@@ -139,7 +144,8 @@ export function DailyEntryPage() {
     }, 0);
     const tollTotal = formData.tolls.reduce((sum, t) => sum + Number(t.amount || 0), 0);
     const guaranteeDed = (formData.hasGuaranteeDeduction && !formData.isLeave) ? formData.guaranteeDeductionAmount : 0;
-    return formData.baseWage + formData.travelAllowance + tollTotal + otPay + adjustmentsTotal - formData.lateDeduction - guaranteeDed;
+    
+    return effectiveBaseWage + formData.travelAllowance + tollTotal + otPay + adjustmentsTotal - formData.lateDeduction - guaranteeDed;
   };
 
   // Auto-calculate late deduction and overtime when times change
@@ -672,8 +678,12 @@ export function DailyEntryPage() {
     if (entry?.isLeave) {
       // Fallback for older data that had 'ลาพักผ่อน'
       let leaveStr = (entry.leaveType as any) === 'ลาพักผ่อน' ? 'ลากิจ' : (entry.leaveType || 'ลากิจ');
-      if (entry.leaveNote) leaveStr += ` (${entry.leaveNote})`;
-      text += `${leaveStr}\n`;
+      if (leaveStr === 'ลาครึ่งวัน') {
+        text += `ลาครึ่งวัน: ค่าแรง ฿${baseWage / 2}\n`;
+      } else {
+        if (entry.leaveNote) leaveStr += ` (${entry.leaveNote})`;
+        text += `${leaveStr}\n`;
+      }
     } else {
       const actualStart = clockIn > wStart ? clockIn : wStart;
       const actualEnd = clockOut < wEnd ? clockOut : wEnd;
@@ -714,7 +724,7 @@ export function DailyEntryPage() {
         text += `OT${otDurationInfo}: ฿${overtimePay}\n`;
       }
     }
-    if (!entry?.isLeave) {
+    if (!entry?.isLeave || entry?.leaveType === 'ลาครึ่งวัน') {
       text += `\n`;
       if (travelAllowance > 0) text += `- ค่ารถ: ฿${travelAllowance}\n`;
       if (tollFee > 0) {
@@ -951,8 +961,12 @@ export function DailyEntryPage() {
       text += `👤 ${worker.name}\n`;
       if (entry?.isLeave) {
         let leaveStr = (entry.leaveType as any) === 'ลาพักผ่อน' ? 'ลากิจ' : (entry.leaveType || 'ลากิจ');
-        if (entry.leaveNote) leaveStr += ` (${entry.leaveNote})`;
-        text += `${leaveStr}\n`;
+        if (leaveStr === 'ลาครึ่งวัน') {
+          text += `ลาครึ่งวัน: ค่าแรง ฿${baseWage / 2}\n`;
+        } else {
+          if (entry.leaveNote) leaveStr += ` (${entry.leaveNote})`;
+          text += `${leaveStr}\n`;
+        }
       } else {
         const actualStart = clockIn > wStart ? clockIn : wStart;
         const actualEnd = clockOut < wEnd ? clockOut : wEnd;
@@ -994,7 +1008,7 @@ export function DailyEntryPage() {
           text += `OT${otDurationInfo}: ฿${overtimePay}\n`;
         }
       }
-      if (!entry?.isLeave) {
+      if (!entry?.isLeave || entry?.leaveType === 'ลาครึ่งวัน') {
         if (travelAllowance > 0) text += `- ค่ารถ: ฿${travelAllowance}\n`;
         if (tollFee > 0) {
           text += `- ทางด่วน`;
@@ -1075,7 +1089,7 @@ export function DailyEntryPage() {
     setIsAdvanceModalOpen(false);
   };
 
-  const handleQuickLeaveInfo = (e: React.MouseEvent, leaveType: 'ลาป่วย' | 'ลากิจ' | 'ขาดงาน') => {
+  const handleQuickLeaveInfo = (e: React.MouseEvent, leaveType: 'ลาป่วย' | 'ลากิจ' | 'ขาดงาน' | 'ลาครึ่งวัน') => {
     e.stopPropagation();
     if (!activeWorker) return;
     const entryData = {
@@ -1091,7 +1105,7 @@ export function DailyEntryPage() {
       overtimeMinutes: 0,
       overtimePay: 0,
       adjustments: [],
-      totalPay: 0,
+      totalPay: leaveType === 'ลาครึ่งวัน' ? activeWorker.baseWage / 2 : 0,
       note: '',
       isDraft: false,
       isLeave: true,
@@ -1416,6 +1430,14 @@ export function DailyEntryPage() {
                         title="ขาดงาน"
                       >
                         ขาดงาน
+                      </Button>
+                      <Button
+                        variant="danger"
+                        onClick={(e) => handleQuickLeaveInfo(e, 'ลาครึ่งวัน')}
+                        className="p-3 text-xs h-auto rounded-xl bg-purple-50 text-purple-600 hover:bg-purple-100 border border-purple-100 font-medium whitespace-nowrap"
+                        title="ลาครึ่งวัน"
+                      >
+                        ลาครึ่งวัน
                       </Button>
                     </div>
                   </>

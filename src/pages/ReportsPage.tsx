@@ -34,11 +34,20 @@ export function ReportsPage() {
     const summary = workers.map(worker => {
       const workerEntries = filteredEntries.filter(e => e.workerId === worker.id);
 
-      const totalDays = workerEntries.filter(e => !e.isLeave).length;
-      const leaveDays = workerEntries.filter(e => e.isLeave).length;
+      const totalDays = workerEntries.reduce((sum, e) => {
+        if (e.isLeave) return e.leaveType === 'ลาครึ่งวัน' ? sum + 0.5 : sum;
+        return sum + 1;
+      }, 0);
+
+      const leaveDays = workerEntries.reduce((sum, e) => {
+        if (!e.isLeave) return sum;
+        return e.leaveType === 'ลาครึ่งวัน' ? sum + 0.5 : sum + 1;
+      }, 0);
+
       const sickDays = workerEntries.filter(e => e.isLeave && e.leaveType === 'ลาป่วย').length;
       const personalDays = workerEntries.filter(e => e.isLeave && (e.leaveType === 'ลากิจ' || !e.leaveType || (e.leaveType as any) === 'ลาพักผ่อน')).length;
       const absentDays = workerEntries.filter(e => e.isLeave && e.leaveType === 'ขาดงาน').length;
+      const halfDaysCount = workerEntries.filter(e => e.isLeave && e.leaveType === 'ลาครึ่งวัน').length;
       const totalBaseWage = workerEntries.reduce((sum, e) => sum + e.baseWage, 0);
       const totalTravel = workerEntries.reduce((sum, e) => sum + e.travelAllowance, 0);
       const totalToll = workerEntries.reduce((sum, e) => sum + e.tollFee, 0);
@@ -133,6 +142,7 @@ export function ReportsPage() {
         sickDays,
         personalDays,
         absentDays,
+        halfDaysCount,
         guaranteeTotal,
         rangeGuaranteeDeduction,
         advanceDeduction,
@@ -950,10 +960,14 @@ export function ReportsPage() {
                 const processedModalDates = new Set<string>();
 
                 metricEntries.forEach(e => {
-                  if (selectedMetric.metricType === 'days' && !e.isLeave) {
-                    items.push({ date: e.date, label: 'มาทำงาน', amount: 1 });
+                  if (selectedMetric.metricType === 'days') {
+                    if (!e.isLeave) {
+                      items.push({ date: e.date, label: 'มาทำงาน', amount: 1 });
+                    } else if (e.leaveType === 'ลาครึ่งวัน') {
+                      items.push({ date: e.date, label: 'ลาครึ่งวัน (ทำครึ่งวัน)', amount: 0.5 });
+                    }
                   } else if (selectedMetric.metricType === 'leave' && e.isLeave) {
-                    items.push({ date: e.date, label: e.leaveType || 'ลาหยุด', amount: 1, isDeduct: true });
+                    items.push({ date: e.date, label: e.leaveType || 'ลาหยุด', amount: e.leaveType === 'ลาครึ่งวัน' ? 0.5 : 1, isDeduct: true });
                   } else if (selectedMetric.metricType === 'baseWage' && e.baseWage > 0) {
                     items.push({ date: e.date, label: 'ค่าแรง', amount: e.baseWage });
                   } else if (selectedMetric.metricType === 'travel' && e.travelAllowance > 0) {

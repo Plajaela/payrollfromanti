@@ -44,7 +44,7 @@ export interface DailyEntry {
   note: string;
   isDraft?: boolean;
   isLeave?: boolean;
-  leaveType?: 'ลาป่วย' | 'ลากิจ' | 'ขาดงาน';
+  leaveType?: 'ลาป่วย' | 'ลากิจ' | 'ขาดงาน' | 'ลาครึ่งวัน';
   leaveNote?: string;
   transferSlipUrl?: string; // Legacy
   transferSlips?: string[];
