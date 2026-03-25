@@ -79,18 +79,29 @@ export function ReportsPage() {
 
       let grandTotal = 0;
       let rangeGuaranteeDeduction = 0;
+      const processedDates = new Set<string>();
 
       workerEntries.forEach(e => {
         let guarantee = e.guaranteeDeduction || 0;
-        // User explicitly asked NEVER to deduct guarantee on leave days or unsaved (draft) days
+        let needsRefund = false;
+
         if (e.isLeave || e.isDraft) {
+          if (guarantee > 0) needsRefund = true;
           guarantee = 0;
+        } else if (guarantee > 0) {
+          if (processedDates.has(e.date)) {
+            needsRefund = true;
+            guarantee = 0; // Duplicate guarantee! 
+          } else {
+            processedDates.add(e.date);
+          }
         }
+
         rangeGuaranteeDeduction += guarantee;
 
         let pay = e.totalPay;
-        // Self-heal historical DB data: if DB deducted guarantee on a leave/draft day, refund it to totalPay
-        if ((e.isLeave || e.isDraft) && (e.guaranteeDeduction || 0) > 0) {
+        // Self-heal historical DB data: if DB deducted guarantee duplicate or on leave/draft, refund it
+        if (needsRefund && (e.guaranteeDeduction || 0) > 0) {
           pay += e.guaranteeDeduction;
         }
         grandTotal += pay;
@@ -936,6 +947,7 @@ export function ReportsPage() {
                 }).sort((a, b) => a.date.localeCompare(b.date));
 
                 const items: { date: string; label: string; amount: number; isDeduct?: boolean }[] = [];
+                const processedModalDates = new Set<string>();
 
                 metricEntries.forEach(e => {
                   if (selectedMetric.metricType === 'days' && !e.isLeave) {
@@ -951,12 +963,28 @@ export function ReportsPage() {
                   } else if (selectedMetric.metricType === 'late' && e.lateDeduction > 0) {
                     items.push({ date: e.date, label: 'หักสาย', amount: e.lateDeduction, isDeduct: true });
                   } else if (selectedMetric.metricType === 'guarantee' && !e.isLeave && !e.isDraft && e.guaranteeDeduction > 0) {
-                    items.push({ date: e.date, label: 'หักประกันสะสมรอบนี้', amount: e.guaranteeDeduction, isDeduct: false });
+                    if (!processedModalDates.has(e.date)) {
+                      processedModalDates.add(e.date);
+                      items.push({ date: e.date, label: 'หักประกันสะสมรอบนี้', amount: e.guaranteeDeduction, isDeduct: false });
+                    }
                   } else if (selectedMetric.metricType === 'net' && e.totalPay !== 0) {
                     let pay = e.totalPay;
-                    if ((e.isLeave || e.isDraft) && e.guaranteeDeduction > 0) {
+                    let needsRefund = false;
+                    
+                    if (e.isLeave || e.isDraft) {
+                      needsRefund = true;
+                    } else if (e.guaranteeDeduction > 0) {
+                      if (processedModalDates.has(e.date)) {
+                        needsRefund = true;
+                      } else {
+                        processedModalDates.add(e.date);
+                      }
+                    }
+
+                    if (needsRefund && (e.guaranteeDeduction || 0) > 0) {
                        pay += e.guaranteeDeduction;
                     }
+
                     items.push({ date: e.date, label: e.isLeave ? (e.leaveType || 'ลาหยุด') : 'ยอดสุทธิรายวัน', amount: pay });
                   }
                 });

@@ -25,9 +25,22 @@ export function WalletPage() {
         const worker = workers.find(w => w.id === workerId);
 
         // Calculate Guarantee Deduction
-        const entriesSum = entries
-            .filter(e => e.workerId === workerId && !e.isDraft)
-            .reduce((sum, e) => sum + (e.guaranteeDeduction || 0), 0);
+        const processedDates = new Set<string>();
+        const workerEntries = entries.filter(e => e.workerId === workerId && !e.isDraft).sort((a,b) => b.date.localeCompare(a.date));
+        
+        let entriesSum = 0;
+        const guaranteeHistory: {id: string, date: string, amount: number}[] = [];
+
+        workerEntries.forEach(e => {
+             if (e.isLeave) return;
+             if ((e.guaranteeDeduction || 0) > 0) {
+                 if (!processedDates.has(e.date)) {
+                     processedDates.add(e.date);
+                     entriesSum += e.guaranteeDeduction;
+                     guaranteeHistory.push({ id: e.id, date: e.date, amount: e.guaranteeDeduction });
+                 }
+             }
+        });
 
         const guaranteeTotal = (worker?.historicalGuarantee || 0) + entriesSum;
 
@@ -41,7 +54,8 @@ export function WalletPage() {
             entriesSum,
             guaranteeTotal,
             advanceTotal,
-            workerAdvances
+            workerAdvances,
+            guaranteeHistory
         };
     };
 
@@ -265,25 +279,84 @@ export function WalletPage() {
                             </div>
 
                             {/* Transactions Area */}
-                            <div>
-                                <div className="flex justify-between items-center mb-3">
-                                    <h4 className="font-semibold text-gray-900 flex items-center gap-1.5">
-                                        <History className="w-4 h-4 text-gray-500" />
-                                        ประวัติเบิกล่วงหน้า
-                                    </h4>
-                                    {!isAddMode && (
-                                        <button
-                                            onClick={() => setIsAddMode(true)}
-                                            className="text-xs font-semibold text-sky-600 bg-sky-50 px-3 py-1.5 rounded-full hover:bg-sky-100 transition-colors flex items-center gap-1"
-                                        >
-                                            <Plus className="w-3 h-3" /> เพิ่มรายการเบิก
-                                        </button>
-                                    )}
-                                </div>
+                            <div className="flex gap-2 mb-4 bg-gray-100 p-1 rounded-xl">
+                                <button
+                                    onClick={() => setIsAddMode(false)}
+                                    className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${!isAddMode ? 'bg-white text-sky-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                >
+                                    เงินประกันสะสม ({stats.guaranteeHistory.length})
+                                </button>
+                                <button
+                                    onClick={() => setIsAddMode('advance' as any)}
+                                    className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${isAddMode === ('advance' as any) ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                >
+                                    เบิกล่วงหน้า ({advancesList.length})
+                                </button>
+                            </div>
 
-                                {isAddMode ? (
-                                    renderAddForm()
-                                ) : (
+                            <div>
+                                {isAddMode === false && (
+                                    <>
+                                        <div className="flex justify-between items-center mb-3">
+                                            <h4 className="font-semibold text-gray-900 flex items-center gap-1.5">
+                                                <History className="w-4 h-4 text-gray-500" />
+                                                ประวัติหักเงินประกันสะสม
+                                            </h4>
+                                        </div>
+                                        <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1 pb-4">
+                                            {stats.guaranteeHistory.length === 0 ? (
+                                                <div className="text-center py-6 text-gray-400 text-sm border border-dashed rounded-xl">
+                                                    ยังไม่มีประวัติการหักเงินประกัน
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-2">
+                                                    {stats.guaranteeHistory.map(g => (
+                                                        <div key={g.id} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-white">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                                                                    <ArrowUpCircle className="w-5 h-5" />
+                                                                </div>
+                                                                <div>
+                                                                    <div className="text-sm font-semibold text-gray-900">
+                                                                        หักจากบันทึกรายวัน
+                                                                    </div>
+                                                                    <div className="text-[10px] text-gray-500">
+                                                                        {format(new Date(g.date), 'd MMM yyyy', { locale: th })}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="font-bold text-emerald-600">
+                                                                +฿{g.amount.toLocaleString()}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </>
+                                )}
+
+                                {isAddMode === ('advance' as any) && (
+                                    <>
+                                        <div className="flex justify-between items-center mb-3">
+                                            <h4 className="font-semibold text-gray-900 flex items-center gap-1.5">
+                                                <History className="w-4 h-4 text-gray-500" />
+                                                ประวัติเบิกล่วงหน้า
+                                            </h4>
+                                            {!isAddMode || isAddMode === ('advance' as any) ? (
+                                                <button
+                                                    onClick={() => setIsAddMode('add_advance' as any)}
+                                                    className="text-xs font-semibold text-sky-600 bg-sky-50 px-3 py-1.5 rounded-full hover:bg-sky-100 transition-colors flex items-center gap-1"
+                                                >
+                                                    <Plus className="w-3 h-3" /> เพิ่มรายการเบิก
+                                                </button>
+                                            ) : null}
+                                        </div>
+
+                                    {isAddMode === ('add_advance' as any) && (
+                                        renderAddForm()
+                                    )}
+                                    {isAddMode === ('advance' as any) && (
                                     <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1 pb-4">
                                         {advancesList.length === 0 ? (
                                             <div className="text-center py-6 text-gray-400 text-sm border border-dashed rounded-xl">
@@ -369,6 +442,8 @@ export function WalletPage() {
                                             })()
                                         )}
                                     </div>
+                                    )}
+                                    </>
                                 )}
                             </div>
                         </div>
