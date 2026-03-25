@@ -77,18 +77,31 @@ export function ReportsPage() {
         }
       });
 
-      const grandTotal = workerEntries.reduce((sum, e) => sum + e.totalPay, 0);
+      let grandTotal = 0;
+      let rangeGuaranteeDeduction = 0;
 
-      const rangeGuaranteeDeduction = workerEntries.reduce((sum, e) => sum + (e.guaranteeDeduction || 0), 0);
-      
-      const guaranteeTotal = (worker.historicalGuarantee || 0) + entries
-        .filter(e => e.workerId === worker.id && parseISO(e.date) <= parseISO(endDate))
-        .reduce((sum, e) => sum + (e.guaranteeDeduction || 0), 0);
+      workerEntries.forEach(e => {
+        let guarantee = e.guaranteeDeduction || 0;
+        // User explicitly asked NEVER to deduct guarantee on leave days or unsaved (draft) days
+        if (e.isLeave || e.isDraft) {
+          guarantee = 0;
+        }
+        rangeGuaranteeDeduction += guarantee;
 
-      // Current active advance debt for the worker (up to endDate)
+        let pay = e.totalPay;
+        // Self-heal historical DB data: if DB deducted guarantee on a leave/draft day, refund it to totalPay
+        if ((e.isLeave || e.isDraft) && (e.guaranteeDeduction || 0) > 0) {
+          pay += e.guaranteeDeduction;
+        }
+        grandTotal += pay;
+      });
+
+      const guaranteeTotal = rangeGuaranteeDeduction;
+
+      // Advance debt STRICTLY within this date range only
       const workerAdvances = advances.filter(a => {
         const aDate = parseISO(a.date);
-        return a.workerId === worker.id && aDate <= parseISO(endDate);
+        return a.workerId === worker.id && isWithinInterval(aDate, { start: parseISO(startDate), end: parseISO(endDate) });
       });
       const advanceTotal = workerAdvances.reduce((sum, a) => sum + (a.type === 'borrow' ? a.amount : -a.amount), 0);
       const advanceDeduction = advanceTotal > 0 ? advanceTotal : 0;
@@ -166,10 +179,6 @@ export function ReportsPage() {
     if (row.advanceDeduction > 0) {
       text += `\n❌ หักหนี้เบิกล่วงหน้า: -฿${row.advanceDeduction}\n` +
       `✅ คงเหลือรับสุทธิ: ฿${row.finalPay}`;
-    }
-
-    if (row.guaranteeTotal > 0) {
-      text += `\n(🔒 มีเงินประกันสะสมรวมทั้งหมด: ฿${row.guaranteeTotal})`;
     }
 
     handleCopy(text, row.worker.id);
@@ -704,7 +713,7 @@ export function ReportsPage() {
                     <th scope="col" className="px-3 py-3.5 text-right text-[13px] font-semibold text-zinc-900 uppercase tracking-wide">โอที</th>
                     <th scope="col" className="px-3 py-3.5 text-right text-[13px] font-semibold text-red-600 uppercase tracking-wide">หักสาย</th>
                     <th scope="col" className="px-3 py-3.5 text-right text-[13px] font-semibold text-zinc-900 uppercase tracking-wide">อื่นๆ</th>
-                    <th scope="col" className="py-3.5 px-3 text-right text-[13px] font-semibold text-orange-600 uppercase tracking-wide">ประกันสะสมรวม</th>
+                    <th scope="col" className="py-3.5 px-3 text-right text-[13px] font-semibold text-orange-600 uppercase tracking-wide">หักประกันสะสม</th>
                     <th scope="col" className="py-3.5 px-3 text-right text-[13px] font-semibold text-red-600 uppercase tracking-wide">หักเบิก</th>
                     <th scope="col" className="py-3.5 px-3 text-right text-[13px] font-semibold text-blue-600 uppercase tracking-wide">สุทธิ</th>
                     <th scope="col" className="py-3.5 px-3 text-center text-[13px] font-semibold text-violet-600 uppercase tracking-wide">คัดลอกรูป</th>
@@ -761,7 +770,7 @@ export function ReportsPage() {
                         )}
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm font-bold text-right">
-                        <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'ประกันสะสมรวม', metricType: 'guarantee' })} className={`hover:underline cursor-pointer transition-colors px-2 py-1 -mr-2 rounded-md hover:bg-orange-50 text-orange-600 ${row.guaranteeTotal > 0 ? '' : 'text-zinc-300 font-normal hover:bg-transparent cursor-default'}`} disabled={row.guaranteeTotal === 0}>
+                        <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'หักประกันสะสมรอบนี้', metricType: 'guarantee' })} className={`hover:underline cursor-pointer transition-colors px-2 py-1 -mr-2 rounded-md hover:bg-orange-50 text-orange-600 ${row.guaranteeTotal > 0 ? '' : 'text-zinc-300 font-normal hover:bg-transparent cursor-default'}`} disabled={row.guaranteeTotal === 0}>
                           {row.guaranteeTotal > 0 ? `฿${row.guaranteeTotal}` : '-'}
                         </button>
                       </td>
@@ -941,50 +950,35 @@ export function ReportsPage() {
                     items.push({ date: e.date, label: `โอที (${e.overtimeHours}ช.ม. ${e.overtimeMinutes}น.)`, amount: e.overtimePay });
                   } else if (selectedMetric.metricType === 'late' && e.lateDeduction > 0) {
                     items.push({ date: e.date, label: 'หักสาย', amount: e.lateDeduction, isDeduct: true });
-                  } else if (selectedMetric.metricType === 'guarantee' && e.guaranteeDeduction > 0) {
+                  } else if (selectedMetric.metricType === 'guarantee' && !e.isLeave && !e.isDraft && e.guaranteeDeduction > 0) {
                     items.push({ date: e.date, label: 'หักประกันสะสมรอบนี้', amount: e.guaranteeDeduction, isDeduct: false });
                   } else if (selectedMetric.metricType === 'net' && e.totalPay !== 0) {
-                    items.push({ date: e.date, label: e.isLeave ? (e.leaveType || 'ลาหยุด') : 'ยอดสุทธิรายวัน', amount: e.totalPay });
+                    let pay = e.totalPay;
+                    if ((e.isLeave || e.isDraft) && e.guaranteeDeduction > 0) {
+                       pay += e.guaranteeDeduction;
+                    }
+                    items.push({ date: e.date, label: e.isLeave ? (e.leaveType || 'ลาหยุด') : 'ยอดสุทธิรายวัน', amount: pay });
                   }
                 });
-
-                if (selectedMetric.metricType === 'guarantee') {
-                  const worker = workers.find(w => w.id === selectedMetric.workerId);
-                  const priorEntries = entries.filter(e => e.workerId === selectedMetric.workerId && parseISO(e.date) < parseISO(startDate));
-                  const priorDeductions = priorEntries.reduce((sum, e) => sum + (e.guaranteeDeduction || 0), 0);
-                  const carriedBalance = (worker?.historicalGuarantee || 0) + priorDeductions;
-
-                  if (carriedBalance > 0) {
-                     items.unshift({ date: '', label: 'ยอดยกมา', amount: carriedBalance });
-                  }
-                }
 
                 if (selectedMetric.metricType === 'net') {
                    const workerAdvances = advances.filter(a => {
                      const aDate = parseISO(a.date);
-                     return a.workerId === selectedMetric.workerId && aDate <= parseISO(endDate);
+                     return a.workerId === selectedMetric.workerId && isWithinInterval(aDate, { start: parseISO(startDate), end: parseISO(endDate) });
                    });
                    const advanceTotal = workerAdvances.reduce((sum, a) => sum + (a.type === 'borrow' ? a.amount : -a.amount), 0);
                    const advanceDeduction = advanceTotal > 0 ? advanceTotal : 0;
                    if (advanceDeduction > 0) {
-                      items.push({ date: '', label: 'หักหนี้เบิกสะสม', amount: advanceDeduction, isDeduct: true });
+                      items.push({ date: '', label: 'หักเบิก (รวมรอบนี้)', amount: advanceDeduction, isDeduct: true });
                    }
                 }
 
                 if (selectedMetric.metricType === 'advance') {
                    const workerAdvances = advances.filter(a => {
                      const aDate = parseISO(a.date);
-                     return a.workerId === selectedMetric.workerId && aDate <= parseISO(endDate);
+                     return a.workerId === selectedMetric.workerId && isWithinInterval(aDate, { start: parseISO(startDate), end: parseISO(endDate) });
                    });
-                   const priorAdvances = workerAdvances.filter(a => parseISO(a.date) < parseISO(startDate));
-                   const carriedAdvanceBalance = priorAdvances.reduce((sum, a) => sum + (a.type === 'borrow' ? a.amount : -a.amount), 0);
-
-                   if (carriedAdvanceBalance > 0) {
-                      items.push({ date: '', label: 'ยอดยกมา (หนี้ค้างชำระ)', amount: carriedAdvanceBalance, isDeduct: true });
-                   }
-
-                   const periodAdvances = workerAdvances.filter(a => parseISO(a.date) >= parseISO(startDate));
-                   periodAdvances.forEach(a => {
+                   workerAdvances.forEach(a => {
                       items.push({ date: a.date, label: a.type === 'borrow' ? 'เบิกเงินล่วงหน้า' : 'คืนเงิน', amount: a.amount, isDeduct: a.type === 'borrow' });
                    });
                 }
