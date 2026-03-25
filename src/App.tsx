@@ -3,13 +3,14 @@ import { WorkersPage } from './pages/WorkersPage';
 import { DailyEntryPage } from './pages/DailyEntryPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { WalletPage } from './pages/WalletPage';
-import { Users, CalendarDays, FileText, Wallet, Moon, Sun, Snowflake, RefreshCw } from 'lucide-react';
+import { DashboardPage } from './pages/DashboardPage';
+import { Users, CalendarDays, FileText, Wallet, Moon, Sun, Snowflake, RefreshCw, LayoutDashboard } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Snowfall from 'react-snowfall';
 import { cn } from './components/ui';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'daily' | 'workers' | 'reports' | 'wallet'>('daily');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'daily' | 'workers' | 'reports' | 'wallet'>('dashboard');
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return localStorage.getItem('theme') === 'dark';
@@ -85,6 +86,7 @@ export default function App() {
             </motion.div>
             <div className="flex flex-col">
               <h1 className="text-lg font-black tracking-tight text-gray-900 dark:text-zinc-100 leading-none">
+                {activeTab === 'dashboard' && 'ภาพรวมระบบ'}
                 {activeTab === 'daily' && 'บันทึกรายวัน'}
                 {activeTab === 'workers' && 'จัดการช่าง'}
                 {activeTab === 'wallet' && 'บัญชีสะสม'}
@@ -140,6 +142,7 @@ export default function App() {
             exit={{ opacity: 0, y: -10, scale: 0.98 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
           >
+            {activeTab === 'dashboard' && <DashboardPage />}
             {activeTab === 'daily' && <DailyEntryPage />}
             {activeTab === 'workers' && <WorkersPage />}
             {activeTab === 'wallet' && <WalletPage />}
@@ -152,6 +155,7 @@ export default function App() {
       <nav className="fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-t border-gray-100 dark:border-zinc-800 z-20 pb-safe transition-all duration-500">
         <div className="max-w-5xl mx-auto flex justify-around px-2 py-3">
           {[
+            { id: 'dashboard', label: 'ภาพรวม', icon: LayoutDashboard },
             { id: 'daily', label: 'รายวัน', icon: CalendarDays },
             { id: 'workers', label: 'ช่าง', icon: Users },
             { id: 'wallet', label: 'บัญชีสะสม', icon: Wallet },
