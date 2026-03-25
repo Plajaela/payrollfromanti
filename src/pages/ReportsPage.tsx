@@ -82,7 +82,7 @@ export function ReportsPage() {
       const rangeGuaranteeDeduction = workerEntries.reduce((sum, e) => sum + (e.guaranteeDeduction || 0), 0);
       
       const guaranteeTotal = (worker.historicalGuarantee || 0) + entries
-        .filter(e => e.workerId === worker.id && !e.isDraft && parseISO(e.date) <= parseISO(endDate))
+        .filter(e => e.workerId === worker.id && parseISO(e.date) <= parseISO(endDate))
         .reduce((sum, e) => sum + (e.guaranteeDeduction || 0), 0);
 
       // Current active advance debt for the worker (up to endDate)
@@ -950,7 +950,7 @@ export function ReportsPage() {
 
                 if (selectedMetric.metricType === 'guarantee') {
                   const worker = workers.find(w => w.id === selectedMetric.workerId);
-                  const priorEntries = entries.filter(e => e.workerId === selectedMetric.workerId && !e.isDraft && parseISO(e.date) < parseISO(startDate));
+                  const priorEntries = entries.filter(e => e.workerId === selectedMetric.workerId && parseISO(e.date) < parseISO(startDate));
                   const priorDeductions = priorEntries.reduce((sum, e) => sum + (e.guaranteeDeduction || 0), 0);
                   const carriedBalance = (worker?.historicalGuarantee || 0) + priorDeductions;
 
