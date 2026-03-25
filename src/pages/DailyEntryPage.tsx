@@ -564,7 +564,7 @@ export function DailyEntryPage() {
           overtimeMinutes: formData.overtimeMinutes,
           overtimePay: otPay,
           adjustments: updatedAdjustments,
-          totalPay: formData.baseWage + formData.travelAllowance + tollTotal + otPay + updatedAdjustments.reduce((s, a) => s + (a.type==='add'?Number(a.amount):-Number(a.amount)), 0) - formData.lateDeduction - ((formData.hasGuaranteeDeduction && !formData.isLeave) ? formData.guaranteeDeductionAmount : 0),
+          totalPay: formData.baseWage + formData.travelAllowance + tollTotal + otPay + updatedAdjustments.reduce((s, a) => s + (a.type==='add'?Number(a.amount):-Number(a.amount)), 0) - formData.lateDeduction - 0, // No guarantee on drafts
           note: formData.note,
           isDraft: true, // AUTO DRAFT!
           isLeave: formData.isLeave,
@@ -574,7 +574,7 @@ export function DailyEntryPage() {
           transferSlips: updatedTransferSlips,
           tollReceiptUrl: updatedTollReceiptUrl,
           tollDate: formData.tollDate,
-          guaranteeDeduction: (formData.hasGuaranteeDeduction && !formData.isLeave) ? formData.guaranteeDeductionAmount : 0,
+          guaranteeDeduction: 0, // User requested: ONLY deduct on finalized save, NEVER on draft
           lateRateRule: formData.lateRateRule,
         };
         
@@ -624,7 +624,7 @@ export function DailyEntryPage() {
       transferSlips: formData.transferSlips,
       tollReceiptUrl: formData.tollReceiptUrl,
       tollDate: formData.tollDate,
-      guaranteeDeduction: (formData.hasGuaranteeDeduction && !formData.isLeave) ? formData.guaranteeDeductionAmount : 0,
+      guaranteeDeduction: (!isDraft && formData.hasGuaranteeDeduction && !formData.isLeave) ? formData.guaranteeDeductionAmount : 0, // ONLY record if NOT a draft AND NOT leave
       lateRateRule: formData.lateRateRule,
     };
 
@@ -1883,8 +1883,8 @@ export function DailyEntryPage() {
                 </div>
               </div>
 
-              {/* Guarantee Deduction (Only show if worker has guarantee) */}
-              {workers.find(w => w.id === formData.workerId)?.hasGuarantee && (
+              {/* Guarantee Deduction (Only show if worker has guarantee AND not on leave) */}
+              {!formData.isLeave && workers.find(w => w.id === formData.workerId)?.hasGuarantee && (
                 <div className="bg-orange-50/50 p-4 rounded-3xl border border-orange-100 flex items-center justify-between gap-4">
                   <div className="flex flex-col">
                     <span className="font-semibold text-orange-800 flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-orange-500" /> หักเงินประกันสะสม</span>
