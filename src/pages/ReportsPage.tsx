@@ -933,15 +933,15 @@ export function ReportsPage() {
                     items.push({ date: e.date, label: 'มาทำงาน', amount: 1 });
                   } else if (selectedMetric.metricType === 'leave' && e.isLeave) {
                     items.push({ date: e.date, label: e.leaveType || 'ลาหยุด', amount: 1, isDeduct: true });
-                  } else if (selectedMetric.metricType === 'baseWage' && !e.isLeave && e.baseWage > 0) {
+                  } else if (selectedMetric.metricType === 'baseWage' && e.baseWage > 0) {
                     items.push({ date: e.date, label: 'ค่าแรง', amount: e.baseWage });
-                  } else if (selectedMetric.metricType === 'travel' && !e.isLeave && e.travelAllowance > 0) {
+                  } else if (selectedMetric.metricType === 'travel' && e.travelAllowance > 0) {
                     items.push({ date: e.date, label: 'ค่ารถ', amount: e.travelAllowance });
-                  } else if (selectedMetric.metricType === 'ot' && !e.isLeave && e.overtimePay > 0) {
+                  } else if (selectedMetric.metricType === 'ot' && e.overtimePay > 0) {
                     items.push({ date: e.date, label: `โอที (${e.overtimeHours}ช.ม. ${e.overtimeMinutes}น.)`, amount: e.overtimePay });
-                  } else if (selectedMetric.metricType === 'late' && !e.isLeave && e.lateDeduction > 0) {
+                  } else if (selectedMetric.metricType === 'late' && e.lateDeduction > 0) {
                     items.push({ date: e.date, label: 'หักสาย', amount: e.lateDeduction, isDeduct: true });
-                  } else if (selectedMetric.metricType === 'guarantee' && !e.isLeave && e.guaranteeDeduction > 0) {
+                  } else if (selectedMetric.metricType === 'guarantee' && e.guaranteeDeduction > 0) {
                     items.push({ date: e.date, label: 'หักประกันสะสมรอบนี้', amount: e.guaranteeDeduction, isDeduct: false });
                   } else if (selectedMetric.metricType === 'net' && e.totalPay !== 0) {
                     items.push({ date: e.date, label: e.isLeave ? (e.leaveType || 'ลาหยุด') : 'ยอดสุทธิรายวัน', amount: e.totalPay });
