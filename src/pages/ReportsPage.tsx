@@ -94,7 +94,7 @@ export function ReportsPage() {
         let guarantee = e.guaranteeDeduction || 0;
         let needsRefund = false;
 
-        if (e.isLeave || e.isDraft) {
+        if ((e.isLeave && e.leaveType !== 'ลาครึ่งวัน') || e.isDraft) {
           if (guarantee > 0) needsRefund = true;
           guarantee = 0;
         } else if (guarantee > 0) {

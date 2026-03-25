@@ -32,7 +32,7 @@ export function WalletPage() {
         const guaranteeHistory: {id: string, date: string, amount: number}[] = [];
 
         workerEntries.forEach(e => {
-             if (e.isLeave) return;
+             if (e.isLeave && e.leaveType !== 'ลาครึ่งวัน') return;
              if ((e.guaranteeDeduction || 0) > 0) {
                  if (!processedDates.has(e.date)) {
                      processedDates.add(e.date);

@@ -143,7 +143,9 @@ export function DailyEntryPage() {
       return sum + (adj.type === 'add' ? Number(adj.amount) : -Number(adj.amount));
     }, 0);
     const tollTotal = formData.tolls.reduce((sum, t) => sum + Number(t.amount || 0), 0);
-    const guaranteeDed = (formData.hasGuaranteeDeduction && !formData.isLeave) ? formData.guaranteeDeductionAmount : 0;
+    const guaranteeDed = (formData.hasGuaranteeDeduction && (!formData.isLeave || formData.leaveType === 'ลาครึ่งวัน')) 
+      ? (formData.isLeave && formData.leaveType === 'ลาครึ่งวัน' ? formData.guaranteeDeductionAmount / 2 : formData.guaranteeDeductionAmount)
+      : 0;
     
     return effectiveBaseWage + formData.travelAllowance + tollTotal + otPay + adjustmentsTotal - formData.lateDeduction - guaranteeDed;
   };
@@ -630,7 +632,9 @@ export function DailyEntryPage() {
       transferSlips: formData.transferSlips,
       tollReceiptUrl: formData.tollReceiptUrl,
       tollDate: formData.tollDate,
-      guaranteeDeduction: (!isDraft && formData.hasGuaranteeDeduction && !formData.isLeave) ? formData.guaranteeDeductionAmount : 0, // ONLY record if NOT a draft AND NOT leave
+      guaranteeDeduction: (!isDraft && formData.hasGuaranteeDeduction && (!formData.isLeave || formData.leaveType === 'ลาครึ่งวัน')) 
+        ? (formData.isLeave && formData.leaveType === 'ลาครึ่งวัน' ? formData.guaranteeDeductionAmount / 2 : formData.guaranteeDeductionAmount)
+        : 0, 
       lateRateRule: formData.lateRateRule,
     };
 
@@ -680,6 +684,9 @@ export function DailyEntryPage() {
       let leaveStr = (entry.leaveType as any) === 'ลาพักผ่อน' ? 'ลากิจ' : (entry.leaveType || 'ลากิจ');
       if (leaveStr === 'ลาครึ่งวัน') {
         text += `ลาครึ่งวัน: ค่าแรง ฿${baseWage / 2}\n`;
+        if (entry.guaranteeDeduction > 0) {
+          text += `- หักสะสมครึ่งวัน: ฿${entry.guaranteeDeduction}\n`;
+        }
       } else {
         if (entry.leaveNote) leaveStr += ` (${entry.leaveNote})`;
         text += `${leaveStr}\n`;
@@ -963,6 +970,9 @@ export function DailyEntryPage() {
         let leaveStr = (entry.leaveType as any) === 'ลาพักผ่อน' ? 'ลากิจ' : (entry.leaveType || 'ลากิจ');
         if (leaveStr === 'ลาครึ่งวัน') {
           text += `ลาครึ่งวัน: ค่าแรง ฿${baseWage / 2}\n`;
+          if (entry.guaranteeDeduction > 0) {
+            text += `- หักสะสมครึ่งวัน: ฿${entry.guaranteeDeduction}\n`;
+          }
         } else {
           if (entry.leaveNote) leaveStr += ` (${entry.leaveNote})`;
           text += `${leaveStr}\n`;
