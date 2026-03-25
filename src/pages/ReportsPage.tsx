@@ -956,7 +956,7 @@ export function ReportsPage() {
                   return e.workerId === selectedMetric.workerId && isWithinInterval(ed, { start: parseISO(startDate), end: parseISO(endDate) });
                 }).sort((a, b) => a.date.localeCompare(b.date));
 
-                const items: { date: string; label: string; amount: number; isDeduct?: boolean }[] = [];
+                const items: { date: string; label: string; amount: number; isDeduct?: boolean; color?: string }[] = [];
                 const processedModalDates = new Set<string>();
 
                 metricEntries.forEach(e => {
@@ -976,7 +976,7 @@ export function ReportsPage() {
                     items.push({ date: e.date, label: `โอที (${e.overtimeHours}ช.ม. ${e.overtimeMinutes}น.)`, amount: e.overtimePay });
                   } else if (selectedMetric.metricType === 'late' && e.lateDeduction > 0) {
                     items.push({ date: e.date, label: 'หักสาย', amount: e.lateDeduction, isDeduct: true });
-                  } else if (selectedMetric.metricType === 'guarantee' && !e.isLeave && !e.isDraft && e.guaranteeDeduction > 0) {
+                  } else if (selectedMetric.metricType === 'guarantee' && (!e.isLeave || e.leaveType === 'ลาครึ่งวัน') && !e.isDraft && e.guaranteeDeduction > 0) {
                     if (!processedModalDates.has(e.date)) {
                       processedModalDates.add(e.date);
                       items.push({ date: e.date, label: 'หักประกันสะสมรอบนี้', amount: e.guaranteeDeduction, isDeduct: false });
@@ -999,7 +999,12 @@ export function ReportsPage() {
                        pay += e.guaranteeDeduction;
                     }
 
-                    items.push({ date: e.date, label: e.isLeave ? (e.leaveType || 'ลาหยุด') : 'ยอดสุทธิรายวัน', amount: pay });
+                    items.push({ 
+                      date: e.date, 
+                      label: e.isLeave ? (e.leaveType || 'ลาหยุด') : 'ยอดสุทธิรายวัน', 
+                      amount: pay,
+                      color: e.leaveType === 'ลาครึ่งวัน' ? 'text-pink-600' : (e.isLeave ? 'text-red-600' : 'text-sky-600')
+                    });
                   }
                 });
 
@@ -1038,7 +1043,7 @@ export function ReportsPage() {
                             <div className="text-[13px] font-medium text-zinc-800">{item.label}</div>
                             {item.date && <div className="text-[11px] text-zinc-500 mt-1">{format(parseISO(item.date), 'dd/MM/yyyy')}</div>}
                             </div>
-                            <div className={`font-bold text-sm ${item.isDeduct ? 'text-red-500' : 'text-emerald-600'}`}>
+                             <div className={`font-bold text-sm ${item.isDeduct ? 'text-red-500' : (item.color || 'text-emerald-600')}`}>
                             {selectedMetric.metricType === 'days' || selectedMetric.metricType === 'leave' ? '' : (item.isDeduct ? '-' : '+')}
                             {selectedMetric.metricType === 'days' || selectedMetric.metricType === 'leave' ? `${item.amount} วัน` : `฿${item.amount}`}
                             </div>

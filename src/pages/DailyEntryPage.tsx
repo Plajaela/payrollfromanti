@@ -3,7 +3,7 @@ import { useStore } from '../useStore';
 import { Button, Input, Label, Card, Modal, Toast } from '../components/ui';
 import { format, addDays, subDays, isSunday, parseISO } from 'date-fns';
 import { th } from 'date-fns/locale';
-import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Settings2, RefreshCw, Copy, Check, Paperclip, ImagePlus, X, AlertTriangle, Loader2, Share2, Wallet, ArrowDownCircle, Send } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Settings2, RefreshCw, Copy, Check, Paperclip, ImagePlus, X, AlertTriangle, Loader2, Share2, Wallet, ArrowDownCircle, Send, Activity } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../components/ui';
 import { v4 as uuidv4 } from 'uuid';
@@ -1115,14 +1115,18 @@ export function DailyEntryPage() {
       overtimeMinutes: 0,
       overtimePay: 0,
       adjustments: [],
-      totalPay: leaveType === 'ลาครึ่งวัน' ? activeWorker.baseWage / 2 : 0,
+      totalPay: leaveType === 'ลาครึ่งวัน' ? (activeWorker.baseWage / 2) - (activeWorker.hasGuarantee ? (activeWorker.guaranteeDeductionAmount || 100) / 2 : 0) : 0,
       note: '',
       isDraft: false,
       isLeave: true,
       leaveType: leaveType,
+      leaveNote: '',
       transferSlipUrl: '',
+      transferSlips: [],
       tollReceiptUrl: '',
-      guaranteeDeduction: 0, // No deduction on leave day
+      tollDate: dateStr,
+      guaranteeDeduction: leaveType === 'ลาครึ่งวัน' ? (activeWorker.hasGuarantee ? (activeWorker.guaranteeDeductionAmount || 100) / 2 : 0) : 0,
+      lateRateRule: activeWorker.lateRateRule || 'normal',
     };
     addEntry(entryData);
   };
@@ -1279,18 +1283,18 @@ export function DailyEntryPage() {
       <Card
         key={activeWorker.id}
         onClick={() => openModal(activeWorker, activeEntry)}
-              className={`p-6 md:p-8 mt-2 mb-4 md:mt-0 md:mb-0 animate-in fade-in zoom-in-95 duration-200 flex flex-col items-center justify-center min-h-[200px] text-center active:scale-[0.99] transition-all duration-300 cursor-pointer hover:-translate-y-1 hover:shadow-xl ${activeEntry ? (activeEntry.isLeave ? 'border-red-200 bg-gradient-to-b from-red-50/50 to-white shadow-red-100' : activeEntry.isDraft ? 'border-amber-200 bg-gradient-to-b from-amber-50/50 to-white shadow-amber-100' : 'border-sky-200 bg-gradient-to-b from-sky-50/50 to-white shadow-sky-100') : 'bg-white border-gray-100 hover:border-sky-300 shadow-sm'}`}
+              className={`p-6 md:p-8 mt-2 mb-4 md:mt-0 md:mb-0 animate-in fade-in zoom-in-95 duration-200 flex flex-col items-center justify-center min-h-[200px] text-center active:scale-[0.99] transition-all duration-300 cursor-pointer hover:-translate-y-1 hover:shadow-xl ${activeEntry ? (activeEntry.isLeave ? (activeEntry.leaveType === 'ลาครึ่งวัน' ? 'border-pink-200 bg-gradient-to-b from-pink-50/50 to-white shadow-pink-100' : 'border-red-200 bg-gradient-to-b from-red-50/50 to-white shadow-red-100') : activeEntry.isDraft ? 'border-amber-200 bg-gradient-to-b from-amber-50/50 to-white shadow-amber-100' : 'border-sky-200 bg-gradient-to-b from-sky-50/50 to-white shadow-sky-100') : 'bg-white border-gray-100 hover:border-sky-300 shadow-sm'}`}
             >
               <div className="mb-4">
                 <div className="font-bold text-gray-900 text-2xl mb-2">{activeWorker.name}</div>
                 <div className="flex flex-col items-center gap-2">
                   {activeEntry ? (
-                    <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-sm font-semibold shadow-sm ${activeEntry.isLeave ? 'bg-red-100 text-red-700' : activeEntry.isDraft ? 'bg-amber-100 text-amber-700' : 'bg-sky-100 text-sky-700'}`}>
-                      {activeEntry.isLeave ? <X className="w-4 h-4" /> : activeEntry.isDraft ? <Clock className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                    <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-sm font-semibold shadow-sm ${activeEntry.isLeave ? (activeEntry.leaveType === 'ลาครึ่งวัน' ? 'bg-pink-100 text-pink-700' : 'bg-red-100 text-red-700') : activeEntry.isDraft ? 'bg-amber-100 text-amber-700' : 'bg-sky-100 text-sky-700'}`}>
+                      {activeEntry.isLeave ? (activeEntry.leaveType === 'ลาครึ่งวัน' ? <Activity className="w-4 h-4" /> : <X className="w-4 h-4" />) : activeEntry.isDraft ? <Clock className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
                       {activeEntry.isLeave ? (activeEntry.leaveType || 'ลากิจ') : activeEntry.isDraft ? 'ฉบับร่าง' : 'บันทึกแล้ว'}
-                      <span className={`${activeEntry.isLeave ? 'text-red-800' : activeEntry.isDraft ? 'text-amber-800' : 'text-sky-800'} ml-1`}>฿{activeEntry.totalPay}</span>
-                      <span className={`${activeEntry.isLeave ? 'text-red-600/70 border-red-200' : activeEntry.isDraft ? 'text-amber-600/70 border-amber-200' : 'text-sky-600/70 border-sky-200'} font-normal ml-1 border-l pl-2`}>
-                        {activeEntry.isLeave ? 'ลาหยุด' : `${activeEntry.clockIn} - ${activeEntry.clockOut}`}
+                      <span className={`${activeEntry.isLeave ? (activeEntry.leaveType === 'ลาครึ่งวัน' ? 'text-pink-800' : 'text-red-800') : activeEntry.isDraft ? 'text-amber-800' : 'text-sky-800'} ml-1`}>฿{activeEntry.totalPay}</span>
+                      <span className={`${activeEntry.isLeave ? (activeEntry.leaveType === 'ลาครึ่งวัน' ? 'text-pink-600/70 border-pink-200' : 'text-red-600/70 border-red-200') : activeEntry.isDraft ? 'text-amber-600/70 border-amber-200' : 'text-sky-600/70 border-sky-200'} font-normal ml-1 border-l pl-2`}>
+                        {activeEntry.isLeave ? (activeEntry.leaveType === 'ลาครึ่งวัน' ? 'มาทำงานครึ่งวัน' : 'ลาหยุด') : `${activeEntry.clockIn} - ${activeEntry.clockOut}`}
                       </span>
                     </div>
                   ) : (
@@ -1444,7 +1448,7 @@ export function DailyEntryPage() {
                       <Button
                         variant="danger"
                         onClick={(e) => handleQuickLeaveInfo(e, 'ลาครึ่งวัน')}
-                        className="p-3 text-xs h-auto rounded-xl bg-purple-50 text-purple-600 hover:bg-purple-100 border border-purple-100 font-medium whitespace-nowrap"
+                        className="p-3 text-xs h-auto rounded-xl bg-pink-50 text-pink-600 hover:bg-pink-100 border border-pink-100 font-medium whitespace-nowrap"
                         title="ลาครึ่งวัน"
                       >
                         ลาครึ่งวัน
@@ -1554,7 +1558,7 @@ export function DailyEntryPage() {
                   <React.Fragment key={worker.id}>
                     <button
                     onClick={() => setActiveTabWorkerId(worker.id)}
-                    className={`flex items-center justify-between p-3.5 md:p-3 rounded-2xl md:rounded-xl text-left transition-all duration-300 flex-shrink-0 border hover:scale-[1.02] active:scale-[0.98] ${isActive ? (entry?.isLeave ? 'bg-gradient-to-r from-red-500 to-red-600 border-red-500 text-white shadow-md shadow-red-200' : isDraft ? 'bg-gradient-to-r from-amber-500 to-amber-600 border-amber-500 text-white shadow-md shadow-amber-200' : 'bg-gradient-to-r from-sky-500 to-sky-600 border-sky-500 text-white shadow-md shadow-sky-200') : (entry?.isLeave ? 'bg-red-50 border-red-200 text-red-900 hover:bg-red-100 shadow-sm' : isDraft ? 'bg-amber-50 border-amber-200 text-amber-900 hover:bg-amber-100 shadow-sm' : 'bg-white border-gray-100 text-gray-700 hover:bg-sky-50 hover:border-sky-200')}`}
+                    className={`flex items-center justify-between p-3.5 md:p-3 rounded-2xl md:rounded-xl text-left transition-all duration-300 flex-shrink-0 border hover:scale-[1.02] active:scale-[0.98] ${isActive ? (entry?.isLeave ? (entry.leaveType === 'ลาครึ่งวัน' ? 'bg-gradient-to-r from-pink-500 to-pink-600 border-pink-500 text-white shadow-md shadow-pink-200' : 'bg-gradient-to-r from-red-500 to-red-600 border-red-500 text-white shadow-md shadow-red-200') : isDraft ? 'bg-gradient-to-r from-amber-500 to-amber-600 border-amber-500 text-white shadow-md shadow-amber-200' : 'bg-gradient-to-r from-sky-500 to-sky-600 border-sky-500 text-white shadow-md shadow-sky-200') : (entry?.isLeave ? (entry.leaveType === 'ลาครึ่งวัน' ? 'bg-pink-50 border-pink-200 text-pink-900 hover:bg-pink-100 shadow-sm' : 'bg-red-50 border-red-200 text-red-900 hover:bg-red-100 shadow-sm') : isDraft ? 'bg-amber-50 border-amber-200 text-amber-900 hover:bg-amber-100 shadow-sm' : 'bg-white border-gray-100 text-gray-700 hover:bg-sky-50 hover:border-sky-200')}`}
                   >
                     <span className="font-semibold text-[15px]">{worker.name}</span>
                     {entry && (
@@ -1574,8 +1578,9 @@ export function DailyEntryPage() {
                             return <AlertTriangle className={`w-3.5 h-3.5 flex-shrink-0 stroke-[2.5px] ${isActive ? 'text-yellow-200' : 'text-yellow-500'}`} />;
                           }
                         })()}
-                        {entry.isLeave ?
-                          <X className={`w-4 h-4 flex-shrink-0 stroke-[3px] ${isActive ? 'text-red-100' : 'text-red-500'}`} /> :
+                        {entry.isLeave ? (entry.leaveType === 'ลาครึ่งวัน' ?
+                          <Activity className={`w-4 h-4 flex-shrink-0 stroke-[3px] ${isActive ? 'text-pink-100' : 'text-pink-500'}`} /> :
+                          <X className={`w-4 h-4 flex-shrink-0 stroke-[3px] ${isActive ? 'text-red-100' : 'text-red-500'}`} />) :
                           isDraft ?
                             <Clock className={`w-4 h-4 flex-shrink-0 stroke-[3px] ${isActive ? 'text-amber-100' : 'text-amber-500'}`} /> :
                             <CheckCircle2 className={`w-4 h-4 flex-shrink-0 stroke-[3px] ${isActive ? 'text-sky-100' : 'text-emerald-500'}`} />

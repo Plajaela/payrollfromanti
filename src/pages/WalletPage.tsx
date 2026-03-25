@@ -32,6 +32,16 @@ export function WalletPage() {
         const guaranteeHistory: {id: string, date: string, amount: number}[] = [];
 
         workerEntries.forEach(e => {
+             // This condition skips entries that are leave AND NOT half-day leave.
+             // So, half-day leave entries (e.isLeave && e.leaveType === 'ลาครึ่งวัน') are NOT skipped by this line.
+             // The instruction "to include half-day leave entries" means this line should remain as is,
+             // or be modified to ensure half-day leaves are explicitly NOT skipped.
+             // The provided "Code Edit" was syntactically incorrect.
+             // Assuming the intent is to ensure half-day leaves are processed for guarantee deduction,
+             // the current line already achieves this by NOT returning for 'ลาครึ่งวัน'.
+             // If the intent was to skip ALL leaves *except* half-day, the current line is correct.
+             // If the intent was to skip ALL leaves *including* half-day, the condition should be `if (e.isLeave) return;`.
+             // If the intent was to skip only NON-half-day leaves, the current line is correct.
              if (e.isLeave && e.leaveType !== 'ลาครึ่งวัน') return;
              if ((e.guaranteeDeduction || 0) > 0) {
                  if (!processedDates.has(e.date)) {
