@@ -151,7 +151,7 @@ export function DashboardPage() {
             </div>
           </div>
           
-          <div className="flex-1 min-h-[300px] pb-8 overflow-x-auto overflow-y-hidden scrollbar-none">
+          <div className="flex-1 min-h-[300px] pb-8 overflow-x-auto overflow-y-visible scrollbar-none">
             <div className="h-full min-w-[500px] flex items-end justify-between gap-2 relative px-2">
               <div className="absolute inset-x-0 top-0 border-t border-gray-100/50 h-px" />
               <div className="absolute inset-x-0 top-1/4 border-t border-gray-100/50 h-px" />
@@ -160,17 +160,16 @@ export function DashboardPage() {
               
               {stats.dailyTrail.map((day, i) => (
                 <div key={day.date} className="flex-1 flex flex-col items-center group relative h-full justify-end">
+                  {/* Tooltip - positioned at top of column to avoid overflow */}
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[110%] bg-gray-900 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-30 pointer-events-none shadow-xl border border-white/10">
+                    ฿{day.value.toLocaleString()}
+                  </div>
                   <motion.div
                     initial={{ height: 0 }}
                     animate={{ height: `${(day.value / maxDaily) * 100}%` }}
                     transition={{ delay: 0.5 + i * 0.05, type: 'spring', bounce: 0.2 }}
                     className="w-full max-w-[32px] bg-gradient-to-t from-red-600 to-orange-400 rounded-t-lg relative group-hover:from-red-700 group-hover:to-orange-500 transition-all cursor-pointer min-h-[4px] shadow-sm"
-                  >
-                    {/* Tooltip on hover */}
-                    <div className="absolute bottom-[105%] left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none shadow-xl border border-white/10">
-                      ฿{day.value.toLocaleString()}
-                    </div>
-                  </motion.div>
+                  />
                   <div className="absolute -bottom-6 whitespace-nowrap text-[10px] font-bold text-gray-400 group-hover:text-gray-600 transition-colors">
                     {day.label}
                   </div>
