@@ -167,7 +167,7 @@ export function DashboardPage() {
                     className="w-full max-w-[32px] bg-gradient-to-t from-red-600 to-orange-400 rounded-t-lg relative group-hover:from-red-700 group-hover:to-orange-500 transition-all cursor-pointer min-h-[4px] shadow-sm"
                   >
                     {/* Tooltip on hover */}
-                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none shadow-xl border border-white/10">
+                    <div className="absolute bottom-[105%] left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none shadow-xl border border-white/10">
                       ฿{day.value.toLocaleString()}
                     </div>
                   </motion.div>

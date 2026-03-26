@@ -133,9 +133,14 @@ export function DailyEntryPage() {
   const calculateTotal = () => {
     if (formData.isLeave && formData.leaveType !== 'ลาครึ่งวัน') return 0;
     
-    const effectiveBaseWage = (formData.isLeave && formData.leaveType === 'ลาครึ่งวัน') 
-      ? formData.baseWage / 2 
-      : formData.baseWage;
+    const guaranteeDed = (formData.hasGuaranteeDeduction && (!formData.isLeave || formData.leaveType === 'ลาครึ่งวัน')) 
+      ? formData.guaranteeDeductionAmount
+      : 0;
+
+    // If half-day: (baseWage - guaranteeDeduction) / 2
+    if (formData.isLeave && formData.leaveType === 'ลาครึ่งวัน') {
+      return (formData.baseWage - guaranteeDed) / 2;
+    }
 
     const otRatePerHour = 100;
     const otPay = (formData.overtimeHours * otRatePerHour) + (formData.overtimeMinutes / 60 * otRatePerHour);
@@ -143,11 +148,8 @@ export function DailyEntryPage() {
       return sum + (adj.type === 'add' ? Number(adj.amount) : -Number(adj.amount));
     }, 0);
     const tollTotal = formData.tolls.reduce((sum, t) => sum + Number(t.amount || 0), 0);
-    const guaranteeDed = (formData.hasGuaranteeDeduction && (!formData.isLeave || formData.leaveType === 'ลาครึ่งวัน')) 
-      ? formData.guaranteeDeductionAmount
-      : 0;
     
-    return effectiveBaseWage + formData.travelAllowance + tollTotal + otPay + adjustmentsTotal - formData.lateDeduction - guaranteeDed;
+    return formData.baseWage + formData.travelAllowance + tollTotal + otPay + adjustmentsTotal - formData.lateDeduction - guaranteeDed;
   };
 
   // Auto-calculate late deduction and overtime when times change
@@ -1115,7 +1117,7 @@ export function DailyEntryPage() {
       overtimeMinutes: 0,
       overtimePay: 0,
       adjustments: [],
-      totalPay: leaveType === 'ลาครึ่งวัน' ? (activeWorker.baseWage / 2) - (activeWorker.hasGuarantee ? 100 : 0) : 0,
+      totalPay: leaveType === 'ลาครึ่งวัน' ? (activeWorker.baseWage - (activeWorker.hasGuarantee ? 100 : 0)) / 2 : 0,
       note: '',
       isDraft: false,
       isLeave: true,

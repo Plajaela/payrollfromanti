@@ -10,7 +10,7 @@ import Snowfall from 'react-snowfall';
 import { cn } from './components/ui';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'daily' | 'workers' | 'reports' | 'wallet'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'daily' | 'workers' | 'reports' | 'wallet'>('daily');
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return localStorage.getItem('theme') === 'dark';
