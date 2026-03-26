@@ -1115,7 +1115,7 @@ export function DailyEntryPage() {
       overtimeMinutes: 0,
       overtimePay: 0,
       adjustments: [],
-      totalPay: leaveType === 'ลาครึ่งวัน' ? (activeWorker.baseWage / 2) - (activeWorker.hasGuarantee ? (activeWorker.guaranteeDeductionAmount || 100) : 0) : 0,
+      totalPay: leaveType === 'ลาครึ่งวัน' ? (activeWorker.baseWage / 2) - (activeWorker.hasGuarantee ? 100 : 0) : 0,
       note: '',
       isDraft: false,
       isLeave: true,
@@ -1125,7 +1125,7 @@ export function DailyEntryPage() {
       transferSlips: [],
       tollReceiptUrl: '',
       tollDate: dateStr,
-      guaranteeDeduction: leaveType === 'ลาครึ่งวัน' ? (activeWorker.hasGuarantee ? (activeWorker.guaranteeDeductionAmount || 100) : 0) : 0,
+      guaranteeDeduction: leaveType === 'ลาครึ่งวัน' ? (activeWorker.hasGuarantee ? 100 : 0) : 0,
       lateRateRule: activeWorker.lateRateRule || 'normal',
     };
     addEntry(entryData);
@@ -1638,7 +1638,8 @@ export function DailyEntryPage() {
                     {[
                       { id: 'ลาป่วย', label: 'ลาป่วย' },
                       { id: 'ลากิจ', label: 'ลากิจ' },
-                      { id: 'ขาดงาน', label: 'ขาดงาน' }
+                      { id: 'ขาดงาน', label: 'ขาดงาน' },
+                      { id: 'ลาครึ่งวัน', label: 'ลาครึ่งวัน' }
                     ].map(type => (
                       <button
                         key={type.id}
@@ -1921,7 +1922,7 @@ export function DailyEntryPage() {
               </div>
 
               {/* Guarantee Deduction (Only show if worker has guarantee AND not on leave) */}
-              {!formData.isLeave && workers.find(w => w.id === formData.workerId)?.hasGuarantee && (
+              {(!formData.isLeave || formData.leaveType === 'ลาครึ่งวัน') && workers.find(w => w.id === formData.workerId)?.hasGuarantee && (
                 <div className="bg-orange-50/50 p-4 rounded-3xl border border-orange-100 flex items-center justify-between gap-4">
                   <div className="flex flex-col">
                     <span className="font-semibold text-orange-800 flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-orange-500" /> หักเงินประกันสะสม</span>
