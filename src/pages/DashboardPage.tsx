@@ -187,47 +187,30 @@ export function DashboardPage() {
         ))}
       </div>
 
-      {/* Today's Attendance Snapshot */}
+      {/* Today's Attendance Snapshot (Integrated Row) */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
+        className="flex flex-wrap items-center justify-between gap-4 px-2 py-1"
       >
-        <Card className="p-4 border-none shadow-sm flex flex-wrap items-center justify-around gap-4 bg-white/40 backdrop-blur-md">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100/50">
-              <UserCheck className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">ทำงานวันนี้</div>
-              <div className="text-lg font-black text-emerald-600 leading-none">{stats.attendance.present} <span className="text-xs text-gray-400 font-bold ml-1">คน</span></div>
-            </div>
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+            <span className="text-[11px] font-black text-gray-700 uppercase tracking-widest">มาทำงาน {stats.attendance.present}</span>
           </div>
-          
-          <div className="w-px h-8 bg-gray-100 hidden sm:block" />
-
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-600 shadow-sm border border-orange-100/50">
-              <Timer className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">มาสาย</div>
-              <div className="text-lg font-black text-orange-600 leading-none">{stats.attendance.late} <span className="text-xs text-gray-400 font-bold ml-1">คน</span></div>
-            </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-orange-400 shadow-[0_0_8px_rgba(251,146,60,0.4)]" />
+            <span className="text-[11px] font-black text-gray-700 uppercase tracking-widest">สาย {stats.attendance.late}</span>
           </div>
-
-          <div className="w-px h-8 bg-gray-100 hidden sm:block" />
-
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-red-50 flex items-center justify-center text-red-600 shadow-sm border border-red-100/50">
-              <UserMinus className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">ลากับขาด</div>
-              <div className="text-lg font-black text-red-600 leading-none">{stats.attendance.leave} <span className="text-xs text-gray-400 font-bold ml-1">คน</span></div>
-            </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.4)]" />
+            <span className="text-[11px] font-black text-gray-700 uppercase tracking-widest">ลา/ขาด {stats.attendance.leave}</span>
           </div>
-        </Card>
+        </div>
+        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+          สถานะวันนี้ ({format(new Date(), 'd MMM yyyy', { locale: th })})
+        </div>
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -329,123 +312,107 @@ export function DashboardPage() {
       {/* Recent Activity Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Expense Breakdown */}
-        <Card className="p-6 border-none shadow-sm">
+        <Card className="p-6 border-none shadow-sm bg-gradient-to-br from-white to-indigo-50/30">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
+            <h3 className="text-base font-black text-gray-900 flex items-center gap-2">
               <PieChart className="w-5 h-5 text-indigo-500" />
               สรุปรายจ่ายเดือนนี้
             </h3>
-            <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full uppercase tracking-tighter">Budget Allocation</span>
+            <span className="text-[9px] font-black text-indigo-500 bg-white border border-indigo-100 px-2 py-0.5 rounded-full uppercase tracking-widest">Analytics</span>
           </div>
           
           <div className="space-y-6">
-            {/* Visual Bar */}
-            <div className="h-4 w-full bg-gray-100 rounded-full overflow-hidden flex shadow-inner">
+            {/* Visual Bar with Enhanced Look */}
+            <div className="h-6 w-full bg-gray-100/50 rounded-2xl overflow-hidden flex shadow-inner border border-white p-1">
               <div 
-                className="h-full bg-emerald-500 transition-all duration-1000 ease-out" 
+                className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-l-xl transition-all duration-1000 ease-out" 
                 style={{ width: `${(stats.breakdown.base / stats.totalBreakdown) * 100}%` }} 
-                title={`ค่าแรง: ฿${stats.breakdown.base.toLocaleString()}`}
               />
               <div 
-                className="h-full bg-sky-500 transition-all duration-1000 ease-out delay-100" 
+                className="h-full bg-gradient-to-r from-sky-500 to-sky-400 transition-all duration-1000 ease-out delay-100" 
                 style={{ width: `${(stats.breakdown.ot / stats.totalBreakdown) * 100}%` }} 
-                title={`OT: ฿${stats.breakdown.ot.toLocaleString()}`}
               />
               <div 
-                className="h-full bg-amber-500 transition-all duration-1000 ease-out delay-200" 
+                className="h-full bg-gradient-to-r from-amber-500 to-orange-400 transition-all duration-1000 ease-out delay-200" 
                 style={{ width: `${(stats.breakdown.travel / stats.totalBreakdown) * 100}%` }} 
-                title={`ค่ารถ/ทางด่วน: ฿${stats.breakdown.travel.toLocaleString()}`}
               />
               <div 
-                className="h-full bg-rose-500 transition-all duration-1000 ease-out delay-300" 
+                className="h-full bg-gradient-to-r from-rose-500 to-red-400 rounded-r-xl transition-all duration-1000 ease-out delay-300" 
                 style={{ width: `${(stats.breakdown.others / stats.totalBreakdown) * 100}%` }} 
-                title={`อื่นๆ: ฿${stats.breakdown.others.toLocaleString()}`}
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-bold text-gray-500">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                  ค่าแรงปกติ
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+              {[
+                { label: 'ค่าแรงปกติ', value: stats.breakdown.base, color: 'bg-emerald-500' },
+                { label: 'OT (โอที)', value: stats.breakdown.ot, color: 'bg-sky-500' },
+                { label: 'ค่ารถ/ทางด่วน', value: stats.breakdown.travel, color: 'bg-amber-500' },
+                { label: 'รายการอื่นๆ', value: stats.breakdown.others, color: 'bg-rose-500' },
+              ].map(b => (
+                <div key={b.label} className="flex flex-col gap-1 p-2 rounded-xl bg-white/50 border border-white shadow-sm">
+                  <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+                    <div className={cn("w-1.5 h-1.5 rounded-full", b.color)} />
+                    {b.label}
+                  </div>
+                  <div className="text-xs font-black text-gray-900 leading-none">฿{b.value.toLocaleString()}</div>
                 </div>
-                <div className="text-sm font-black text-gray-900">฿{stats.breakdown.base.toLocaleString()}</div>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-bold text-gray-500">
-                  <div className="w-2 h-2 rounded-full bg-sky-500" />
-                  OT (โอที)
-                </div>
-                <div className="text-sm font-black text-gray-900">฿{stats.breakdown.ot.toLocaleString()}</div>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-bold text-gray-500">
-                  <div className="w-2 h-2 rounded-full bg-amber-500" />
-                  ค่ารถ/ทางด่วน
-                </div>
-                <div className="text-sm font-black text-gray-900">฿{stats.breakdown.travel.toLocaleString()}</div>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-bold text-gray-500">
-                  <div className="w-2 h-2 rounded-full bg-rose-500" />
-                  รายการอื่นๆ
-                </div>
-                <div className="text-sm font-black text-gray-900">฿{stats.breakdown.others.toLocaleString()}</div>
-              </div>
+              ))}
             </div>
 
-            <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
-              <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">ยอดรวมทั้งหมด</span>
-              <span className="text-lg font-black text-red-600">฿{stats.totalBreakdown.toLocaleString()}</span>
+            <div className="pt-4 border-t border-indigo-100/50 flex items-center justify-between">
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">Net Monthly Pay</span>
+              <span className="text-xl font-black text-red-600 tracking-tight">฿{stats.totalBreakdown.toLocaleString()}</span>
             </div>
           </div>
         </Card>
 
-        {/* Upcoming Holidays */}
-        <Card className="p-6 border-none shadow-sm relative overflow-hidden">
+        {/* Upcoming Holidays - Polished Look */}
+        <Card className="p-6 border-none shadow-sm relative overflow-hidden bg-gradient-to-br from-white to-purple-50/30">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
+            <h3 className="text-base font-black text-gray-900 flex items-center gap-2 relative z-10">
               <Calendar className="w-5 h-5 text-purple-500" />
               วันหยุดนักขัตฤกษ์ถัดไป
             </h3>
-            <Activity className="w-4 h-4 text-purple-200" />
+            <Activity className="w-4 h-4 text-purple-200 animate-pulse relative z-10" />
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3 relative z-10">
             {stats.upcomingHolidays.length === 0 ? (
               <div className="text-center py-10 text-gray-400 text-sm font-medium">ไม่มีวันหยุดที่กำลังจะมาถึง</div>
             ) : (
               stats.upcomingHolidays.map((h, hi) => (
                 <div key={h.id} className="group relative">
                   <div className={cn(
-                    "relative z-10 p-4 rounded-2xl border transition-all flex items-center justify-between",
-                    hi === 0 ? "bg-purple-50/50 border-purple-100 shadow-sm" : "bg-gray-50 border-gray-100 hover:bg-white hover:border-purple-100"
+                    "relative z-10 p-3 rounded-2xl border transition-all flex items-center justify-between",
+                    hi === 0 ? "bg-white border-purple-200 shadow-md ring-2 ring-purple-50" : "bg-white/50 border-gray-100/50 hover:bg-white hover:border-purple-100 shadow-sm"
                   )}>
                     <div className="flex items-center gap-3">
                       <div className={cn(
-                        "w-10 h-10 rounded-xl flex flex-col items-center justify-center font-black",
-                        hi === 0 ? "bg-purple-600 text-white" : "bg-white text-gray-400"
+                        "w-10 h-10 rounded-xl flex flex-col items-center justify-center font-black shadow-sm",
+                        hi === 0 ? "bg-gradient-to-br from-purple-600 to-indigo-600 text-white" : "bg-gray-50 text-gray-400 border border-gray-100"
                       )}>
-                        <span className="text-[10px] uppercase leading-none mb-0.5">{format(parseISO(h.date), 'MMM', { locale: th })}</span>
+                        <span className="text-[9px] uppercase leading-none mb-0.5">{format(parseISO(h.date), 'MMM', { locale: th })}</span>
                         <span className="text-sm leading-none">{format(parseISO(h.date), 'd')}</span>
                       </div>
                       <div>
-                        <div className="text-sm font-black text-gray-900">{h.name}</div>
-                        <div className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mt-0.5">
+                        <div className="text-sm font-black text-gray-900 group-hover:text-purple-700 transition-colors">{h.name}</div>
+                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">
                           {format(parseISO(h.date), 'EEEE', { locale: th })}
                         </div>
                       </div>
                     </div>
                     {hi === 0 && (
-                      <div className="text-[10px] font-bold text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full animate-pulse">เร็วๆ นี้</div>
+                      <div className="text-[9px] font-black text-purple-600 bg-purple-50 border border-purple-100 px-2 py-0.5 rounded-full shadow-sm">FAST APPROACHING</div>
                     )}
                   </div>
                 </div>
               ))
             )}
-            <div className="absolute top-0 right-0 p-8 text-purple-50 -z-0 opacity-10 blur-xl translate-x-1/2 -translate-y-1/2">
-               <Calendar className="w-48 h-48" />
-            </div>
+          </div>
+          
+          {/* Decorative background element */}
+          <div className="absolute top-0 right-0 p-8 text-purple-100 -z-0 opacity-20 blur-2xl translate-x-1/3 -translate-y-1/3">
+             <Calendar className="w-64 h-64 rotate-12" />
           </div>
         </Card>
       </div>
