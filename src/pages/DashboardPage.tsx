@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useStore } from '../useStore';
 import { 
   TrendingUp, 
@@ -13,13 +13,14 @@ import {
   History,
   Activity
 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { format, subDays, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 import { th } from 'date-fns/locale';
 import { Card, cn } from '../components/ui';
 
 export function DashboardPage() {
   const { workers, entries, advances } = useStore();
+  const [selectedWorkerDetail, setSelectedWorkerDetail] = useState<{ id: string; name: string } | null>(null);
 
   const stats = useMemo(() => {
     const now = new Date();
@@ -196,7 +197,8 @@ export function DashboardPage() {
                 initial={{ x: 20, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ delay: i * 0.1 }}
-                className="flex items-center justify-between p-3 rounded-2xl bg-gray-50 group hover:bg-white hover:shadow-sm border border-transparent hover:border-gray-100 transition-all"
+                onClick={() => setSelectedWorkerDetail({ id: w.id, name: w.name })}
+                className="flex items-center justify-between p-3 rounded-2xl bg-gray-50 group hover:bg-white hover:shadow-sm border border-transparent hover:border-orange-200 transition-all cursor-pointer active:scale-[0.98]"
               >
                 <div className="flex items-center gap-3">
                   <div className={cn(
@@ -212,8 +214,9 @@ export function DashboardPage() {
                     <div className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wider">มาทำงาน {w.daysWorked} วัน</div>
                   </div>
                 </div>
-                <div className="text-sm font-black text-red-600">
-                  ฿{w.monthTotal.toLocaleString()}
+                <div className="flex items-center gap-1">
+                  <div className="text-sm font-black text-red-600">฿{w.monthTotal.toLocaleString()}</div>
+                  <ChevronRight className="w-4 h-4 text-gray-300" />
                 </div>
               </motion.div>
             ))}
@@ -292,6 +295,139 @@ export function DashboardPage() {
            </div>
         </Card>
       </div>
+
+      {/* Worker Detail Modal */}
+      <AnimatePresence>
+        {selectedWorkerDetail && (() => {
+          const now = new Date();
+          const monthStart = startOfMonth(now);
+          const monthEnd = endOfMonth(now);
+          const workerEntries = entries
+            .filter(e =>
+              e.workerId === selectedWorkerDetail.id &&
+              !e.isDraft &&
+              isWithinInterval(parseISO(e.date), { start: monthStart, end: monthEnd })
+            )
+            .sort((a, b) => b.date.localeCompare(a.date));
+
+          const grandTotal = workerEntries.reduce((s, e) => s + (e.totalPay || 0), 0);
+
+          return (
+            <motion.div
+              key="worker-detail-modal"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4"
+              onClick={() => setSelectedWorkerDetail(null)}
+            >
+              <motion.div
+                initial={{ y: 60, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 60, opacity: 0 }}
+                transition={{ type: 'spring', bounce: 0.18 }}
+                onClick={e => e.stopPropagation()}
+                className="bg-white w-full sm:max-w-lg rounded-t-[2rem] sm:rounded-[2rem] shadow-2xl flex flex-col max-h-[90vh]"
+              >
+                {/* Header */}
+                <div className="px-6 pt-6 pb-4 border-b border-gray-100 shrink-0">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-black text-gray-900">{selectedWorkerDetail.name}</h2>
+                      <p className="text-sm text-gray-400 font-medium mt-0.5">รายละเอียดเงินเดือน {format(now, 'MMMM yyyy', { locale: th })}</p>
+                    </div>
+                    <button
+                      onClick={() => setSelectedWorkerDetail(null)}
+                      className="w-9 h-9 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors font-bold text-lg"
+                    >×</button>
+                  </div>
+                  {/* Grand total */}
+                  <div className="mt-4 bg-gradient-to-r from-red-500 to-orange-500 rounded-2xl p-4 flex items-center justify-between text-white">
+                    <span className="font-bold text-sm opacity-90">รวมทั้งเดือน ({workerEntries.filter(e => !e.isLeave).length} วัน)</span>
+                    <span className="text-2xl font-black">฿{grandTotal.toLocaleString()}</span>
+                  </div>
+                </div>
+
+                {/* Per-day breakdown */}
+                <div className="overflow-y-auto flex-1 px-4 py-4 space-y-3">
+                  {workerEntries.length === 0 && (
+                    <div className="text-center py-12 text-gray-400 text-sm">ยังไม่มีข้อมูล</div>
+                  )}
+                  {workerEntries.map(e => (
+                    <div key={e.id} className={`rounded-2xl border p-4 space-y-2 ${e.isLeave ? 'bg-red-50/50 border-red-100' : 'bg-gray-50 border-gray-100'}`}>
+                      {/* Day header */}
+                      <div className="flex items-center justify-between">
+                        <div className="font-black text-gray-900 text-sm">
+                          {format(parseISO(e.date), 'EEEE d MMM', { locale: th })}
+                          {e.isLeave && (
+                            <span className="ml-2 text-[10px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full">{e.leaveType || 'ลา'}</span>
+                          )}
+                        </div>
+                        <div className={`font-black text-sm ${e.totalPay > 0 ? 'text-red-600' : 'text-gray-400'}`}>
+                          ฿{(e.totalPay || 0).toLocaleString()}
+                        </div>
+                      </div>
+
+                      {/* Line items */}
+                      <div className="space-y-1 text-[12px]">
+                        {e.baseWage > 0 && (
+                          <div className="flex justify-between text-gray-600">
+                            <span>ค่าแรงพื้นฐาน</span>
+                            <span className="font-semibold text-gray-800">+฿{e.baseWage.toLocaleString()}</span>
+                          </div>
+                        )}
+                        {e.travelAllowance > 0 && (
+                          <div className="flex justify-between text-gray-600">
+                            <span>ค่ารถ</span>
+                            <span className="font-semibold text-emerald-600">+฿{e.travelAllowance.toLocaleString()}</span>
+                          </div>
+                        )}
+                        {e.tollFee > 0 && (
+                          <div className="flex justify-between text-gray-600">
+                            <span>ค่าทางด่วน</span>
+                            <span className="font-semibold text-emerald-600">+฿{e.tollFee.toLocaleString()}</span>
+                          </div>
+                        )}
+                        {e.overtimePay > 0 && (
+                          <div className="flex justify-between text-gray-600">
+                            <span>OT ({e.overtimeHours}ชม.{e.overtimeMinutes > 0 ? ` ${e.overtimeMinutes}น.` : ''})</span>
+                            <span className="font-semibold text-emerald-600">+฿{e.overtimePay.toLocaleString()}</span>
+                          </div>
+                        )}
+                        {(e.adjustments || []).map((adj, ai) => (
+                          <div key={ai} className="flex justify-between text-gray-600">
+                            <span>{adj.note || (adj.type === 'add' ? 'รายการเพิ่ม' : 'รายการหัก')}</span>
+                            <span className={`font-semibold ${adj.type === 'add' ? 'text-emerald-600' : 'text-red-500'}`}>
+                              {adj.type === 'add' ? '+' : '-'}฿{adj.amount.toLocaleString()}
+                            </span>
+                          </div>
+                        ))}
+                        {e.lateDeduction > 0 && (
+                          <div className="flex justify-between text-gray-600">
+                            <span>หักมาสาย</span>
+                            <span className="font-semibold text-red-500">-฿{e.lateDeduction.toLocaleString()}</span>
+                          </div>
+                        )}
+                        {(e.guaranteeDeduction || 0) > 0 && (
+                          <div className="flex justify-between text-gray-600">
+                            <span>หักประกันสะสม</span>
+                            <span className="font-semibold text-orange-500">-฿{(e.guaranteeDeduction || 0).toLocaleString()}</span>
+                          </div>
+                        )}
+                        {e.clockIn && e.clockOut && (
+                          <div className="text-gray-400 pt-1 border-t border-gray-100 text-[11px]">
+                            เวลา {e.clockIn} – {e.clockOut}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
     </div>
   );
 }
