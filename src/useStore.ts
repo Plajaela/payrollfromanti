@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Worker, DailyEntry, AdvancePayment } from './types';
+import { Worker, DailyEntry, AdvancePayment, Holiday } from './types';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from './lib/supabase';
 
@@ -20,6 +20,7 @@ export function useStore() {
   });
 
   const [advances, setAdvances] = useState<AdvancePayment[]>([]);
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
 
   // Fetch workers from Supabase on mount and subscribe to changes
   useEffect(() => {
@@ -532,6 +533,47 @@ export function useStore() {
     }
   };
 
+  // Fetch holidays from Supabase
+  useEffect(() => {
+    const fetchHolidays = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('holidays')
+          .select('*')
+          .order('date', { ascending: true });
+        if (error) throw error;
+        if (data) {
+          setHolidays(data.map(h => ({ id: h.id, date: h.date, name: h.name })));
+        }
+      } catch (err) {
+        console.error('Failed to fetch holidays:', err);
+      }
+    };
+    fetchHolidays();
+  }, []);
+
+  const addHoliday = async (date: string, name: string) => {
+    const newId = uuidv4();
+    const newHoliday: Holiday = { id: newId, date, name };
+    setHolidays(prev => [...prev.filter(h => h.date !== date), newHoliday].sort((a, b) => a.date.localeCompare(b.date)));
+    try {
+      const { error } = await supabase.from('holidays').upsert([{ id: newId, date, name }], { onConflict: 'date' });
+      if (error) throw error;
+    } catch (err) {
+      console.error('Failed to add holiday:', err);
+    }
+  };
+
+  const deleteHoliday = async (id: string) => {
+    setHolidays(prev => prev.filter(h => h.id !== id));
+    try {
+      const { error } = await supabase.from('holidays').delete().eq('id', id);
+      if (error) throw error;
+    } catch (err) {
+      console.error('Failed to delete holiday:', err);
+    }
+  };
+
   return {
     workers,
     isWorkersLoading,
@@ -546,5 +588,8 @@ export function useStore() {
     advances,
     addAdvance,
     deleteAdvance,
+    holidays,
+    addHoliday,
+    deleteHoliday,
   };
 }

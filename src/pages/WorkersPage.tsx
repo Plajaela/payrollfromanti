@@ -1,14 +1,52 @@
 import React, { useState } from 'react';
 import { useStore } from '../useStore';
 import { Button, Input, Label, Card, Modal } from '../components/ui';
-import { Plus, Trash2, UserPlus } from 'lucide-react';
+import { Plus, Trash2, UserPlus, CalendarOff, PlusCircle, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../components/ui';
+import { format, parseISO } from 'date-fns';
+import { th } from 'date-fns/locale';
+
+const THAI_PUBLIC_HOLIDAYS_2025 = [
+  { date: '2025-01-01', name: 'วันปีใหม่' },
+  { date: '2025-04-06', name: 'วันจักรี' },
+  { date: '2025-04-13', name: 'วันสงกรานต์ วัน 1' },
+  { date: '2025-04-14', name: 'วันสงกรานต์ วัน 2' },
+  { date: '2025-04-15', name: 'วันสงกรานต์ วัน 3' },
+  { date: '2025-05-01', name: 'วันแรงงานแห่งชาติ' },
+  { date: '2025-05-05', name: 'วันฉัตรมงคล' },
+  { date: '2025-06-03', name: 'วันเฉลิมฯ สมเด็จพระราชินี' },
+  { date: '2025-07-28', name: 'วันเฉลิมฯ ร.10' },
+  { date: '2025-08-12', name: 'วันแม่แห่งชาติ' },
+  { date: '2025-10-13', name: 'วันนวมินทรมหาราช' },
+  { date: '2025-10-23', name: 'วันปิยมหาราช' },
+  { date: '2025-12-05', name: 'วันพ่อแห่งชาติ' },
+  { date: '2025-12-10', name: 'วันรัฐธรรมนูญ' },
+  { date: '2025-12-31', name: 'วันสิ้นปี' },
+  // 2026
+  { date: '2026-01-01', name: 'วันปีใหม่' },
+  { date: '2026-04-06', name: 'วันจักรี' },
+  { date: '2026-04-13', name: 'วันสงกรานต์ วัน 1' },
+  { date: '2026-04-14', name: 'วันสงกรานต์ วัน 2' },
+  { date: '2026-04-15', name: 'วันสงกรานต์ วัน 3' },
+  { date: '2026-05-01', name: 'วันแรงงานแห่งชาติ' },
+  { date: '2026-05-04', name: 'วันฉัตรมงคล' },
+  { date: '2026-06-03', name: 'วันเฉลิมฯ สมเด็จพระราชินี' },
+  { date: '2026-07-28', name: 'วันเฉลิมฯ ร.10' },
+  { date: '2026-08-12', name: 'วันแม่แห่งชาติ' },
+  { date: '2026-10-23', name: 'วันปิยมหาราช' },
+  { date: '2026-12-05', name: 'วันพ่อแห่งชาติ' },
+  { date: '2026-12-10', name: 'วันรัฐธรรมนูญ' },
+  { date: '2026-12-31', name: 'วันสิ้นปี' },
+];
 
 export function WorkersPage() {
-  const { workers, addWorker, updateWorker, deleteWorker } = useStore();
+  const { workers, addWorker, updateWorker, deleteWorker, holidays, addHoliday, deleteHoliday } = useStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [newHolidayDate, setNewHolidayDate] = useState('');
+  const [newHolidayName, setNewHolidayName] = useState('');
+  const [isLoadingPreset, setIsLoadingPreset] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -138,6 +176,84 @@ export function WorkersPage() {
               );
             })}
           </>
+        )}
+      </div>
+
+      {/* ========= HOLIDAY MANAGEMENT ========= */}
+      <div className="mt-8 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-black text-gray-900 flex items-center gap-2">
+            <CalendarOff className="w-5 h-5 text-purple-500" />
+            วันหยุดนักขัตฤกษ์
+          </h3>
+          <span className="text-xs text-gray-400">{holidays.length} วัน</span>
+        </div>
+
+        {/* Preset loader */}
+        <button
+          onClick={async () => {
+            setIsLoadingPreset(true);
+            for (const h of THAI_PUBLIC_HOLIDAYS_2025) {
+              await addHoliday(h.date, h.name);
+            }
+            setIsLoadingPreset(false);
+          }}
+          disabled={isLoadingPreset}
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-purple-50 border border-purple-200 text-purple-600 hover:bg-purple-100 transition-all text-sm font-semibold disabled:opacity-60"
+        >
+          <Sparkles className="w-4 h-4" />
+          {isLoadingPreset ? 'โหลด...' : 'ตั้งค่าวันหยุดไทยอัตโนมัติ ปี 2568-2569'}
+        </button>
+
+        {/* Add custom holiday */}
+        <div className="flex gap-2">
+          <Input
+            type="date"
+            value={newHolidayDate}
+            onChange={e => setNewHolidayDate(e.target.value)}
+            className="w-40 shrink-0 h-10 text-sm"
+          />
+          <Input
+            placeholder="ชื่อวันหยุด เช่น สงกรานต์วัน 1"
+            value={newHolidayName}
+            onChange={e => setNewHolidayName(e.target.value)}
+            className="flex-1 h-10 text-sm"
+          />
+          <button
+            onClick={() => {
+              if (!newHolidayDate || !newHolidayName.trim()) return;
+              addHoliday(newHolidayDate, newHolidayName.trim());
+              setNewHolidayDate('');
+              setNewHolidayName('');
+            }}
+            className="shrink-0 px-3 h-10 rounded-xl bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+          >
+            <PlusCircle className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Holiday list */}
+        {holidays.length === 0 ? (
+          <div className="text-center py-6 text-gray-400 text-sm bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+            ยังไม่มีวันหยุด — กดปุ่มด้านบนเพื่อตั้งค่าวันหยุดไทยอัตโนมัติ
+          </div>
+        ) : (
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {holidays.map(h => (
+              <div key={h.id} className="flex items-center justify-between bg-purple-50/60 border border-purple-100 rounded-2xl px-3 py-2.5">
+                <div>
+                  <div className="font-semibold text-purple-900 text-sm">🎌 {h.name}</div>
+                  <div className="text-[11px] text-purple-500">{format(parseISO(h.date), 'd MMMM yyyy', { locale: th })}</div>
+                </div>
+                <button
+                  onClick={() => deleteHoliday(h.id)}
+                  className="p-1.5 rounded-xl bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 

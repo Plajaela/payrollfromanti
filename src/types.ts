@@ -63,3 +63,9 @@ export interface AdvancePayment {
   type: 'borrow' | 'repay';
   note: string;
 }
+
+export interface Holiday {
+  id: string;
+  date: string; // YYYY-MM-DD
+  name: string;
+}

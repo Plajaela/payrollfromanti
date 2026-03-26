@@ -3,7 +3,7 @@ import { useStore } from '../useStore';
 import { Button, Input, Label, Card, Modal, Toast } from '../components/ui';
 import { format, addDays, subDays, isSunday, parseISO } from 'date-fns';
 import { th } from 'date-fns/locale';
-import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Settings2, RefreshCw, Copy, Check, Paperclip, ImagePlus, X, AlertTriangle, Loader2, Share2, Wallet, ArrowDownCircle, Send, Activity } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Settings2, RefreshCw, Copy, Check, Paperclip, ImagePlus, X, AlertTriangle, Loader2, Share2, Wallet, ArrowDownCircle, Send, Activity, CalendarOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../components/ui';
 import { v4 as uuidv4 } from 'uuid';
@@ -18,7 +18,7 @@ const timeToMins = (time: string) => {
 };
 
 export function DailyEntryPage() {
-  const { workers, entries, advances, addEntry, updateEntry, deleteEntry, addAdvance } = useStore();
+  const { workers, entries, advances, addEntry, updateEntry, deleteEntry, addAdvance, holidays, addHoliday, deleteHoliday } = useStore();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [dailySlipsViewer, setDailySlipsViewer] = useState<{ workerName: string, images: string[] } | null>(null);
@@ -81,6 +81,8 @@ export function DailyEntryPage() {
   });
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
+  const currentHoliday = holidays.find(h => h.date === dateStr);
+  const isHoliday = !!currentHoliday;
 
   const entriesForDate = useMemo(() => {
     return entries.filter(e => e.date === dateStr);
@@ -1493,7 +1495,9 @@ export function DailyEntryPage() {
             onChange={(e) => setSelectedDate(new Date(e.target.value))}
             className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
           />
-          <div className="text-[11px] text-red-500 font-bold uppercase tracking-wider mb-0.5">{format(selectedDate, 'EEEE', { locale: th })}</div>
+          <div className={`text-[11px] font-bold uppercase tracking-wider mb-0.5 ${isHoliday ? 'text-purple-500' : 'text-red-500'}`}>
+            {isHoliday ? `🎌 ${currentHoliday!.name}` : format(selectedDate, 'EEEE', { locale: th })}
+          </div>
           <div className="text-lg font-extrabold text-gray-900 group-hover:scale-105 transition-transform">{format(selectedDate, 'd MMM yyyy', { locale: th })}</div>
         </div>
         <motion.button 
@@ -1506,7 +1510,7 @@ export function DailyEntryPage() {
         </motion.button>
       </div>
 
-      {isSunday(selectedDate) && (
+      {isSunday(selectedDate) && !isHoliday && (
         <div className="bg-orange-50 border border-orange-200 text-orange-700 p-4 rounded-3xl shadow-sm flex items-start gap-3 text-sm">
           <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
           <div>
@@ -1514,6 +1518,39 @@ export function DailyEntryPage() {
             <p className="text-orange-600/90 leading-relaxed">ปกติแล้วไม่ต้องบันทึกเวลาทำงาน แต่หากมีการเข้ามาทำงาน สามารถบันทึกเวลาที่นี่ และบวก "โบนัสพิเศษ" หรือ "ค่าแรงวันหยุด" ในช่อง <span className="font-semibold underline">รายการปรับปรุง</span> ได้เลยครับ</p>
           </div>
         </div>
+      )}
+
+      {/* Public Holiday Banner */}
+      {isHoliday && (
+        <div className="bg-purple-50 border border-purple-200 text-purple-700 p-4 rounded-3xl shadow-sm flex items-start justify-between gap-3 text-sm">
+          <div className="flex items-start gap-3">
+            <CalendarOff className="w-5 h-5 shrink-0 mt-0.5 text-purple-500" />
+            <div>
+              <p className="font-bold text-base mb-0.5">🎌 {currentHoliday!.name}</p>
+              <p className="text-purple-600/90 leading-relaxed">วันหยุดนักขัตฤกษ์ — ไม่ต้องบันทึกงานในวันนี้ หากมีช่างมาทำงาน สามารถบันทึกได้ตามปกติ</p>
+            </div>
+          </div>
+          <button
+            onClick={() => deleteHoliday(currentHoliday!.id)}
+            className="shrink-0 text-purple-400 hover:text-purple-600 text-xs underline whitespace-nowrap mt-0.5"
+          >
+            ยกเลิกวันหยุด
+          </button>
+        </div>
+      )}
+
+      {/* Mark as holiday button (shown when not already a holiday) */}
+      {!isHoliday && !isSunday(selectedDate) && (
+        <button
+          onClick={() => {
+            const name = prompt('ระบุชื่อวันหยุด เช่น สงกรานต์วัน 1');
+            if (name && name.trim()) addHoliday(dateStr, name.trim());
+          }}
+          className="w-full flex items-center justify-center gap-2 py-2 rounded-2xl border border-dashed border-purple-200 text-purple-500 hover:bg-purple-50 hover:border-purple-400 transition-all text-sm font-medium"
+        >
+          <CalendarOff className="w-4 h-4" />
+          ตั้งวันนี้เป็นวันหยุดนักขัตฤกษ์
+        </button>
       )}
 
       {/* Summary Cards */}
