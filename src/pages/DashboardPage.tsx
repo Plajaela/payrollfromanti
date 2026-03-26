@@ -98,19 +98,17 @@ export function DashboardPage() {
       total: workers.length
     };
 
-    // 9. Monthly Expense Breakdown — use same filter as totalWagesMonth (!isLeave), use totalPay as source of truth
+    // 9. Monthly Expense Breakdown – mirrors calculateTotal() exactly:
+    // totalPay = base + OT + travel + tollFee + adjustments(net) - lateDeduction - guaranteeDeduction
     const monthEntries = entries.filter(e => !e.isDraft && !e.isLeave && isWithinInterval(parseISO(e.date), { start: monthStart, end: monthEnd }));
     const breakdown = {
-      base: monthEntries.reduce((sum, e) => sum + (e.baseWage || 0), 0),
-      ot: monthEntries.reduce((sum, e) => sum + (e.overtimePay || 0), 0),
-      travel: monthEntries.reduce((sum, e) => sum + (e.travelAllowance || 0) + (e.tollFee || 0), 0),
-      others: monthEntries.reduce((sum, e) => {
-        const adjs = e.adjustments?.reduce((s, a) => s + (a.type === 'add' ? a.amount : -a.amount), 0) || 0;
-        const deductions = (e.lateDeduction || 0) + (e.guaranteeDeduction || 0);
-        return sum + adjs - deductions;
-      }, 0)
+      base:        monthEntries.reduce((sum, e) => sum + (e.baseWage || 0), 0),
+      ot:          monthEntries.reduce((sum, e) => sum + (e.overtimePay || 0), 0),
+      travel:      monthEntries.reduce((sum, e) => sum + (e.travelAllowance || 0) + (e.tollFee || 0), 0),
+      adjustments: monthEntries.reduce((sum, e) => sum + (e.adjustments?.reduce((s, a) => s + (a.type === 'add' ? Number(a.amount) : -Number(a.amount)), 0) || 0), 0),
+      deductions:  monthEntries.reduce((sum, e) => sum + (e.lateDeduction || 0) + (e.guaranteeDeduction || 0), 0),
     };
-    // Use totalWagesMonth as the authoritative total so both cards match exactly
+    // verification: breakdown.base + ot + travel + adjustments - deductions must === totalWagesMonth
     const totalBreakdown = totalWagesMonth;
 
     // 10. Next 3 Upcoming Holidays
@@ -346,17 +344,20 @@ export function DashboardPage() {
 
             <div className="grid grid-cols-2 gap-x-4 gap-y-3">
               {[
-                { label: 'ค่าแรงปกติ', value: stats.breakdown.base, color: 'bg-emerald-500' },
-                { label: 'OT (โอที)', value: stats.breakdown.ot, color: 'bg-sky-500' },
-                { label: 'ค่ารถ/ทางด่วน', value: stats.breakdown.travel, color: 'bg-amber-500' },
-                { label: 'รายการอื่นๆ', value: stats.breakdown.others, color: 'bg-rose-500' },
+                { label: 'ค่าแรงปกติ', value: stats.breakdown.base, color: 'bg-emerald-500', positive: true },
+                { label: 'OT (โอที)', value: stats.breakdown.ot, color: 'bg-sky-500', positive: true },
+                { label: 'ค่ารถ/ทางด่วน', value: stats.breakdown.travel, color: 'bg-amber-500', positive: true },
+                { label: 'รายการปรับเพิ่ม/หัก', value: stats.breakdown.adjustments, color: 'bg-violet-500', positive: stats.breakdown.adjustments >= 0 },
+                { label: 'หักสาย+ประกัน', value: stats.breakdown.deductions, color: 'bg-red-400', positive: false },
               ].map(b => (
                 <div key={b.label} className="flex flex-col gap-1 p-2 rounded-xl bg-white/50 border border-white shadow-sm">
                   <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
                     <div className={cn("w-1.5 h-1.5 rounded-full", b.color)} />
                     {b.label}
                   </div>
-                  <div className="text-xs font-black text-gray-900 leading-none">฿{b.value.toLocaleString()}</div>
+                  <div className={cn("text-xs font-black leading-none", b.positive ? 'text-gray-900' : 'text-red-600')}>
+                    {b.positive ? '' : '-'}฿{Math.abs(b.value).toLocaleString()}
+                  </div>
                 </div>
               ))}
             </div>
