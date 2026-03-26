@@ -66,7 +66,7 @@ export function DashboardPage() {
         .reduce((sum, e) => sum + (e.totalPay || 0), 0);
       const daysWorked = entries.filter(e => e.workerId === w.id && !e.isDraft && !e.isLeave && isWithinInterval(parseISO(e.date), { start: monthStart, end: monthEnd })).length;
       return { ...w, monthTotal, daysWorked };
-    }).sort((a, b) => b.monthTotal - a.monthTotal).slice(0, 5);
+    }).sort((a, b) => b.monthTotal - a.monthTotal);
 
     // 7. Recent Adjustments
     const recentAdjustments = entries
@@ -184,12 +184,12 @@ export function DashboardPage() {
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
               <Trophy className="w-5 h-5 text-orange-500" />
-              ติดอันดับยอดสูงสุด
+              ยอดรวมทุกคน
             </h3>
             <span className="text-[10px] font-bold text-orange-500 bg-orange-50 px-2 py-0.5 rounded-full">เดือนนี้</span>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3 max-h-[340px] overflow-y-auto pr-1">
             {stats.topWorkers.map((w, i) => (
               <motion.div
                 key={w.id}
