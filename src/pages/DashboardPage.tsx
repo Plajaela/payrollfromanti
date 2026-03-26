@@ -98,18 +98,20 @@ export function DashboardPage() {
       total: workers.length
     };
 
-    // 9. Monthly Expense Breakdown
-    const monthEntries = entries.filter(e => !e.isDraft && isWithinInterval(parseISO(e.date), { start: monthStart, end: monthEnd }));
+    // 9. Monthly Expense Breakdown — use same filter as totalWagesMonth (!isLeave), use totalPay as source of truth
+    const monthEntries = entries.filter(e => !e.isDraft && !e.isLeave && isWithinInterval(parseISO(e.date), { start: monthStart, end: monthEnd }));
     const breakdown = {
       base: monthEntries.reduce((sum, e) => sum + (e.baseWage || 0), 0),
       ot: monthEntries.reduce((sum, e) => sum + (e.overtimePay || 0), 0),
       travel: monthEntries.reduce((sum, e) => sum + (e.travelAllowance || 0) + (e.tollFee || 0), 0),
       others: monthEntries.reduce((sum, e) => {
         const adjs = e.adjustments?.reduce((s, a) => s + (a.type === 'add' ? a.amount : -a.amount), 0) || 0;
-        return sum + adjs;
+        const deductions = (e.lateDeduction || 0) + (e.guaranteeDeduction || 0);
+        return sum + adjs - deductions;
       }, 0)
     };
-    const totalBreakdown = breakdown.base + breakdown.ot + breakdown.travel + breakdown.others;
+    // Use totalWagesMonth as the authoritative total so both cards match exactly
+    const totalBreakdown = totalWagesMonth;
 
     // 10. Next 3 Upcoming Holidays
     const upcomingHolidays = [...(holidays || [])]
