@@ -11,15 +11,23 @@ import {
   ChevronRight,
   Trophy,
   History,
-  Activity
+  Activity,
+  PieChart,
+  ArrowUp,
+  ArrowDown,
+  Minus,
+  UserCheck,
+  Timer,
+  UserMinus,
+  Percent
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { format, subDays, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
+import { format, subDays, startOfMonth, endOfMonth, isWithinInterval, parseISO, subMonths, isAfter, startOfDay } from 'date-fns';
 import { th } from 'date-fns/locale';
 import { Card, cn } from '../components/ui';
 
 export function DashboardPage() {
-  const { workers, entries, advances } = useStore();
+  const { workers, entries, advances, holidays } = useStore();
   const [selectedWorkerDetail, setSelectedWorkerDetail] = useState<{ id: string; name: string } | null>(null);
 
   const stats = useMemo(() => {
@@ -81,6 +89,45 @@ export function DashboardPage() {
         adjustment: e.adjustments[0] // Just show the first one for brevity
       }));
 
+    // 8. Today's Attendance Summary
+    const todayEntries = entries.filter(e => e.date === todayStr && !e.isDraft);
+    const attendance = {
+      present: todayEntries.filter(e => !e.isLeave).length,
+      late: todayEntries.filter(e => e.lateDeduction > 0).length,
+      leave: todayEntries.filter(e => e.isLeave).length,
+      total: workers.length
+    };
+
+    // 9. Monthly Expense Breakdown
+    const monthEntries = entries.filter(e => !e.isDraft && isWithinInterval(parseISO(e.date), { start: monthStart, end: monthEnd }));
+    const breakdown = {
+      base: monthEntries.reduce((sum, e) => sum + (e.baseWage || 0), 0),
+      ot: monthEntries.reduce((sum, e) => sum + (e.overtimePay || 0), 0),
+      travel: monthEntries.reduce((sum, e) => sum + (e.travelAllowance || 0) + (e.tollFee || 0), 0),
+      others: monthEntries.reduce((sum, e) => {
+        const adjs = e.adjustments?.reduce((s, a) => s + (a.type === 'add' ? a.amount : -a.amount), 0) || 0;
+        return sum + adjs;
+      }, 0)
+    };
+    const totalBreakdown = breakdown.base + breakdown.ot + breakdown.travel + breakdown.others;
+
+    // 10. Next 3 Upcoming Holidays
+    const upcomingHolidays = [...(holidays || [])]
+      .filter(h => isAfter(parseISO(h.date), startOfDay(now)) || h.date === todayStr)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(0, 3);
+
+    // 11. Month Comparison (Growth %)
+    const prevMonthStart = startOfMonth(subMonths(now, 1));
+    const prevMonthEnd = endOfMonth(subMonths(now, 1));
+    const prevMonthWages = entries
+      .filter(e => !e.isDraft && isWithinInterval(parseISO(e.date), { start: prevMonthStart, end: prevMonthEnd }))
+      .reduce((sum, e) => sum + (e.totalPay || 0), 0);
+    
+    const growth = prevMonthWages > 0 
+      ? ((totalWagesMonth - prevMonthWages) / prevMonthWages) * 100 
+      : 0;
+
     return {
       totalWagesMonth,
       activeToday,
@@ -88,9 +135,14 @@ export function DashboardPage() {
       totalGuarantee,
       dailyTrail,
       topWorkers: workerStats,
-      recentAdjustments
+      recentAdjustments,
+      attendance,
+      breakdown,
+      totalBreakdown,
+      upcomingHolidays,
+      growth
     };
-  }, [workers, entries, advances]);
+  }, [workers, entries, advances, holidays]);
 
   const maxDaily = Math.max(...stats.dailyTrail.map(d => d.value), 1);
 
@@ -99,7 +151,7 @@ export function DashboardPage() {
       {/* KPI Section */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'ยอดจ่ายเดือนนี้', value: stats.totalWagesMonth, icon: Banknote, color: 'text-emerald-600', bg: 'bg-emerald-50', trend: '+5.2%' },
+          { label: 'ยอดจ่ายเดือนนี้', value: stats.totalWagesMonth, icon: Banknote, color: 'text-emerald-600', bg: 'bg-emerald-50', trend: stats.growth !== 0 ? `${stats.growth > 0 ? '+' : ''}${stats.growth.toFixed(1)}%` : null, trendUp: stats.growth > 0 },
           { label: 'มาทำงานวันนี้', value: `${stats.activeToday} / ${workers.length}`, icon: Users, color: 'text-sky-600', bg: 'bg-sky-50' },
           { label: 'หนี้เบิกสะสม', value: stats.totalDebt, icon: Wallet, color: 'text-orange-600', bg: 'bg-orange-50', isMoney: true },
           { label: 'เงินประกันรวม', value: stats.totalGuarantee, icon: TrendingUp, color: 'text-purple-600', bg: 'bg-purple-50', isMoney: true },
@@ -116,8 +168,11 @@ export function DashboardPage() {
                   <item.icon className="w-5 h-5" />
                 </div>
                 {item.trend && (
-                  <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-full flex items-center gap-0.5">
-                    <ArrowUpRight className="w-3 h-3" /> {item.trend}
+                  <span className={cn(
+                    "text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-0.5",
+                    item.trendUp ? "text-red-500 bg-red-50" : "text-emerald-500 bg-emerald-50"
+                  )}>
+                    {item.trendUp ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />} {item.trend}
                   </span>
                 )}
               </div>
@@ -132,7 +187,49 @@ export function DashboardPage() {
         ))}
       </div>
 
-      {/* Main Charts Row */}
+      {/* Today's Attendance Snapshot */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.4 }}
+      >
+        <Card className="p-4 border-none shadow-sm flex flex-wrap items-center justify-around gap-4 bg-white/40 backdrop-blur-md">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100/50">
+              <UserCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">ทำงานวันนี้</div>
+              <div className="text-lg font-black text-emerald-600 leading-none">{stats.attendance.present} <span className="text-xs text-gray-400 font-bold ml-1">คน</span></div>
+            </div>
+          </div>
+          
+          <div className="w-px h-8 bg-gray-100 hidden sm:block" />
+
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-600 shadow-sm border border-orange-100/50">
+              <Timer className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">มาสาย</div>
+              <div className="text-lg font-black text-orange-600 leading-none">{stats.attendance.late} <span className="text-xs text-gray-400 font-bold ml-1">คน</span></div>
+            </div>
+          </div>
+
+          <div className="w-px h-8 bg-gray-100 hidden sm:block" />
+
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-red-50 flex items-center justify-center text-red-600 shadow-sm border border-red-100/50">
+              <UserMinus className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">ลากับขาด</div>
+              <div className="text-lg font-black text-red-600 leading-none">{stats.attendance.leave} <span className="text-xs text-gray-400 font-bold ml-1">คน</span></div>
+            </div>
+          </div>
+        </Card>
+      </motion.div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Daily Wage Trend */}
         <Card className="lg:col-span-2 p-6 border-none shadow-sm overflow-visible flex flex-col">
@@ -230,6 +327,129 @@ export function DashboardPage() {
       </div>
 
       {/* Recent Activity Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Expense Breakdown */}
+        <Card className="p-6 border-none shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
+              <PieChart className="w-5 h-5 text-indigo-500" />
+              สรุปรายจ่ายเดือนนี้
+            </h3>
+            <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full uppercase tracking-tighter">Budget Allocation</span>
+          </div>
+          
+          <div className="space-y-6">
+            {/* Visual Bar */}
+            <div className="h-4 w-full bg-gray-100 rounded-full overflow-hidden flex shadow-inner">
+              <div 
+                className="h-full bg-emerald-500 transition-all duration-1000 ease-out" 
+                style={{ width: `${(stats.breakdown.base / stats.totalBreakdown) * 100}%` }} 
+                title={`ค่าแรง: ฿${stats.breakdown.base.toLocaleString()}`}
+              />
+              <div 
+                className="h-full bg-sky-500 transition-all duration-1000 ease-out delay-100" 
+                style={{ width: `${(stats.breakdown.ot / stats.totalBreakdown) * 100}%` }} 
+                title={`OT: ฿${stats.breakdown.ot.toLocaleString()}`}
+              />
+              <div 
+                className="h-full bg-amber-500 transition-all duration-1000 ease-out delay-200" 
+                style={{ width: `${(stats.breakdown.travel / stats.totalBreakdown) * 100}%` }} 
+                title={`ค่ารถ/ทางด่วน: ฿${stats.breakdown.travel.toLocaleString()}`}
+              />
+              <div 
+                className="h-full bg-rose-500 transition-all duration-1000 ease-out delay-300" 
+                style={{ width: `${(stats.breakdown.others / stats.totalBreakdown) * 100}%` }} 
+                title={`อื่นๆ: ฿${stats.breakdown.others.toLocaleString()}`}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold text-gray-500">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                  ค่าแรงปกติ
+                </div>
+                <div className="text-sm font-black text-gray-900">฿{stats.breakdown.base.toLocaleString()}</div>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold text-gray-500">
+                  <div className="w-2 h-2 rounded-full bg-sky-500" />
+                  OT (โอที)
+                </div>
+                <div className="text-sm font-black text-gray-900">฿{stats.breakdown.ot.toLocaleString()}</div>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold text-gray-500">
+                  <div className="w-2 h-2 rounded-full bg-amber-500" />
+                  ค่ารถ/ทางด่วน
+                </div>
+                <div className="text-sm font-black text-gray-900">฿{stats.breakdown.travel.toLocaleString()}</div>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold text-gray-500">
+                  <div className="w-2 h-2 rounded-full bg-rose-500" />
+                  รายการอื่นๆ
+                </div>
+                <div className="text-sm font-black text-gray-900">฿{stats.breakdown.others.toLocaleString()}</div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">ยอดรวมทั้งหมด</span>
+              <span className="text-lg font-black text-red-600">฿{stats.totalBreakdown.toLocaleString()}</span>
+            </div>
+          </div>
+        </Card>
+
+        {/* Upcoming Holidays */}
+        <Card className="p-6 border-none shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-purple-500" />
+              วันหยุดนักขัตฤกษ์ถัดไป
+            </h3>
+            <Activity className="w-4 h-4 text-purple-200" />
+          </div>
+
+          <div className="space-y-3">
+            {stats.upcomingHolidays.length === 0 ? (
+              <div className="text-center py-10 text-gray-400 text-sm font-medium">ไม่มีวันหยุดที่กำลังจะมาถึง</div>
+            ) : (
+              stats.upcomingHolidays.map((h, hi) => (
+                <div key={h.id} className="group relative">
+                  <div className={cn(
+                    "relative z-10 p-4 rounded-2xl border transition-all flex items-center justify-between",
+                    hi === 0 ? "bg-purple-50/50 border-purple-100 shadow-sm" : "bg-gray-50 border-gray-100 hover:bg-white hover:border-purple-100"
+                  )}>
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "w-10 h-10 rounded-xl flex flex-col items-center justify-center font-black",
+                        hi === 0 ? "bg-purple-600 text-white" : "bg-white text-gray-400"
+                      )}>
+                        <span className="text-[10px] uppercase leading-none mb-0.5">{format(parseISO(h.date), 'MMM', { locale: th })}</span>
+                        <span className="text-sm leading-none">{format(parseISO(h.date), 'd')}</span>
+                      </div>
+                      <div>
+                        <div className="text-sm font-black text-gray-900">{h.name}</div>
+                        <div className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mt-0.5">
+                          {format(parseISO(h.date), 'EEEE', { locale: th })}
+                        </div>
+                      </div>
+                    </div>
+                    {hi === 0 && (
+                      <div className="text-[10px] font-bold text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full animate-pulse">เร็วๆ นี้</div>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+            <div className="absolute top-0 right-0 p-8 text-purple-50 -z-0 opacity-10 blur-xl translate-x-1/2 -translate-y-1/2">
+               <Calendar className="w-48 h-48" />
+            </div>
+          </div>
+        </Card>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="p-6 border-none shadow-sm">
           <div className="flex items-center justify-between mb-6">
