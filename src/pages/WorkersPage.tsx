@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../useStore';
 import { Button, Input, Label, Card, Modal } from '../components/ui';
-import { Plus, Trash2, UserPlus, CalendarOff, PlusCircle, Sparkles } from 'lucide-react';
+import { Plus, Trash2, UserPlus, CalendarOff, PlusCircle, Sparkles, Check, Settings2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../components/ui';
 import { format, parseISO } from 'date-fns';
@@ -40,13 +40,16 @@ const THAI_PUBLIC_HOLIDAYS_2025 = [
   { date: '2026-12-31', name: 'วันสิ้นปี' },
 ];
 
-export function WorkersPage() {
+export function WorkersPage({ onNavigateToDate }: { onNavigateToDate?: (date: string) => void }) {
   const { workers, addWorker, updateWorker, deleteWorker, holidays, addHoliday, deleteHoliday } = useStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newHolidayDate, setNewHolidayDate] = useState('');
   const [newHolidayName, setNewHolidayName] = useState('');
   const [isLoadingPreset, setIsLoadingPreset] = useState(false);
+  const [presetLoaded, setPresetLoaded] = useState(false);
+  const [editingHolidayId, setEditingHolidayId] = useState<string | null>(null);
+  const [editingHolidayName, setEditingHolidayName] = useState('');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -193,16 +196,19 @@ export function WorkersPage() {
         <button
           onClick={async () => {
             setIsLoadingPreset(true);
+            setPresetLoaded(false);
             for (const h of THAI_PUBLIC_HOLIDAYS_2025) {
               await addHoliday(h.date, h.name);
             }
             setIsLoadingPreset(false);
+            setPresetLoaded(true);
+            setTimeout(() => setPresetLoaded(false), 3000);
           }}
           disabled={isLoadingPreset}
           className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-purple-50 border border-purple-200 text-purple-600 hover:bg-purple-100 transition-all text-sm font-semibold disabled:opacity-60"
         >
           <Sparkles className="w-4 h-4" />
-          {isLoadingPreset ? 'โหลด...' : 'ตั้งค่าวันหยุดไทยอัตโนมัติ ปี 2568-2569'}
+          {isLoadingPreset ? 'กำลังโหลด...' : presetLoaded ? `✅ โหลดแล้ว ${THAI_PUBLIC_HOLIDAYS_2025.length} วันหยุด` : 'ตั้งค่าวันหยุดไทยอัตโนมัติ ปี 2568-2569'}
         </button>
 
         {/* Add custom holiday */}
@@ -238,19 +244,58 @@ export function WorkersPage() {
             ยังไม่มีวันหยุด — กดปุ่มด้านบนเพื่อตั้งค่าวันหยุดไทยอัตโนมัติ
           </div>
         ) : (
-          <div className="space-y-2 max-h-64 overflow-y-auto">
+          <div className="space-y-2 max-h-72 overflow-y-auto">
             {holidays.map(h => (
-              <div key={h.id} className="flex items-center justify-between bg-purple-50/60 border border-purple-100 rounded-2xl px-3 py-2.5">
-                <div>
-                  <div className="font-semibold text-purple-900 text-sm">🎌 {h.name}</div>
-                  <div className="text-[11px] text-purple-500">{format(parseISO(h.date), 'd MMMM yyyy', { locale: th })}</div>
-                </div>
+              <div key={h.id} className="flex items-center justify-between bg-purple-50/60 border border-purple-100 rounded-2xl px-3 py-2">
                 <button
-                  onClick={() => deleteHoliday(h.id)}
-                  className="p-1.5 rounded-xl bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 transition-colors"
+                  className="flex-1 text-left cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => onNavigateToDate?.(h.date)}
+                  title="กดเพื่อไปหน้ารายวัน"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  {editingHolidayId === h.id ? (
+                    <input
+                      autoFocus
+                      className="w-full text-sm font-semibold text-purple-900 bg-white border border-purple-300 rounded-lg px-2 py-0.5 outline-none"
+                      value={editingHolidayName}
+                      onChange={e => setEditingHolidayName(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          addHoliday(h.date, editingHolidayName);
+                          setEditingHolidayId(null);
+                        } else if (e.key === 'Escape') {
+                          setEditingHolidayId(null);
+                        }
+                      }}
+                      onClick={e => e.stopPropagation()}
+                    />
+                  ) : (
+                    <div className="font-semibold text-purple-900 text-sm">🎌 {h.name}</div>
+                  )}
+                  <div className="text-[11px] text-purple-400">{format(parseISO(h.date), 'd MMMM yyyy', { locale: th })} — กดเพื่อไปหน้ารายวัน</div>
                 </button>
+                <div className="flex gap-1 ml-2 shrink-0">
+                  <button
+                    onClick={e => {
+                      e.stopPropagation();
+                      if (editingHolidayId === h.id) {
+                        addHoliday(h.date, editingHolidayName);
+                        setEditingHolidayId(null);
+                      } else {
+                        setEditingHolidayId(h.id);
+                        setEditingHolidayName(h.name);
+                      }
+                    }}
+                    className="p-1.5 rounded-xl bg-purple-100 text-purple-500 hover:bg-purple-200 transition-colors"
+                  >
+                    {editingHolidayId === h.id ? <Check className="w-4 h-4" /> : <Settings2 className="w-4 h-4" />}
+                  </button>
+                  <button
+                    onClick={() => deleteHoliday(h.id)}
+                    className="p-1.5 rounded-xl bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>

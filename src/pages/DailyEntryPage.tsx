@@ -17,7 +17,7 @@ const timeToMins = (time: string) => {
   return h * 60 + m;
 };
 
-export function DailyEntryPage() {
+export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pendingDate?: string | null; onPendingDateConsumed?: () => void }) {
   const { workers, entries, advances, addEntry, updateEntry, deleteEntry, addAdvance, holidays, addHoliday, deleteHoliday } = useStore();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -83,6 +83,15 @@ export function DailyEntryPage() {
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
   const currentHoliday = holidays.find(h => h.date === dateStr);
   const isHoliday = !!currentHoliday;
+
+  // Consume pending date from navigation (e.g., clicked holiday in WorkersPage)
+  useEffect(() => {
+    if (pendingDate) {
+      const d = new Date(pendingDate + 'T00:00:00');
+      if (!isNaN(d.getTime())) setSelectedDate(d);
+      onPendingDateConsumed?.();
+    }
+  }, [pendingDate]);
 
   const entriesForDate = useMemo(() => {
     return entries.filter(e => e.date === dateStr);
@@ -1549,7 +1558,7 @@ export function DailyEntryPage() {
           className="w-full flex items-center justify-center gap-2 py-2 rounded-2xl border border-dashed border-purple-200 text-purple-500 hover:bg-purple-50 hover:border-purple-400 transition-all text-sm font-medium"
         >
           <CalendarOff className="w-4 h-4" />
-          ตั้งวันนี้เป็นวันหยุดนักขัตฤกษ์
+          ตั้งค่าวันหยุด
         </button>
       )}
 

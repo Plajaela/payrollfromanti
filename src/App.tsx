@@ -11,6 +11,12 @@ import { cn } from './components/ui';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'daily' | 'workers' | 'reports' | 'wallet'>('daily');
+  const [pendingDate, setPendingDate] = useState<string | null>(null);
+
+  const navigateToDate = (dateStr: string) => {
+    setPendingDate(dateStr);
+    setActiveTab('daily');
+  };
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return localStorage.getItem('theme') === 'dark';
@@ -143,8 +149,8 @@ export default function App() {
             transition={{ duration: 0.2, ease: "easeOut" }}
           >
             {activeTab === 'dashboard' && <DashboardPage />}
-            {activeTab === 'daily' && <DailyEntryPage />}
-            {activeTab === 'workers' && <WorkersPage />}
+            {activeTab === 'daily' && <DailyEntryPage pendingDate={pendingDate} onPendingDateConsumed={() => setPendingDate(null)} />}
+            {activeTab === 'workers' && <WorkersPage onNavigateToDate={navigateToDate} />}
             {activeTab === 'wallet' && <WalletPage />}
             {activeTab === 'reports' && <ReportsPage />}
           </motion.div>
