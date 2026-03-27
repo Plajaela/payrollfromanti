@@ -41,7 +41,7 @@ export function DashboardPage() {
     //    A global Set (the previous bug) would wrongly mark worker B's guarantee as duplicate
     //    if worker A already used the same date.
     const monthEntriesSorted = entries
-      .filter(e => isWithinInterval(parseISO(e.date), { start: monthStart, end: monthEnd }))
+      .filter(e => !e.isDraft && isWithinInterval(parseISO(e.date), { start: monthStart, end: monthEnd }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
     let totalWagesMonth = 0;

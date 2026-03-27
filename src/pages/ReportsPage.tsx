@@ -25,7 +25,7 @@ export function ReportsPage() {
   const reportData = useMemo(() => {
     const filteredEntries = entries.filter(entry => {
       const entryDate = parseISO(entry.date);
-      return isWithinInterval(entryDate, {
+      return !entry.isDraft && isWithinInterval(entryDate, {
         start: parseISO(startDate),
         end: parseISO(endDate)
       });
@@ -290,7 +290,7 @@ export function ReportsPage() {
 
     const filteredEntries = entries.filter(entry => {
       const entryDate = parseISO(entry.date);
-      return isWithinInterval(entryDate, {
+      return !entry.isDraft && isWithinInterval(entryDate, {
         start: parseISO(startDate),
         end: parseISO(endDate)
       });
