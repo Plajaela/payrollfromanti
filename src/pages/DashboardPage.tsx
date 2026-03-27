@@ -36,10 +36,32 @@ export function DashboardPage() {
     const monthEnd = endOfMonth(now);
     const todayStr = format(now, 'yyyy-MM-dd');
 
-    // 1. Total Wages this month
-    const totalWagesMonth = entries
-      .filter(e => !e.isDraft && !e.isLeave && isWithinInterval(parseISO(e.date), { start: monthStart, end: monthEnd }))
-      .reduce((sum, e) => sum + (e.totalPay || 0), 0);
+    // 1. Total Wages this month — mirrors Reports page grandTotal logic:
+    //    - Includes half-day leave (they have totalPay > 0)
+    //    - Applies same guarantee self-heal as Reports (refund duplicate/leave/draft guarantees)
+    //    - Excludes full-leave and draft entries (they contribute ฿0 to grandTotal)
+    const monthEntriesForTotal = entries.filter(e => isWithinInterval(parseISO(e.date), { start: monthStart, end: monthEnd }));
+    const processedDatesForTotal = new Set<string>();
+    let totalWagesMonth = 0;
+    const monthEntriesSorted = [...monthEntriesForTotal].sort((a, b) => a.date.localeCompare(b.date));
+    monthEntriesSorted.forEach(e => {
+      let guarantee = e.guaranteeDeduction || 0;
+      let needsRefund = false;
+      if ((e.isLeave && e.leaveType !== 'ลาครึ่งวัน') || e.isDraft) {
+        if (guarantee > 0) needsRefund = true;
+        guarantee = 0;
+      } else if (guarantee > 0) {
+        if (processedDatesForTotal.has(e.date)) {
+          needsRefund = true;
+          guarantee = 0;
+        } else {
+          processedDatesForTotal.add(e.date);
+        }
+      }
+      let pay = e.totalPay || 0;
+      if (needsRefund && (e.guaranteeDeduction || 0) > 0) pay += e.guaranteeDeduction;
+      totalWagesMonth += pay;
+    });
 
     // 2. Active workers today
     const activeToday = entries.filter(e => e.date === todayStr && !e.isLeave).length;
@@ -98,17 +120,21 @@ export function DashboardPage() {
       total: workers.length
     };
 
-    // 9. Monthly Expense Breakdown – mirrors calculateTotal() exactly:
-    // totalPay = base + OT + travel + tollFee + adjustments(net) - lateDeduction - guaranteeDeduction
-    const monthEntries = entries.filter(e => !e.isDraft && !e.isLeave && isWithinInterval(parseISO(e.date), { start: monthStart, end: monthEnd }));
+    // 9. Monthly Expense Breakdown – same filter as totalWagesMonth (includes half-day leave, excludes full-leave/draft)
+    const monthEntries = monthEntriesSorted.filter(e => !e.isDraft && !(e.isLeave && e.leaveType !== 'ลาครึ่งวัน'));
     const breakdown = {
       base:        monthEntries.reduce((sum, e) => sum + (e.baseWage || 0), 0),
       ot:          monthEntries.reduce((sum, e) => sum + (e.overtimePay || 0), 0),
       travel:      monthEntries.reduce((sum, e) => sum + (e.travelAllowance || 0) + (e.tollFee || 0), 0),
       adjustments: monthEntries.reduce((sum, e) => sum + (e.adjustments?.reduce((s, a) => s + (a.type === 'add' ? Number(a.amount) : -Number(a.amount)), 0) || 0), 0),
-      deductions:  monthEntries.reduce((sum, e) => sum + (e.lateDeduction || 0) + (e.guaranteeDeduction || 0), 0),
+      // Use same guarantee as self-healed totalWagesMonth (only count guarantee if it was actually applied)
+      deductions:  monthEntries.reduce((sum, e) => {
+        if ((e.guaranteeDeduction || 0) > 0 && processedDatesForTotal.has(e.date)) {
+          return sum + (e.lateDeduction || 0) + (e.guaranteeDeduction || 0);
+        }
+        return sum + (e.lateDeduction || 0);
+      }, 0),
     };
-    // verification: breakdown.base + ot + travel + adjustments - deductions must === totalWagesMonth
     const totalBreakdown = totalWagesMonth;
 
     // 10. Next 3 Upcoming Holidays
