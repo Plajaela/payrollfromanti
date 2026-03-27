@@ -48,6 +48,7 @@ export function DashboardPage() {
     workers.forEach(worker => {
       const workerEntries = monthEntriesSorted.filter(e => e.workerId === worker.id);
       const seenDates = new Set<string>();
+      let workerMonthTotal = 0;
       workerEntries.forEach(e => {
         const guarantee = e.guaranteeDeduction || 0;
         let needsRefund = false;
@@ -59,8 +60,18 @@ export function DashboardPage() {
         }
         let pay = e.totalPay || 0;
         if (needsRefund && guarantee > 0) pay += guarantee;
-        totalWagesMonth += pay;
+        workerMonthTotal += pay;
       });
+      
+      // Advance debt STRICTLY within this date range only (matching Reports exactly)
+      const workerAdvances = advances.filter(a => {
+        const aDate = parseISO(a.date);
+        return a.workerId === worker.id && isWithinInterval(aDate, { start: monthStart, end: monthEnd });
+      });
+      const advanceTotal = workerAdvances.reduce((sum, a) => sum + (a.type === 'borrow' ? a.amount : -a.amount), 0);
+      const advanceDeduction = advanceTotal > 0 ? advanceTotal : 0;
+      
+      totalWagesMonth += (workerMonthTotal - advanceDeduction);
     });
 
     // 2. Active workers today
@@ -90,11 +101,11 @@ export function DashboardPage() {
       };
     });
 
-    // 6. Top Workers (This month) — same guarantee self-heal logic as totalWagesMonth
+    // 6. Top Workers (This month) — same guarantee self-heal and advance logic as totalWagesMonth
     const workerStats = workers.map(w => {
       const workerMonthEntries = monthEntriesSorted.filter(e => e.workerId === w.id);
       const seenDates = new Set<string>();
-      let monthTotal = 0;
+      let workerMonthTotal = 0;
       let daysWorked = 0;
       workerMonthEntries.forEach(e => {
         const guarantee = e.guaranteeDeduction || 0;
@@ -110,9 +121,20 @@ export function DashboardPage() {
         }
         let pay = e.totalPay || 0;
         if (needsRefund && guarantee > 0) pay += guarantee;
-        monthTotal += pay;
+        workerMonthTotal += pay;
       });
-      return { ...w, monthTotal, daysWorked };
+
+      // Advance debt STRICTLY within this date range only (matching Reports exactly)
+      const workerAdvances = advances.filter(a => {
+        const aDate = parseISO(a.date);
+        return a.workerId === w.id && isWithinInterval(aDate, { start: monthStart, end: monthEnd });
+      });
+      const advanceTotal = workerAdvances.reduce((sum, a) => sum + (a.type === 'borrow' ? a.amount : -a.amount), 0);
+      const advanceDeduction = advanceTotal > 0 ? advanceTotal : 0;
+
+      const finalMonthTotal = workerMonthTotal - advanceDeduction;
+
+      return { ...w, monthTotal: finalMonthTotal, daysWorked };
     }).sort((a, b) => b.monthTotal - a.monthTotal);
 
     // 7. Recent Adjustments
@@ -140,8 +162,9 @@ export function DashboardPage() {
     const monthEntries = monthEntriesSorted.filter(
       e => !e.isDraft && !(e.isLeave && e.leaveType !== 'ลาครึ่งวัน')
     );
-    // Per-worker guarantee deduction (same self-heal rule as totalWagesMonth)
+    // Per-worker guarantee and advance deduction (same self-heal rule as totalWagesMonth)
     let totalActualGuaranteeDeduction = 0;
+    let totalAdvanceDeduction = 0;
     workers.forEach(worker => {
       const seenDates = new Set<string>();
       monthEntries.filter(e => e.workerId === worker.id).forEach(e => {
@@ -150,6 +173,13 @@ export function DashboardPage() {
           totalActualGuaranteeDeduction += e.guaranteeDeduction;
         }
       });
+      
+      const workerAdvances = advances.filter(a => {
+        const aDate = parseISO(a.date);
+        return a.workerId === worker.id && isWithinInterval(aDate, { start: monthStart, end: monthEnd });
+      });
+      const advanceTotal = workerAdvances.reduce((sum, a) => sum + (a.type === 'borrow' ? a.amount : -a.amount), 0);
+      if (advanceTotal > 0) totalAdvanceDeduction += advanceTotal;
     });
     const totalLateDeduction = monthEntries.reduce((s, e) => s + (e.lateDeduction || 0), 0);
     const breakdown = {
@@ -158,6 +188,7 @@ export function DashboardPage() {
       travel:      monthEntries.reduce((s, e) => s + (e.travelAllowance || 0) + (e.tollFee || 0), 0),
       adjustments: monthEntries.reduce((s, e) => s + (e.adjustments?.reduce((a2, a) => a2 + (a.type === 'add' ? Number(a.amount) : -Number(a.amount)), 0) || 0), 0),
       deductions:  totalLateDeduction + totalActualGuaranteeDeduction,
+      advances:    totalAdvanceDeduction,
     };
     const totalBreakdown = totalWagesMonth;
 
@@ -398,7 +429,8 @@ export function DashboardPage() {
                 { label: 'OT (โอที)', value: stats.breakdown.ot, color: 'bg-sky-500', positive: true },
                 { label: 'ค่ารถ/ทางด่วน', value: stats.breakdown.travel, color: 'bg-amber-500', positive: true },
                 { label: 'รายการปรับเพิ่ม/หัก', value: stats.breakdown.adjustments, color: 'bg-violet-500', positive: stats.breakdown.adjustments >= 0 },
-                { label: 'หักสาย+ประกัน', value: stats.breakdown.deductions, color: 'bg-red-400', positive: false },
+                { label: 'หักเงิน (สาย+ประกัน)', value: stats.breakdown.deductions, color: 'bg-rose-400', positive: false },
+                { label: 'หักเบิกล่วงหน้า', value: stats.breakdown.advances, color: 'bg-red-500', positive: false },
               ].map(b => (
                 <div key={b.label} className="flex flex-col gap-1 p-2 rounded-xl bg-white/50 border border-white shadow-sm">
                   <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
