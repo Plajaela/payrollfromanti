@@ -545,10 +545,10 @@ export function ReportsPage() {
         row['ทางด่วน'] = entry.isLeave || !entry.tollFee ? '' : entry.tollFee;
         row['หักประกันสะสม'] = entry.isLeave || !entry.guaranteeDeduction ? '' : -(entry.guaranteeDeduction || 0);
         row['รวมอื่นๆ'] = entry.isLeave || !otherSums ? '' : otherSums;
-        row['หักเบิกล่วงหน้า'] = '';
-        row['ยอดสุทธิ(หลังหักเบิก)'] = '';
         row['หมายเหตุอื่นๆ'] = entry.isLeave ? getLeaveText(entry) : notes;
         row['ยอดสุทธิประจำวัน'] = entry.isLeave ? '' : entry.totalPay;
+        row['หักเบิกล่วงหน้า'] = '';
+        row['ยอดสุทธิ(หลังหักเบิก)'] = '';
         row['สลิปโอนเงิน'] = entry.isLeave || !entry.transferSlipUrl ? '' : formatSlipUrl(entry.transferSlipUrl);
         row['สลิปทางด่วน'] = entry.isLeave || !entry.tollFee || !entry.tollReceiptUrl ? '' : formatSlipUrl(entry.tollReceiptUrl);
 
@@ -575,10 +575,10 @@ export function ReportsPage() {
       workerTotalRow['ทางด่วน'] = '';
       workerTotalRow['หักประกันสะสม'] = summaryData.guaranteeTotal > 0 ? `สะสมรวม: ฿${summaryData.guaranteeTotal}` : '';
       workerTotalRow['รวมอื่นๆ'] = '';
-      workerTotalRow['หักเบิกล่วงหน้า'] = summaryData.advanceDeduction > 0 ? -summaryData.advanceDeduction : '';
-      workerTotalRow['ยอดสุทธิ(หลังหักเบิก)'] = summaryData.advanceDeduction > 0 ? summaryData.finalPay : '';
       workerTotalRow['หมายเหตุอื่นๆ'] = '';
       workerTotalRow['ยอดสุทธิประจำวัน'] = workerTotal;
+      workerTotalRow['หักเบิกล่วงหน้า'] = summaryData.advanceDeduction > 0 ? -summaryData.advanceDeduction : '';
+      workerTotalRow['ยอดสุทธิ(หลังหักเบิก)'] = summaryData.advanceDeduction > 0 ? summaryData.finalPay : '';
       workerTotalRow['สลิปโอนเงิน'] = '';
       workerTotalRow['สลิปทางด่วน'] = '';
 
