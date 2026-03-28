@@ -296,7 +296,9 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
         isLeave: existingEntry.isLeave || false,
         leaveType: (existingEntry.leaveType === 'ลาพักผ่อน' as any) ? 'ลากิจ' : (existingEntry.leaveType || 'ลากิจ'),
         leaveNote: existingEntry.leaveNote || '',
-        hasGuaranteeDeduction: (existingEntry.guaranteeDeduction || 0) > 0,
+        hasGuaranteeDeduction: existingEntry.isDraft 
+          ? ((worker.hasGuarantee || false) && capRemaining > 0)
+          : ((existingEntry.guaranteeDeduction || 0) > 0),
         guaranteeDeductionAmount: existingEntry.guaranteeDeduction || Math.min(100, capRemaining),
         lateRateRule: existingEntry.lateRateRule || worker.lateRateRule || 'normal',
       });
