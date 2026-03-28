@@ -491,7 +491,7 @@ export function ReportsPage() {
         workerTotal += entry.totalPay;
 
         const getLeaveText = (e: typeof entry) => {
-          let str = e.leaveType || 'ลาพักผ่อน';
+          let str = e.leaveType || 'ลากิจ';
           if (e.leaveNote) str += ` (${e.leaveNote})`;
           return str;
         };
@@ -535,7 +535,6 @@ export function ReportsPage() {
           'เวลาทำโอที': entry.isLeave || !entry.overtimePay ? '' : `${wEnd} - ${entry.clockOut}`,
           'โอที': entry.isLeave || !entry.overtimePay ? '' : entry.overtimePay,
           'ค่ารถ': entry.isLeave ? '' : (entry.travelAllowance || ''),
-          'ยอดสุทธิประจำวัน': entry.isLeave ? '' : entry.totalPay,
           'ประเภทการลา': entry.isLeave ? getLeaveText(entry) : '',
         };
 
@@ -549,6 +548,7 @@ export function ReportsPage() {
         row['หักเบิกล่วงหน้า'] = '';
         row['ยอดสุทธิ(หลังหักเบิก)'] = '';
         row['หมายเหตุอื่นๆ'] = entry.isLeave ? getLeaveText(entry) : notes;
+        row['ยอดสุทธิประจำวัน'] = entry.isLeave ? '' : entry.totalPay;
         row['สลิปโอนเงิน'] = entry.isLeave || !entry.transferSlipUrl ? '' : formatSlipUrl(entry.transferSlipUrl);
         row['สลิปทางด่วน'] = entry.isLeave || !entry.tollFee || !entry.tollReceiptUrl ? '' : formatSlipUrl(entry.tollReceiptUrl);
 
@@ -565,7 +565,6 @@ export function ReportsPage() {
         'เวลาทำโอที': '',
         'โอที': '',
         'ค่ารถ': '',
-        'ยอดสุทธิประจำวัน': workerTotal,
         'ประเภทการลา': '',
       };
 
@@ -579,6 +578,7 @@ export function ReportsPage() {
       workerTotalRow['หักเบิกล่วงหน้า'] = summaryData.advanceDeduction > 0 ? -summaryData.advanceDeduction : '';
       workerTotalRow['ยอดสุทธิ(หลังหักเบิก)'] = summaryData.advanceDeduction > 0 ? summaryData.finalPay : '';
       workerTotalRow['หมายเหตุอื่นๆ'] = '';
+      workerTotalRow['ยอดสุทธิประจำวัน'] = workerTotal;
       workerTotalRow['สลิปโอนเงิน'] = '';
       workerTotalRow['สลิปทางด่วน'] = '';
 
