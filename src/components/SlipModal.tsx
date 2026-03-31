@@ -315,6 +315,12 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
                 <span className="text-xs text-gray-500 font-medium">มาทำงานจริง / Actual Days</span>
                 <span className="text-sm font-bold text-emerald-600">{data.totalDays} วัน</span>
               </div>
+              {data.leaveDays > 0 && (
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs text-gray-500 font-medium">ลาทั้งหมด / Leave Days</span>
+                  <span className="text-sm font-bold text-orange-500">{data.leaveDays} วัน</span>
+                </div>
+              )}
               <div className="flex justify-between items-center">
                 <span className="text-xs text-gray-500 font-medium">รอบวันที่ / Period</span>
                 <span className="text-xs font-semibold text-gray-800">{dateRangeStr}</span>
