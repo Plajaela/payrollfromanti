@@ -123,12 +123,19 @@ export function ReportsPage() {
           }
         }
 
+        // Half day mathematically cuts the deduction in half in totalPay logic
+        const isHalfDay = e.isLeave && e.leaveType === 'ลาครึ่งวัน';
+        if (isHalfDay && guarantee > 0) {
+           guarantee = guarantee / 2;
+        }
+
         rangeGuaranteeDeduction += guarantee;
 
         let pay = e.totalPay;
         // Self-heal historical DB data: if DB deducted guarantee duplicate or on leave/draft, refund it
         if (needsRefund && (e.guaranteeDeduction || 0) > 0) {
-          pay += e.guaranteeDeduction;
+          const refundAmount = isHalfDay ? (e.guaranteeDeduction / 2) : e.guaranteeDeduction;
+          pay += refundAmount;
         }
         grandTotal += pay;
       });
@@ -546,32 +553,35 @@ export function ReportsPage() {
            lateDeductionValue = -entry.lateDeduction;
         }
 
+        const isHalfDay = entry.isLeave && entry.leaveType === 'ลาครึ่งวัน';
+        const isFullLeave = entry.isLeave && !isHalfDay;
+
         const row: any = {
           'วันที่': displayDate,
           'ชื่อช่าง': worker.name,
-          'เวลาทำงาน': entry.isLeave ? 'ลาหยุด' : `${actualStart} - ${actualEnd}`,
+          'เวลาทำงาน': isFullLeave ? 'ลาหยุด' : (isHalfDay ? 'ลาครึ่งวัน' : `${actualStart} - ${actualEnd}`),
           'จำนวนเวลาสาย': lateMinsStr,
           'หักสาย': lateDeductionValue,
-          'ค่าแรง': entry.isLeave ? '' : (entry.baseWage || ''),
-          'เวลาทำโอที': entry.isLeave || !entry.overtimePay ? '' : `${wEnd} - ${entry.clockOut}`,
-          'โอที': entry.isLeave || !entry.overtimePay ? '' : entry.overtimePay,
-          'ค่ารถ': entry.isLeave ? '' : (entry.travelAllowance || ''),
+          'ค่าแรง': isFullLeave ? '' : (isHalfDay ? (entry.baseWage / 2) : (entry.baseWage || '')),
+          'เวลาทำโอที': isFullLeave || !entry.overtimePay ? '' : `${wEnd} - ${entry.clockOut}`,
+          'โอที': isFullLeave || !entry.overtimePay ? '' : entry.overtimePay,
+          'ค่ารถ': isFullLeave || isHalfDay ? '' : (entry.travelAllowance || ''),
           'ประเภทการลา': entry.isLeave ? getLeaveText(entry) : '',
         };
 
         PRESETS.forEach(p => {
-          row[p] = entry.isLeave || !presetSums[p] ? '' : presetSums[p];
+          row[p] = isFullLeave || isHalfDay || !presetSums[p] ? '' : presetSums[p];
         });
 
-        row['ทางด่วน'] = entry.isLeave || !entry.tollFee ? '' : entry.tollFee;
-        row['หักประกันสะสม'] = entry.isLeave || !entry.guaranteeDeduction ? '' : -(entry.guaranteeDeduction || 0);
-        row['รวมอื่นๆ'] = entry.isLeave || !otherSums ? '' : otherSums;
+        row['ทางด่วน'] = isFullLeave || isHalfDay || !entry.tollFee ? '' : entry.tollFee;
+        row['หักประกันสะสม'] = isFullLeave || !entry.guaranteeDeduction ? '' : (isHalfDay ? -(entry.guaranteeDeduction / 2) : -entry.guaranteeDeduction);
+        row['รวมอื่นๆ'] = isFullLeave || isHalfDay || !otherSums ? '' : otherSums;
         row['หมายเหตุอื่นๆ'] = entry.isLeave ? getLeaveText(entry) : notes;
-        row['ยอดสุทธิประจำวัน'] = entry.isLeave ? '' : entry.totalPay;
+        row['ยอดสุทธิประจำวัน'] = isFullLeave ? '' : entry.totalPay;
         row['หักเบิกล่วงหน้า'] = '';
         row['ยอดสุทธิ(หลังหักเบิก)'] = '';
-        row['สลิปโอนเงิน'] = entry.isLeave || !entry.transferSlipUrl ? '' : formatSlipUrl(entry.transferSlipUrl);
-        row['สลิปทางด่วน'] = entry.isLeave || !entry.tollFee || !entry.tollReceiptUrl ? '' : formatSlipUrl(entry.tollReceiptUrl);
+        row['สลิปโอนเงิน'] = isFullLeave || !entry.transferSlipUrl ? '' : formatSlipUrl(entry.transferSlipUrl);
+        row['สลิปทางด่วน'] = isFullLeave || isHalfDay || !entry.tollFee || !entry.tollReceiptUrl ? '' : formatSlipUrl(entry.tollReceiptUrl);
 
         workerRows.push(row);
       });
