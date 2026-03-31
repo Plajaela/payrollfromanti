@@ -135,8 +135,26 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
     if (!slipRef.current) return;
     try {
       setIsGenerating(true);
-      // We must wait a tiny bit to make sure fonts/DOM are settled
-      await new Promise(r => setTimeout(r, 100));
+      // Force canvas to image BEFORE generating image to ensure strokes are captured by html-to-image
+      const canvases = slipRef.current.querySelectorAll('canvas');
+      const originalDisplays: string[] = [];
+      const images: HTMLImageElement[] = [];
+
+      canvases.forEach(canvas => {
+          const img = document.createElement('img');
+          img.src = canvas.toDataURL('image/png');
+          img.style.width = canvas.style.width || canvas.offsetWidth + 'px';
+          img.style.height = canvas.style.height || canvas.offsetHeight + 'px';
+          img.className = canvas.className;
+          
+          originalDisplays.push(canvas.style.display);
+          canvas.style.display = 'none';
+          canvas.parentNode?.insertBefore(img, canvas);
+          images.push(img);
+      });
+
+      await new Promise(r => setTimeout(r, 100)); // allow DOM to update
+
       const dataUrl = await htmlToImage.toPng(slipRef.current, {
         pixelRatio: 2, // Equivalent to scale: 2 for high quality
         backgroundColor: '#ffffff',
@@ -145,6 +163,13 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
           boxShadow: 'none',
         }
       });
+
+      // Restore canvases
+      canvases.forEach((canvas, i) => {
+          canvas.style.display = originalDisplays[i];
+          images[i].parentNode?.removeChild(images[i]);
+      });
+
       setGeneratedImage(dataUrl);
     } catch (error) {
       console.error('Error generating slip:', error);
@@ -183,12 +208,11 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
       const webhookUrl = import.meta.env.VITE_GOOGLE_DRIVE_WEBHOOK_URL;
       if (webhookUrl) {
         const driveFormData = new URLSearchParams();
-        driveFormData.append('workerName', `เซ็นสลิป - ${data.worker.name || 'Unknown'}`);
+        driveFormData.append('workerName', data.worker.name || 'Unknown');
+        driveFormData.append('mainFolder', 'เซ็นสลิป'); // Requested generic MAIN folder
         driveFormData.append('date', dateRangeStr);
         driveFormData.append('imageUrl', publicUrl);
         driveFormData.append('type', 'signed_slip'); // Metadata hint
-        driveFormData.append('folderGroup', 'เซ็นสลิป'); // Optional param for Google Apps Script
-        driveFormData.append('originalWorkerName', data.worker.name || 'Unknown');
 
         await fetch(webhookUrl, {
           method: 'POST',
