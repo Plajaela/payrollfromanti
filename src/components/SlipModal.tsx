@@ -39,6 +39,7 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
   const [isUploading, setIsUploading] = useState(false);
   const [isUploadSuccess, setIsUploadSuccess] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [useSignature, setUseSignature] = useState(false);
   const [isSignatureEmpty, setIsSignatureEmpty] = useState(true);
 
   if (!data) return null;
@@ -181,6 +182,7 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
   const resetModal = () => {
     setGeneratedImage(null);
     setIsSignatureEmpty(true);
+    setUseSignature(false);
     setIsUploadSuccess(false);
     onClose();
   };
@@ -331,30 +333,37 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
             {/* Signature Area */}
             <div className="mt-6 pt-6 pb-2">
               <div className="flex flex-col items-center">
-                <span className="text-xs text-gray-500 mb-2 font-medium">ยืนยันการรับเงินถูกต้อง</span>
-                <div className="relative group">
-                  <div className="w-64 h-32 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50/50 flex items-center justify-center overflow-hidden">
-                    <SignatureCanvas
-                      ref={signatureRef}
-                      penColor="black"
-                      canvasProps={{
-                        width: 256,
-                        height: 128,
-                        className: 'signature-canvas w-full h-full cursor-crosshair'
-                      }}
-                      onEnd={() => setIsSignatureEmpty(false)}
-                    />
-                  </div>
-                  {!isSignatureEmpty && (
-                    <button
-                      onClick={clearSignature}
-                      className="absolute -top-2 -right-2 bg-red-100 p-1.5 rounded-full text-red-600 hover:bg-red-200 transition-colors shadow-sm"
-                      title="ลบเซ็น"
-                    >
-                      <Eraser className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
+                {useSignature ? (
+                  <>
+                    <span className="text-xs text-gray-500 mb-2 font-medium">ยืนยันการรับเงินถูกต้อง</span>
+                    <div className="relative group">
+                      <div className="w-64 h-32 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50/50 flex items-center justify-center overflow-hidden">
+                        <SignatureCanvas
+                          ref={signatureRef}
+                          penColor="black"
+                          canvasProps={{
+                            width: 256,
+                            height: 128,
+                            className: 'signature-canvas w-full h-full cursor-crosshair'
+                          }}
+                          onEnd={() => setIsSignatureEmpty(false)}
+                        />
+                      </div>
+                      {!isSignatureEmpty && (
+                        <button
+                          onClick={clearSignature}
+                          className="absolute -top-2 -right-2 bg-red-100 p-1.5 rounded-full text-red-600 hover:bg-red-200 transition-colors shadow-sm"
+                          title="ลบเซ็น"
+                        >
+                          <Eraser className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="w-48 border-b-2 border-dotted border-gray-300 h-8"></div>
+                )}
+                
                 <div className="mt-4 w-48 border-b-2 border-dotted border-gray-300 relative text-center">
                   <span className="text-[10px] text-gray-400">
                     ({data.worker.name})
@@ -379,9 +388,22 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
 
           </div>
         )}
+        {!generatedImage && (
+          <div className="w-full flex justify-center py-4 bg-gray-50 mt-4 rounded-2xl border border-gray-100">
+            <label className="flex items-center gap-3 cursor-pointer select-none">
+              <input 
+                type="checkbox" 
+                checked={useSignature} 
+                onChange={(e) => setUseSignature(e.target.checked)}
+                className="w-5 h-5 rounded border-gray-300 text-sky-600 focus:ring-sky-500"
+              />
+              <span className="text-sm font-bold text-gray-700">ต้องการให้ช่างเซ็นชื่อ</span>
+            </label>
+          </div>
+        )}
       </div>
 
-      <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100 flex gap-2 w-full mx-auto relative z-10">
+      <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100 flex flex-col gap-3 w-full mx-auto relative z-10">
         <Button onClick={resetModal} variant="secondary" className="px-6 py-3.5">
           ปิด
         </Button>
@@ -412,11 +434,11 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
         ) : (
           <Button 
             onClick={handleGenerate} 
-            disabled={isGenerating || isSignatureEmpty} 
+            disabled={isGenerating || (useSignature && isSignatureEmpty)} 
             className="flex-1 py-3.5 bg-sky-600 hover:bg-sky-700 shadow-sky-200 text-white flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <ImageIcon className="w-5 h-5" />}
-            {isGenerating ? 'กำลังสร้างรูป...' : isSignatureEmpty ? 'กรุณาเซ็นชื่อก่อน' : 'ดูภายพร้อมลายเซ็น'}
+            {isGenerating ? 'กำลังสร้างรูป...' : (useSignature && isSignatureEmpty) ? 'กรุณาเซ็นชื่อก่อน' : 'ดูภาพพร้อมลายเซ็น'}
           </Button>
         )}
       </div>
