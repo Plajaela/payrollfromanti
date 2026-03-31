@@ -109,14 +109,13 @@ export function ReportsPage() {
 
       workerEntries.forEach(e => {
         let guarantee = e.guaranteeDeduction || 0;
-        let needsRefund = false;
+        let isDuplicateRefundNeeded = false;
 
         if ((e.isLeave && e.leaveType !== 'ลาครึ่งวัน') || e.isDraft) {
-          if (guarantee > 0) needsRefund = true;
-          guarantee = 0;
+          guarantee = 0; // leaves/drafts do not deduct guarantee mathematically
         } else if (guarantee > 0) {
           if (processedDates.has(e.date)) {
-            needsRefund = true;
+            isDuplicateRefundNeeded = true;
             guarantee = 0; // Duplicate guarantee! 
           } else {
             processedDates.add(e.date);
@@ -132,8 +131,8 @@ export function ReportsPage() {
         rangeGuaranteeDeduction += guarantee;
 
         let pay = e.totalPay;
-        // Self-heal historical DB data: if DB deducted guarantee duplicate or on leave/draft, refund it
-        if (needsRefund && (e.guaranteeDeduction || 0) > 0) {
+        // Self-heal historical DB data: if DB deducted guarantee duplicate
+        if (isDuplicateRefundNeeded && (e.guaranteeDeduction || 0) > 0) {
           const refundAmount = isHalfDay ? (e.guaranteeDeduction / 2) : e.guaranteeDeduction;
           pay += refundAmount;
         }
