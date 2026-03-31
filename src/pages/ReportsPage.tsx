@@ -771,24 +771,25 @@ export function ReportsPage() {
               <table className="min-w-full divide-y divide-zinc-200">
                 <thead className="bg-zinc-50/80">
                   <tr>
-                    <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-[13px] font-semibold text-zinc-900 sm:pl-6 uppercase tracking-wide">ชื่อช่าง</th>
-                    <th scope="col" className="px-2 py-3.5 text-center text-[13px] font-semibold text-zinc-900 uppercase tracking-wide">วันทำงาน</th>
-                    <th scope="col" className="px-2 py-3.5 text-right text-[13px] font-semibold text-zinc-900 uppercase tracking-wide flex items-center justify-end gap-1">
-                      <Wallet className="w-3.5 h-3.5 text-emerald-500" />
+                    <th scope="col" className="py-2.5 pl-4 pr-1 text-left text-[11px] font-semibold text-zinc-900 sm:pl-6">ชื่อช่าง</th>
+                    <th scope="col" className="px-1.5 py-2.5 text-center text-[11px] font-semibold text-zinc-900">วัน</th>
+                    <th scope="col" className="px-1.5 py-2.5 text-right text-[11px] font-semibold text-zinc-900 flex items-center justify-end gap-1">
+                      <Wallet className="w-3 h-3 text-emerald-500" />
                       ค่าแรง
                     </th>
-                    <th scope="col" className="px-2 py-3.5 text-right text-[13px] font-semibold text-zinc-900 uppercase tracking-wide">ค่ารถ</th>
-                    <th scope="col" className="px-2 py-3.5 text-right text-[13px] font-semibold text-zinc-900 uppercase tracking-wide">โอที</th>
-                    <th scope="col" className="px-2 py-3.5 text-right text-[13px] font-semibold text-red-600 uppercase tracking-wide">หักสาย</th>
-                    <th scope="col" className="px-2 py-3.5 text-right text-[13px] font-semibold text-zinc-900 uppercase tracking-wide">อื่นๆ</th>
-                    <th scope="col" className="py-3.5 px-2 text-right text-[13px] font-semibold text-orange-600 uppercase tracking-wide">หักประกันสะสม</th>
-                    <th scope="col" className="py-3.5 px-2 text-right text-[13px] font-semibold text-purple-600 uppercase tracking-wide flex items-center justify-end gap-1">
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                      ประกันสังคม
+                    <th scope="col" className="px-1.5 py-2.5 text-right text-[11px] font-semibold text-zinc-900">ค่ารถ</th>
+                    <th scope="col" className="px-1.5 py-2.5 text-right text-[11px] font-semibold text-zinc-900">โอที</th>
+                    <th scope="col" className="px-1.5 py-2.5 text-right text-[11px] font-semibold text-red-600">สาย</th>
+                    <th scope="col" className="px-1.5 py-2.5 text-right text-[11px] font-semibold text-zinc-900">อื่นๆ</th>
+                    <th scope="col" className="py-2.5 px-1.5 text-right text-[11px] font-semibold text-orange-600">สะสม</th>
+                    <th scope="col" className="py-2.5 px-1.5 text-right text-[11px] font-semibold text-purple-600 flex items-center justify-end gap-0.5">
+                      <ShieldCheck className="w-3 h-3" />
+                      สปส.
                     </th>
-                    <th scope="col" className="py-3.5 px-2 text-right text-[13px] font-semibold text-red-600 uppercase tracking-wide">หักเบิก</th>
-                    <th scope="col" className="py-3.5 px-2 text-right text-[13px] font-semibold text-blue-600 uppercase tracking-wide">สุทธิ</th>
-                    <th scope="col" className="py-3.5 px-2 text-center text-[13px] font-semibold text-violet-600 uppercase tracking-wide">คัดลอกรูป</th>
+                    <th scope="col" className="py-2.5 px-1.5 text-right text-[11px] font-semibold text-red-600">หักเบิก</th>
+                    <th scope="col" className="py-2.5 px-1.5 text-right text-[11px] font-semibold text-blue-600">สุทธิ</th>
+                    <th scope="col" className="py-2.5 px-1.5 text-center text-[11px] font-semibold text-violet-600">รูป</th>
+                    <th scope="col" className="py-2.5 pl-1.5 pr-4 sm:pr-6"><span className="sr-only">คัดลอก</span></th>
                     <th scope="col" className="py-3.5 pl-3 pr-4 sm:pr-6"><span className="sr-only">คัดลอก</span></th>
                   </tr>
                 </thead>
@@ -812,70 +813,69 @@ export function ReportsPage() {
                           )}
                         </div>
                       </td>
-                      <td className="whitespace-nowrap px-2 py-4 text-sm text-center">
-                        <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'วันทำงาน', metricType: 'days' })} className="hover:underline cursor-pointer transition-colors px-1 py-1 -mr-1 rounded-md hover:bg-zinc-100 text-zinc-500">
+                      <td className="whitespace-nowrap px-1.5 py-2 text-[12px] text-center">
+                        <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'วันทำงาน', metricType: 'days' })} className="hover:underline cursor-pointer px-1 py-0.5 rounded-md hover:bg-zinc-100 text-zinc-500">
                           {row.totalDays}
                         </button>
                         {row.leaveDays > 0 && (
-                          <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'วันลาหยุด', metricType: 'leave' })} className="hover:underline cursor-pointer transition-colors px-1 py-1 rounded-md hover:bg-red-50 text-red-500 ml-1 text-xs">
-                            (ลา {row.leaveDays})
+                          <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'วันลาหยุด', metricType: 'leave' })} className="hover:underline cursor-pointer px-1 py-0.5 rounded-md hover:bg-red-50 text-red-500 ml-0.5 text-[10px]">
+                            ({row.leaveDays})
                           </button>
                         )}
                       </td>
-                      <td className="whitespace-nowrap px-2 py-4 text-sm text-right">
-                        <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'ค่าแรง', metricType: 'baseWage' })} className="hover:underline cursor-pointer transition-colors px-1.5 py-1 -mr-1 rounded-md hover:bg-zinc-100 text-zinc-500">
+                      <td className="whitespace-nowrap px-1.5 py-2 text-[12px] text-right">
+                        <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'ค่าแรง', metricType: 'baseWage' })} className="hover:underline cursor-pointer px-1 py-0.5 rounded-md hover:bg-zinc-100 text-zinc-500 font-medium">
                           ฿{row.totalBaseWage}
                         </button>
                       </td>
-                      <td className="whitespace-nowrap px-2 py-4 text-sm text-right">
-                        <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'ค่ารถ', metricType: 'travel' })} className="hover:underline cursor-pointer transition-colors px-1.5 py-1 -mr-1 rounded-md hover:bg-zinc-100 text-zinc-500">
+                      <td className="whitespace-nowrap px-1.5 py-2 text-[12px] text-right">
+                        <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'ค่ารถ', metricType: 'travel' })} className="hover:underline cursor-pointer px-1 py-0.5 rounded-md hover:bg-zinc-100 text-zinc-500">
                           ฿{row.totalTravel}
                         </button>
                       </td>
-                      <td className="whitespace-nowrap px-2 py-4 text-sm text-right">
-                        <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'โอที', metricType: 'ot' })} className="hover:underline cursor-pointer transition-colors px-1.5 py-1 -mr-1 rounded-md hover:bg-zinc-100 text-zinc-500">
+                      <td className="whitespace-nowrap px-1.5 py-2 text-[12px] text-right">
+                        <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'โอที', metricType: 'ot' })} className="hover:underline cursor-pointer px-1 py-0.5 rounded-md hover:bg-zinc-100 text-zinc-500">
                           ฿{row.totalOT}
                         </button>
                       </td>
-                      <td className="whitespace-nowrap px-2 py-4 text-sm text-right">
-                        <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'หักสาย', metricType: 'late' })} className="hover:underline cursor-pointer transition-colors px-1.5 py-1 -mr-1 rounded-md hover:bg-red-50 text-red-500 font-medium">
+                      <td className="whitespace-nowrap px-1.5 py-2 text-[12px] text-right">
+                        <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'หักสาย', metricType: 'late' })} className="hover:underline cursor-pointer px-1 py-0.5 rounded-md hover:bg-red-50 text-red-500 font-medium">
                           -฿{row.totalLate}
                         </button>
                       </td>
-                      <td className="whitespace-nowrap px-2 py-4 text-sm text-zinc-500 text-right">
+                      <td className="whitespace-nowrap px-1.5 py-2 text-[12px] text-zinc-500 text-right">
                         {row.adjustmentsList && row.adjustmentsList.length > 0 ? (
                           <button
                             onClick={() => setSelectedAdjustments({ workerName: row.worker.name, list: row.adjustmentsList })}
-                            className={`hover:underline cursor-pointer transition-colors px-1.5 py-1 -mr-1 rounded-md hover:bg-zinc-100 ${row.netAdjustments > 0 ? 'text-emerald-600 font-medium' : row.netAdjustments < 0 ? 'text-red-600 font-medium' : ''}`}
-                            title="คลิกเพื่อดูรายการอื่นๆ"
+                            className={`hover:underline cursor-pointer px-1 py-0.5 rounded-md hover:bg-zinc-100 ${row.netAdjustments > 0 ? 'text-emerald-600 font-medium' : row.netAdjustments < 0 ? 'text-red-600 font-medium' : ''}`}
                           >
                             {row.netAdjustments > 0 ? '+' : ''}{row.netAdjustments !== 0 ? `฿${row.netAdjustments}` : '-'}
                           </button>
                         ) : (
-                          <span className={row.netAdjustments > 0 ? 'text-emerald-600' : row.netAdjustments < 0 ? 'text-red-600' : ''}>
+                          <span className={`${row.netAdjustments > 0 ? 'text-emerald-600' : row.netAdjustments < 0 ? 'text-red-600' : ''} px-1`}>
                             {row.netAdjustments > 0 ? '+' : ''}{row.netAdjustments !== 0 ? `฿${row.netAdjustments}` : '-'}
                           </span>
                         )}
                       </td>
-                      <td className="whitespace-nowrap px-2 py-4 text-sm font-bold text-right">
-                        <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'หักประกันสะสมรอบนี้', metricType: 'guarantee' })} className={`hover:underline cursor-pointer transition-colors px-1.5 py-1 -mr-1 rounded-md hover:bg-orange-50 text-orange-600 ${row.guaranteeTotal > 0 ? '' : 'text-zinc-300 font-normal hover:bg-transparent cursor-default'}`} disabled={row.guaranteeTotal === 0}>
+                      <td className="whitespace-nowrap px-1.5 py-2 text-[12px] font-bold text-right">
+                        <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'หักประกันสะสมรอบนี้', metricType: 'guarantee' })} className={`hover:underline cursor-pointer px-1 py-0.5 rounded-md hover:bg-orange-50 text-orange-600 ${row.guaranteeTotal > 0 ? '' : 'text-zinc-300 font-normal hover:bg-transparent cursor-default'}`} disabled={row.guaranteeTotal === 0}>
                           {row.guaranteeTotal > 0 ? `฿${row.guaranteeTotal}` : '-'}
                         </button>
                       </td>
-                      <td className="whitespace-nowrap px-2 py-4 text-sm font-bold text-right">
-                        <span className={`px-2 py-1 -mr-1 rounded-md ${row.socialSecurityDeduction > 0 ? 'text-purple-600 bg-purple-50' : 'text-zinc-300'} font-medium`}>
+                      <td className="whitespace-nowrap px-1.5 py-2 text-[12px] font-bold text-right">
+                        <span className={`px-1 py-0.5 rounded-md ${row.socialSecurityDeduction > 0 ? 'text-purple-600 bg-purple-50' : 'text-zinc-300'} font-medium`}>
                           {row.socialSecurityDeduction > 0 ? `-฿${row.socialSecurityDeduction}` : '-'}
                         </span>
                       </td>
-                      <td className="whitespace-nowrap px-2 py-4 text-sm font-bold text-right">
-                        <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'หักเบิก', metricType: 'advance' })} className={`hover:underline cursor-pointer transition-colors px-1.5 py-1 -mr-1 rounded-md hover:bg-red-50 text-red-500 ${row.advanceDeduction > 0 ? '' : 'text-zinc-300 font-normal hover:bg-transparent cursor-default'}`} disabled={row.advanceDeduction === 0}>
+                      <td className="whitespace-nowrap px-1.5 py-2 text-[12px] font-bold text-right">
+                        <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'หักเบิก', metricType: 'advance' })} className={`hover:underline cursor-pointer px-1 py-0.5 rounded-md hover:bg-red-50 text-red-500 ${row.advanceDeduction > 0 ? '' : 'text-zinc-300 font-normal hover:bg-transparent cursor-default'}`} disabled={row.advanceDeduction === 0}>
                           {row.advanceDeduction > 0 ? `-฿${row.advanceDeduction}` : '-'}
                         </button>
                       </td>
-                      <td className="whitespace-nowrap px-2 py-4 text-sm font-bold text-right">
-                        <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'สุทธิ', metricType: 'net' })} className="hover:underline cursor-pointer transition-colors px-1.5 py-1 -mr-1 rounded-md hover:bg-blue-50 text-blue-600">
-                          <div className="flex flex-col items-end">
-                              {row.advanceDeduction > 0 && <span className="text-[10px] text-zinc-400 line-through">฿{row.grandTotal}</span>}
+                      <td className="whitespace-nowrap px-1.5 py-2 text-[12px] font-bold text-right">
+                        <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'สุทธิ', metricType: 'net' })} className="hover:underline cursor-pointer px-1 py-0.5 rounded-md hover:bg-blue-50 text-blue-600">
+                          <div className="flex flex-col items-end leading-tight">
+                              {row.advanceDeduction > 0 && <span className="text-[9px] text-zinc-400 line-through">฿{row.grandTotal}</span>}
                               <span>฿{row.finalPay}</span>
                           </div>
                         </button>
