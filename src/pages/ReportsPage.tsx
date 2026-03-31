@@ -48,7 +48,11 @@ export function ReportsPage() {
       const personalDays = workerEntries.filter(e => e.isLeave && (e.leaveType === 'ลากิจ' || !e.leaveType || (e.leaveType as any) === 'ลาพักผ่อน')).length;
       const absentDays = workerEntries.filter(e => e.isLeave && e.leaveType === 'ขาดงาน').length;
       const halfDaysCount = workerEntries.filter(e => e.isLeave && e.leaveType === 'ลาครึ่งวัน').length;
-      let totalBaseWage = 0;
+      const isMonthly = worker.paymentType === 'month';
+      
+      let totalBaseWage = isMonthly ? worker.baseWage : 0;
+      let socialSecurityDeduction = isMonthly ? 750 : 0;
+      
       let totalTravel = 0;
       let totalToll = 0;
       let totalLate = 0;
@@ -64,11 +68,11 @@ export function ReportsPage() {
         }
 
         if (e.isLeave && e.leaveType === 'ลาครึ่งวัน') {
-          totalBaseWage += (e.baseWage || 0) / 2;
-          return; // Half day gets only half base wage, skip others
+          if (!isMonthly) totalBaseWage += (e.baseWage || 0) / 2;
+          return; // Half day gets only half base wage (if daily), skip others
         }
 
-        totalBaseWage += (e.baseWage || 0);
+        if (!isMonthly) totalBaseWage += (e.baseWage || 0);
         totalTravel += (e.travelAllowance || 0);
         totalToll += (e.tollFee || 0);
         totalLate += (e.lateDeduction || 0);
@@ -103,7 +107,7 @@ export function ReportsPage() {
 
       const netAdjustments = totalAdditions - totalDeductions + totalToll;
 
-      let grandTotal = 0;
+      let grandTotal = isMonthly ? worker.baseWage - socialSecurityDeduction : 0;
       let rangeGuaranteeDeduction = 0;
       const processedDates = new Set<string>();
 
@@ -130,7 +134,7 @@ export function ReportsPage() {
 
         rangeGuaranteeDeduction += guarantee;
 
-        let pay = e.totalPay;
+        let pay = e.totalPay; // This doesn't include 20k for monthly since their daily baseWage is 0
         // Self-heal historical DB data: if DB deducted guarantee duplicate
         if (isDuplicateRefundNeeded && (e.guaranteeDeduction || 0) > 0) {
           const refundAmount = isHalfDay ? (e.guaranteeDeduction / 2) : e.guaranteeDeduction;
@@ -158,6 +162,7 @@ export function ReportsPage() {
         totalToll,
         totalLate,
         totalOT,
+        socialSecurityDeduction,
         netAdjustments,
         adjustmentsList,
         grandTotal,
@@ -366,6 +371,7 @@ export function ReportsPage() {
       baseRow['รวมโอที'] = row.totalOT;
       baseRow['รวมอื่นๆ (สุทธิ)'] = otherSums;
       baseRow['หักประกันสะสม(ในรอบ)'] = row.rangeGuaranteeDeduction;
+      baseRow['หักประกันสังคม'] = row.socialSecurityDeduction || 0;
       baseRow['ยอดประกันสะสมรวมทั้งหมด'] = row.guaranteeTotal || 0;
       baseRow['หักเบิกล่วงหน้า'] = row.advanceDeduction;
       baseRow['ยอดสุทธิ(ในรอบ)'] = row.finalPay;
@@ -395,6 +401,7 @@ export function ReportsPage() {
     grandTotalRow['รวมโอที'] = reportData.reduce((sum, r) => sum + r.totalOT, 0);
     grandTotalRow['รวมอื่นๆ (สุทธิ)'] = summaryRows.reduce((sum, r) => sum + (r['รวมอื่นๆ (สุทธิ)'] || 0), 0);
     grandTotalRow['หักประกันสะสม(ในรอบ)'] = reportData.reduce((sum, r) => sum + r.rangeGuaranteeDeduction, 0);
+    grandTotalRow['หักประกันสังคม'] = reportData.reduce((sum, r) => sum + r.socialSecurityDeduction, 0);
     grandTotalRow['ยอดประกันสะสมรวมทั้งหมด'] = reportData.reduce((sum, r) => sum + r.guaranteeTotal, 0);
     grandTotalRow['หักเบิกล่วงหน้า'] = reportData.reduce((sum, r) => sum + r.advanceDeduction, 0);
     grandTotalRow['ยอดสุทธิ(ในรอบ)'] = reportData.reduce((sum, r) => sum + r.finalPay, 0);
@@ -695,6 +702,7 @@ export function ReportsPage() {
       { wpx: 100 }, // รวมโอที
       { wpx: 100 }, // รวมอื่นๆ
       { wpx: 150 }, // หักประกันสะสม
+      { wpx: 120 }, // หักประกันสังคม
       { wpx: 150 }, // ยอดประกันสะสมรวม
       { wpx: 120 }, // หักเบิกล่วงหน้า
       { wpx: 150 }  // ยอดสุทธิ
@@ -769,6 +777,7 @@ export function ReportsPage() {
                     <th scope="col" className="px-3 py-3.5 text-right text-[13px] font-semibold text-red-600 uppercase tracking-wide">หักสาย</th>
                     <th scope="col" className="px-3 py-3.5 text-right text-[13px] font-semibold text-zinc-900 uppercase tracking-wide">อื่นๆ</th>
                     <th scope="col" className="py-3.5 px-3 text-right text-[13px] font-semibold text-orange-600 uppercase tracking-wide">หักประกันสะสม</th>
+                    <th scope="col" className="py-3.5 px-3 text-right text-[13px] font-semibold text-purple-600 uppercase tracking-wide">หักประกันสังคม</th>
                     <th scope="col" className="py-3.5 px-3 text-right text-[13px] font-semibold text-red-600 uppercase tracking-wide">หักเบิก</th>
                     <th scope="col" className="py-3.5 px-3 text-right text-[13px] font-semibold text-blue-600 uppercase tracking-wide">สุทธิ</th>
                     <th scope="col" className="py-3.5 px-3 text-center text-[13px] font-semibold text-violet-600 uppercase tracking-wide">คัดลอกรูป</th>
@@ -830,6 +839,11 @@ export function ReportsPage() {
                         </button>
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm font-bold text-right">
+                        <span className={`px-2 py-1 -mr-2 rounded-md ${row.socialSecurityDeduction > 0 ? 'text-purple-600 bg-purple-50' : 'text-zinc-300'} font-medium`}>
+                          {row.socialSecurityDeduction > 0 ? `-฿${row.socialSecurityDeduction}` : '-'}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm font-bold text-right">
                         <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'หักเบิก', metricType: 'advance' })} className={`hover:underline cursor-pointer transition-colors px-2 py-1 -mr-2 rounded-md hover:bg-red-50 text-red-500 ${row.advanceDeduction > 0 ? '' : 'text-zinc-300 font-normal hover:bg-transparent cursor-default'}`} disabled={row.advanceDeduction === 0}>
                           {row.advanceDeduction > 0 ? `-฿${row.advanceDeduction}` : '-'}
                         </button>
@@ -889,6 +903,7 @@ export function ReportsPage() {
                     <td className="px-3 py-3 text-sm font-bold text-red-600 text-right">-฿{reportData.reduce((sum, r) => sum + r.totalLate, 0)}</td>
                     <td className="px-3 py-3 text-sm font-bold text-blue-900 text-right">฿{reportData.reduce((sum, r) => sum + r.netAdjustments, 0)}</td>
                     <td className="px-3 py-3 text-sm font-bold text-orange-600 text-right">฿{reportData.reduce((sum, r) => sum + r.guaranteeTotal, 0)}</td>
+                    <td className="px-3 py-3 text-sm font-bold text-purple-600 text-right">-฿{reportData.reduce((sum, r) => sum + r.socialSecurityDeduction, 0)}</td>
                     <td className="px-3 py-3 text-sm font-bold text-red-600 text-right">-฿{reportData.reduce((sum, r) => sum + r.advanceDeduction, 0)}</td>
                     <td className="px-3 py-3 text-sm font-bold text-blue-700 text-right">฿{reportData.reduce((sum, r) => sum + r.finalPay, 0)}</td>
                     <td className="py-3 pl-3 pr-4 sm:pr-6"></td>

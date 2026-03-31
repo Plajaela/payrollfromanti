@@ -77,7 +77,12 @@ export function DashboardPage() {
       const advanceTotal = workerAdvances.reduce((sum, a) => sum + (a.type === 'borrow' ? a.amount : -a.amount), 0);
       const advanceDeduction = advanceTotal > 0 ? advanceTotal : 0;
       
-      totalWagesMonth += (workerMonthTotal - advanceDeduction);
+      let finalWorkerMonthTotal = workerMonthTotal;
+      if (worker.paymentType === 'month') {
+        finalWorkerMonthTotal += (worker.baseWage || 0) - 750;
+      }
+      
+      totalWagesMonth += (finalWorkerMonthTotal - advanceDeduction);
     });
 
     const activeToday = entries.filter(e => e.date === todayStr && !e.isLeave).length;
@@ -131,7 +136,13 @@ export function DashboardPage() {
       });
       const advanceTotal = workerAdvances.reduce((sum, a) => sum + (a.type === 'borrow' ? a.amount : -a.amount), 0);
       const advanceDeduction = advanceTotal > 0 ? advanceTotal : 0;
-      const finalMonthTotal = workerMonthTotal - advanceDeduction;
+      
+      let finalWorkerMonthTotal = workerMonthTotal;
+      if (w.paymentType === 'month') {
+        finalWorkerMonthTotal += (w.baseWage || 0) - 750;
+      }
+      
+      const finalMonthTotal = finalWorkerMonthTotal - advanceDeduction;
 
       return { ...w, monthTotal: finalMonthTotal, daysWorked };
     }).sort((a, b) => b.monthTotal - a.monthTotal);
@@ -153,6 +164,8 @@ export function DashboardPage() {
     const monthEntries = monthEntriesSorted.filter(e => !e.isDraft);
     let totalActualGuaranteeDeduction = 0;
     let totalAdvanceDeduction = 0;
+    let totalSocialSecurityDeduction = 0;
+    let monthlyBaseWageSum = 0;
     
     workers.forEach(worker => {
       const seenDates = new Set<string>();
@@ -172,6 +185,11 @@ export function DashboardPage() {
       });
       const advanceTotal = workerAdvances.reduce((sum, a) => sum + (a.type === 'borrow' ? a.amount : -a.amount), 0);
       if (advanceTotal > 0) totalAdvanceDeduction += advanceTotal;
+      
+      if (worker.paymentType === 'month') {
+        monthlyBaseWageSum += (worker.baseWage || 0);
+        totalSocialSecurityDeduction += 750;
+      }
     });
     
     let baseSum = 0; let otSum = 0; let travelSum = 0; let adjSum = 0; let lateSum = 0;
@@ -189,8 +207,8 @@ export function DashboardPage() {
     });
 
     const breakdown = {
-      base: baseSum, ot: otSum, travel: travelSum, adjustments: adjSum,
-      deductions: lateSum + totalActualGuaranteeDeduction, advances: totalAdvanceDeduction,
+      base: baseSum + monthlyBaseWageSum, ot: otSum, travel: travelSum, adjustments: adjSum,
+      deductions: lateSum + totalActualGuaranteeDeduction + totalSocialSecurityDeduction, advances: totalAdvanceDeduction,
     };
     const totalBreakdown = totalWagesMonth;
 

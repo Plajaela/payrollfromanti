@@ -105,6 +105,7 @@ interface SlipModalProps {
     guaranteeTotal: number;
     rangeGuaranteeDeduction: number;
     advanceDeduction?: number;
+    socialSecurityDeduction?: number;
     finalPay?: number;
   } | null;
 }
@@ -121,13 +122,18 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
 
   if (!data) return null;
 
+  const isMonthly = data.worker.paymentType === 'month';
+  const socialSecurityDeduction = data.socialSecurityDeduction || 0;
+
   const absentDays = data.absentDays || 0;
   const expectedDays = data.totalDays + absentDays;
-  const absentDeduction = absentDays * (data.worker.baseWage || 0);
-  const expectedBaseWage = data.totalBaseWage + absentDeduction;
+  // If monthly, base wage is fixed, so absent deduction usually requires manual adjustment or custom formula (/30).
+  // We'll set it to 0 here to keep it simple, since baseWage is already the full monthly salary.
+  const absentDeduction = isMonthly ? 0 : absentDays * (data.worker.baseWage || 0);
+  const expectedBaseWage = isMonthly ? (data.worker.baseWage || 0) : data.totalBaseWage + absentDeduction;
 
   const potentialEarnings = expectedBaseWage + data.totalTravel + data.totalToll + data.totalOT + (data.netAdjustments > 0 ? data.netAdjustments : 0);
-  const totalDeductions = absentDeduction + data.totalLate + data.rangeGuaranteeDeduction + (data.netAdjustments < 0 ? Math.abs(data.netAdjustments) : 0) + (data.advanceDeduction || 0);
+  const totalDeductions = absentDeduction + data.totalLate + data.rangeGuaranteeDeduction + (data.netAdjustments < 0 ? Math.abs(data.netAdjustments) : 0) + (data.advanceDeduction || 0) + socialSecurityDeduction;
 
   const actualNetPay = data.finalPay !== undefined ? data.finalPay : data.grandTotal;
 
@@ -394,7 +400,7 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
                     <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div> รายการหัก (คุณขาดงาน / สาย / เบิก)
                   </div>
                   <div className="space-y-1.5">
-                    {absentDays > 0 && (
+                    {absentDays > 0 && !isMonthly && (
                       <div className="pb-0.5">
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-600">หักขาดงาน ({absentDays} วัน)</span>
@@ -424,6 +430,12 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
                       <div className="flex justify-between text-sm">
                         <span className="text-red-500">ดึงเงินคืน (เบิกล่วงหน้า)</span>
                         <span className="font-bold text-red-600">-฿{data.advanceDeduction.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {socialSecurityDeduction > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-purple-600">หักประกันสังคม (สปส.)</span>
+                        <span className="font-bold text-purple-600">-฿{socialSecurityDeduction.toLocaleString()}</span>
                       </div>
                     )}
                   </div>
