@@ -72,6 +72,8 @@ export function useStore() {
                   shift_start: w.shiftStart || '07:00',
                   shift_end: w.shiftEnd || '16:00',
                   payment_type: w.paymentType || 'month',
+                  monthly_wage: w.monthlyWage || 0,
+                  has_social_security: w.hasSocialSecurity || false,
                   has_guarantee: w.hasGuarantee || false,
                   historical_guarantee: w.historicalGuarantee || 0,
                   late_rate_rule: w.lateRateRule || 'normal'
@@ -96,6 +98,8 @@ export function useStore() {
             shiftStart: w.shift_start,
             shiftEnd: w.shift_end,
             paymentType: w.payment_type,
+            monthlyWage: Number(w.monthly_wage) || 0,
+            hasSocialSecurity: w.has_social_security || false,
             hasGuarantee: w.has_guarantee || false,
             historicalGuarantee: Number(w.historical_guarantee) || 0,
             lateRateRule: w.late_rate_rule || 'normal'
@@ -337,6 +341,8 @@ export function useStore() {
         shift_start: worker.shiftStart || '07:00',
         shift_end: worker.shiftEnd || '16:00',
         payment_type: worker.paymentType || 'month',
+        monthly_wage: worker.monthlyWage || 0,
+        has_social_security: worker.hasSocialSecurity || false,
         has_guarantee: worker.hasGuarantee || false,
         historical_guarantee: worker.historicalGuarantee || 0,
         late_rate_rule: worker.lateRateRule || 'normal'
@@ -364,6 +370,8 @@ export function useStore() {
       if (updated.shiftStart !== undefined) updateData.shift_start = updated.shiftStart;
       if (updated.shiftEnd !== undefined) updateData.shift_end = updated.shiftEnd;
       if (updated.paymentType !== undefined) updateData.payment_type = updated.paymentType;
+      if (updated.monthlyWage !== undefined) updateData.monthly_wage = updated.monthlyWage;
+      if (updated.hasSocialSecurity !== undefined) updateData.has_social_security = updated.hasSocialSecurity;
       if (updated.hasGuarantee !== undefined) updateData.has_guarantee = updated.hasGuarantee;
       if (updated.historicalGuarantee !== undefined) updateData.historical_guarantee = updated.historicalGuarantee;
       if (updated.lateRateRule !== undefined) updateData.late_rate_rule = updated.lateRateRule;
