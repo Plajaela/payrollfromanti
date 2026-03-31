@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useStore } from '../useStore';
 import { Button, Input, Card, Label, Toast } from '../components/ui';
 import { parseISO, startOfMonth, endOfMonth, isWithinInterval, format, isSunday, eachDayOfInterval } from 'date-fns';
-import { FileSpreadsheet, Copy, Check, Image as ImageIcon, X, ImagePlus, Loader2 } from 'lucide-react';
+import { FileSpreadsheet, Copy, Check, Image as ImageIcon, X, ImagePlus, Loader2, Wallet, ShieldCheck } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../components/ui';
 import * as XLSX from 'xlsx-js-style';
@@ -577,6 +577,7 @@ export function ReportsPage() {
             'ค่ารถ': isFullLeave || isHalfDay ? '' : (entry.travelAllowance || ''),
             'ยอดสุทธิประจำวัน': isFullLeave ? '' : entry.totalPay,
             'ประเภทการลา': entry.isLeave ? getLeaveText(entry) : '',
+            'หักประกันสังคม': '',
           };
 
           PRESETS.forEach(p => {
@@ -615,11 +616,12 @@ export function ReportsPage() {
 
       workerTotalRow['ทางด่วน'] = '';
       workerTotalRow['หักประกันสะสม'] = summaryData.guaranteeTotal > 0 ? `สะสมรวม: ฿${summaryData.guaranteeTotal}` : '';
+      workerTotalRow['หักประกันสังคม'] = summaryData.socialSecurityDeduction > 0 ? -summaryData.socialSecurityDeduction : '';
       workerTotalRow['รวมอื่นๆ'] = '';
       workerTotalRow['หมายเหตุอื่นๆ'] = '';
-      workerTotalRow['ยอดสุทธิประจำวัน'] = workerTotal;
+      workerTotalRow['ยอดสุทธิประจำวัน'] = worker.paymentType === 'month' ? summaryData.grandTotal : workerTotal;
       workerTotalRow['หักเบิกล่วงหน้า'] = summaryData.advanceDeduction > 0 ? -summaryData.advanceDeduction : '';
-      workerTotalRow['ยอดสุทธิ(หลังหักเบิก)'] = summaryData.advanceDeduction > 0 ? summaryData.finalPay : '';
+      workerTotalRow['ยอดสุทธิ(หลังหักเบิก)'] = summaryData.finalPay;
       workerTotalRow['สลิปโอนเงิน'] = '';
       workerTotalRow['สลิปทางด่วน'] = '';
 
@@ -771,13 +773,19 @@ export function ReportsPage() {
                   <tr>
                     <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-[13px] font-semibold text-zinc-900 sm:pl-6 uppercase tracking-wide">ชื่อช่าง</th>
                     <th scope="col" className="px-3 py-3.5 text-center text-[13px] font-semibold text-zinc-900 uppercase tracking-wide">วันทำงาน</th>
-                    <th scope="col" className="px-3 py-3.5 text-right text-[13px] font-semibold text-zinc-900 uppercase tracking-wide">ค่าแรง</th>
+                    <th scope="col" className="px-3 py-3.5 text-right text-[13px] font-semibold text-zinc-900 uppercase tracking-wide flex items-center justify-end gap-1">
+                      <Wallet className="w-3.5 h-3.5 text-emerald-500" />
+                      ค่าแรง
+                    </th>
                     <th scope="col" className="px-3 py-3.5 text-right text-[13px] font-semibold text-zinc-900 uppercase tracking-wide">ค่ารถ</th>
                     <th scope="col" className="px-3 py-3.5 text-right text-[13px] font-semibold text-zinc-900 uppercase tracking-wide">โอที</th>
                     <th scope="col" className="px-3 py-3.5 text-right text-[13px] font-semibold text-red-600 uppercase tracking-wide">หักสาย</th>
                     <th scope="col" className="px-3 py-3.5 text-right text-[13px] font-semibold text-zinc-900 uppercase tracking-wide">อื่นๆ</th>
                     <th scope="col" className="py-3.5 px-3 text-right text-[13px] font-semibold text-orange-600 uppercase tracking-wide">หักประกันสะสม</th>
-                    <th scope="col" className="py-3.5 px-3 text-right text-[13px] font-semibold text-purple-600 uppercase tracking-wide">หักประกันสังคม</th>
+                    <th scope="col" className="py-3.5 px-3 text-right text-[13px] font-semibold text-purple-600 uppercase tracking-wide flex items-center justify-end gap-1">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      ประกันสังคม
+                    </th>
                     <th scope="col" className="py-3.5 px-3 text-right text-[13px] font-semibold text-red-600 uppercase tracking-wide">หักเบิก</th>
                     <th scope="col" className="py-3.5 px-3 text-right text-[13px] font-semibold text-blue-600 uppercase tracking-wide">สุทธิ</th>
                     <th scope="col" className="py-3.5 px-3 text-center text-[13px] font-semibold text-violet-600 uppercase tracking-wide">คัดลอกรูป</th>
@@ -787,7 +795,23 @@ export function ReportsPage() {
                 <tbody className="divide-y divide-zinc-100 bg-white">
                   {reportData.map((row) => (
                     <tr key={row.worker.id} className="hover:bg-zinc-50/50 transition-colors">
-                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-zinc-900 sm:pl-6">{row.worker.name}</td>
+                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-zinc-900 sm:pl-6">
+                        <div className="font-bold">{row.worker.name}</div>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {row.worker.paymentType === 'month' && (
+                            <span className="text-[10px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded-md flex items-center gap-0.5 font-bold uppercase tracking-tighter">
+                              <Wallet className="w-2.5 h-2.5" />
+                              Monthly
+                            </span>
+                          )}
+                          {row.worker.hasSocialSecurity && (
+                            <span className="text-[10px] bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded-md flex items-center gap-0.5 font-bold uppercase tracking-tighter">
+                              <ShieldCheck className="w-2.5 h-2.5" />
+                              SS
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-center">
                         <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'วันทำงาน', metricType: 'days' })} className="hover:underline cursor-pointer transition-colors px-2 py-1 -mr-2 rounded-md hover:bg-zinc-100 text-zinc-500">
                           {row.totalDays}

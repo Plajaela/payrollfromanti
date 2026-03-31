@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../useStore';
 import { Button, Input, Label, Card, Modal } from '../components/ui';
-import { Plus, Trash2, UserPlus, CalendarOff, PlusCircle, Sparkles, Check, Settings2 } from 'lucide-react';
+import { Plus, Trash2, UserPlus, CalendarOff, PlusCircle, Sparkles, Check, Settings2, Wallet, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../components/ui';
 import { format, parseISO } from 'date-fns';
@@ -158,6 +158,18 @@ export function WorkersPage({ onNavigateToDate }: { onNavigateToDate?: (date: st
                           <span className="bg-sky-50 text-red-700 px-2 py-0.5 rounded-md">เวลา {worker.shiftStart || '07:00'} - {worker.shiftEnd || '16:00'}</span>
                           {worker.hasGuarantee && (
                             <span className="bg-orange-50 text-orange-700 px-2 py-0.5 rounded-md shrink-0">หักประกัน</span>
+                          )}
+                          {worker.monthlyWage > 0 && (
+                            <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md flex items-center gap-1">
+                              <Wallet className="w-3 h-3" />
+                              ฿{worker.monthlyWage.toLocaleString()}
+                            </span>
+                          )}
+                          {worker.hasSocialSecurity && (
+                            <span className="bg-purple-50 text-purple-700 px-2 py-0.5 rounded-md flex items-center gap-1">
+                              <ShieldCheck className="w-3 h-3" />
+                              ประกันสังคม
+                            </span>
                           )}
                           <span className={`px-2 py-0.5 rounded-md shrink-0 ${worker.lateRateRule === 'special' ? 'bg-purple-50 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>
                             หักสาย{worker.lateRateRule === 'special' ? 'อัตราพิเศษ' : 'ปกติ'}
@@ -410,7 +422,10 @@ export function WorkersPage({ onNavigateToDate }: { onNavigateToDate?: (date: st
               className="space-y-4"
             >
               <div className="space-y-2">
-                <Label htmlFor="monthlyWage">ฐานเงินเดือนรายเดือน (บาท)</Label>
+                <Label htmlFor="monthlyWage" className="flex items-center gap-2">
+                  <Wallet className="w-4 h-4 text-emerald-500" />
+                  ฐานเงินเดือนรายเดือน (บาท)
+                </Label>
                 <Input
                   id="monthlyWage"
                   type="number"
@@ -424,9 +439,14 @@ export function WorkersPage({ onNavigateToDate }: { onNavigateToDate?: (date: st
 
               <div className="bg-purple-50/50 p-4 rounded-2xl border border-purple-100">
                 <label className="flex items-center justify-between cursor-pointer">
-                  <div>
-                    <div className="font-semibold text-purple-900">หักประกันสังคม (750 บาท)</div>
-                    <div className="text-xs text-purple-500 mt-0.5">หักอัตโนมัติเมื่อสรุปยอดสิ้นเดือน</div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600">
+                      <ShieldCheck className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-purple-900">หักประกันสังคม (750 บาท)</div>
+                      <div className="text-xs text-purple-500 mt-0.5">หักอัตโนมัติเมื่อสรุปยอดสิ้นเดือน</div>
+                    </div>
                   </div>
                   <div className="relative">
                     <input type="checkbox" className="sr-only peer" checked={formData.hasSocialSecurity} onChange={(e) => setFormData(p => ({ ...p, hasSocialSecurity: e.target.checked }))} />
