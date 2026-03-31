@@ -50,20 +50,26 @@ export function DashboardPage() {
       const seenDates = new Set<string>();
       let workerMonthTotal = 0;
       workerEntries.forEach(e => {
-        const guarantee = e.guaranteeDeduction || 0;
-        let needsRefund = false;
-        if ((e.isLeave && e.leaveType !== 'ลาครึ่งวัน') || e.isDraft) {
-          if (guarantee > 0) needsRefund = true;
-        } else if (guarantee > 0) {
-          if (seenDates.has(e.date)) needsRefund = true;
-          else seenDates.add(e.date);
+        let guarantee = e.guaranteeDeduction || 0;
+        let isDuplicateRefundNeeded = false;
+        
+        if (e.isLeave && e.leaveType !== 'ลาครึ่งวัน') {
+          guarantee = 0;
+        } else {
+          if (guarantee > 0) {
+            if (seenDates.has(e.date)) isDuplicateRefundNeeded = true;
+            else seenDates.add(e.date);
+          }
         }
+        
+        const isHalfDay = e.isLeave && e.leaveType === 'ลาครึ่งวัน';
         let pay = e.totalPay || 0;
-        if (needsRefund && guarantee > 0) pay += guarantee;
+        if (isDuplicateRefundNeeded && (e.guaranteeDeduction || 0) > 0) {
+          pay += (isHalfDay ? e.guaranteeDeduction / 2 : e.guaranteeDeduction);
+        }
         workerMonthTotal += pay;
       });
       
-      // Advance debt STRICTLY within this date range only (matching Reports exactly)
       const workerAdvances = advances.filter(a => {
         const aDate = parseISO(a.date);
         return a.workerId === worker.id && isWithinInterval(aDate, { start: monthStart, end: monthEnd });
@@ -74,103 +80,89 @@ export function DashboardPage() {
       totalWagesMonth += (workerMonthTotal - advanceDeduction);
     });
 
-    // 2. Active workers today
     const activeToday = entries.filter(e => e.date === todayStr && !e.isLeave).length;
-
-    // 3. Total Advance Debt
     const totalDebt = advances.reduce((sum, a) => sum + (a.type === 'borrow' ? a.amount : -a.amount), 0);
 
-    // 4. Total Guarantee Fund
     const historicalTotal = workers.reduce((sum, w) => sum + (w.historicalGuarantee || 0), 0);
     const entriesGuarantee = entries
       .filter(e => !e.isDraft && !e.isLeave)
       .reduce((sum, e) => sum + (e.guaranteeDeduction || 0), 0);
     const totalGuarantee = historicalTotal + entriesGuarantee;
 
-    // 5. Daily Trend (Last 14 days)
     const dailyTrail = Array.from({ length: 14 }).map((_, i) => {
       const d = subDays(now, 13 - i);
       const dStr = format(d, 'yyyy-MM-dd');
       const dayTotal = entries
         .filter(e => e.date === dStr && !e.isDraft && !e.isLeave)
         .reduce((sum, e) => sum + (e.totalPay || 0), 0);
-      return {
-        date: dStr,
-        label: format(d, 'd MMM', { locale: th }),
-        value: dayTotal
-      };
+      return {  date: dStr, label: format(d, 'd MMM', { locale: th }), value: dayTotal };
     });
 
-    // 6. Top Workers (This month) — same guarantee self-heal and advance logic as totalWagesMonth
     const workerStats = workers.map(w => {
       const workerMonthEntries = monthEntriesSorted.filter(e => e.workerId === w.id);
       const seenDates = new Set<string>();
       let workerMonthTotal = 0;
       let daysWorked = 0;
       workerMonthEntries.forEach(e => {
-        const guarantee = e.guaranteeDeduction || 0;
-        let needsRefund = false;
-        if ((e.isLeave && e.leaveType !== 'ลาครึ่งวัน') || e.isDraft) {
-          if (guarantee > 0) needsRefund = true;
+        let guarantee = e.guaranteeDeduction || 0;
+        let isDuplicateRefundNeeded = false;
+        
+        if (e.isLeave && e.leaveType !== 'ลาครึ่งวัน') {
+          guarantee = 0;
         } else {
           daysWorked += e.leaveType === 'ลาครึ่งวัน' ? 0.5 : 1;
           if (guarantee > 0) {
-            if (seenDates.has(e.date)) needsRefund = true;
+            if (seenDates.has(e.date)) isDuplicateRefundNeeded = true;
             else seenDates.add(e.date);
           }
         }
+        
+        const isHalfDay = e.isLeave && e.leaveType === 'ลาครึ่งวัน';
         let pay = e.totalPay || 0;
-        if (needsRefund && guarantee > 0) pay += guarantee;
+        if (isDuplicateRefundNeeded && (e.guaranteeDeduction || 0) > 0) {
+          pay += (isHalfDay ? e.guaranteeDeduction / 2 : e.guaranteeDeduction);
+        }
         workerMonthTotal += pay;
       });
 
-      // Advance debt STRICTLY within this date range only (matching Reports exactly)
       const workerAdvances = advances.filter(a => {
         const aDate = parseISO(a.date);
         return a.workerId === w.id && isWithinInterval(aDate, { start: monthStart, end: monthEnd });
       });
       const advanceTotal = workerAdvances.reduce((sum, a) => sum + (a.type === 'borrow' ? a.amount : -a.amount), 0);
       const advanceDeduction = advanceTotal > 0 ? advanceTotal : 0;
-
       const finalMonthTotal = workerMonthTotal - advanceDeduction;
 
       return { ...w, monthTotal: finalMonthTotal, daysWorked };
     }).sort((a, b) => b.monthTotal - a.monthTotal);
 
-    // 7. Recent Adjustments
     const recentAdjustments = entries
       .filter(e => e.adjustments && e.adjustments.length > 0)
       .sort((a, b) => b.date.localeCompare(a.date))
       .slice(0, 5)
       .map(e => ({
-        id: e.id,
-        workerName: workers.find(w => w.id === e.workerId)?.name || 'Unknown',
-        date: e.date,
-        adjustment: e.adjustments[0] // Just show the first one for brevity
+        id: e.id, workerName: workers.find(w => w.id === e.workerId)?.name || 'Unknown', date: e.date, adjustment: e.adjustments[0]
       }));
 
-    // 8. Today's Attendance Summary
     const todayEntries = entries.filter(e => e.date === todayStr && !e.isDraft);
     const attendance = {
-      present: todayEntries.filter(e => !e.isLeave).length,
-      late: todayEntries.filter(e => e.lateDeduction > 0).length,
-      leave: todayEntries.filter(e => e.isLeave).length,
-      total: workers.length
+      present: todayEntries.filter(e => !e.isLeave).length, late: todayEntries.filter(e => e.lateDeduction > 0).length,
+      leave: todayEntries.filter(e => e.isLeave).length, total: workers.length
     };
 
-    // 9. Monthly Expense Breakdown – filter matches totalWagesMonth: includes half-day leave, excludes full-leave/draft
-    const monthEntries = monthEntriesSorted.filter(
-      e => !e.isDraft && !(e.isLeave && e.leaveType !== 'ลาครึ่งวัน')
-    );
-    // Per-worker guarantee and advance deduction (same self-heal rule as totalWagesMonth)
+    const monthEntries = monthEntriesSorted.filter(e => !e.isDraft);
     let totalActualGuaranteeDeduction = 0;
     let totalAdvanceDeduction = 0;
+    
     workers.forEach(worker => {
       const seenDates = new Set<string>();
       monthEntries.filter(e => e.workerId === worker.id).forEach(e => {
+        if ((e.isLeave && e.leaveType !== 'ลาครึ่งวัน')) return;
+        const isHalfDay = e.isLeave && e.leaveType === 'ลาครึ่งวัน';
+        
         if ((e.guaranteeDeduction || 0) > 0 && !seenDates.has(e.date)) {
           seenDates.add(e.date);
-          totalActualGuaranteeDeduction += e.guaranteeDeduction;
+          totalActualGuaranteeDeduction += isHalfDay ? (e.guaranteeDeduction / 2) : e.guaranteeDeduction;
         }
       });
       
@@ -181,14 +173,24 @@ export function DashboardPage() {
       const advanceTotal = workerAdvances.reduce((sum, a) => sum + (a.type === 'borrow' ? a.amount : -a.amount), 0);
       if (advanceTotal > 0) totalAdvanceDeduction += advanceTotal;
     });
-    const totalLateDeduction = monthEntries.reduce((s, e) => s + (e.lateDeduction || 0), 0);
+    
+    let baseSum = 0; let otSum = 0; let travelSum = 0; let adjSum = 0; let lateSum = 0;
+    monthEntries.forEach(e => {
+       if (e.isLeave && e.leaveType !== 'ลาครึ่งวัน') return;
+       const isHalfDay = e.isLeave && e.leaveType === 'ลาครึ่งวัน';
+       
+       baseSum += isHalfDay ? (e.baseWage || 0) / 2 : (e.baseWage || 0);
+       if (!isHalfDay) {
+          otSum += (e.overtimePay || 0);
+          travelSum += (e.travelAllowance || 0) + (e.tollFee || 0);
+          lateSum += (e.lateDeduction || 0);
+          adjSum += e.adjustments?.reduce((s, a) => s + (a.type === 'add' ? Number(a.amount) : -Number(a.amount)), 0) || 0;
+       }
+    });
+
     const breakdown = {
-      base:        monthEntries.reduce((s, e) => s + (e.baseWage || 0), 0),
-      ot:          monthEntries.reduce((s, e) => s + (e.overtimePay || 0), 0),
-      travel:      monthEntries.reduce((s, e) => s + (e.travelAllowance || 0) + (e.tollFee || 0), 0),
-      adjustments: monthEntries.reduce((s, e) => s + (e.adjustments?.reduce((a2, a) => a2 + (a.type === 'add' ? Number(a.amount) : -Number(a.amount)), 0) || 0), 0),
-      deductions:  totalLateDeduction + totalActualGuaranteeDeduction,
-      advances:    totalAdvanceDeduction,
+      base: baseSum, ot: otSum, travel: travelSum, adjustments: adjSum,
+      deductions: lateSum + totalActualGuaranteeDeduction, advances: totalAdvanceDeduction,
     };
     const totalBreakdown = totalWagesMonth;
 

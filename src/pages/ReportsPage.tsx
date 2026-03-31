@@ -434,11 +434,11 @@ export function ReportsPage() {
 
       intervalDays.forEach(dateObj => {
         const dateStr = format(dateObj, 'yyyy-MM-dd');
-        const entry = workerEntries.find(e => e.date === dateStr);
+        const dayEntries = workerEntries.filter(e => e.date === dateStr);
         const isSun = isSunday(dateObj);
-        const displayDate = format(dateObj, 'dd/MM/yyyy') + (isSun ? ' (อาทิตย์)' : '');
-
-        if (!entry) {
+        
+        if (dayEntries.length === 0) {
+          const displayDate = format(dateObj, 'dd/MM/yyyy') + (isSun ? ' (อาทิตย์)' : '');
           const row: any = {
             'วันที่': displayDate,
             'ชื่อช่าง': worker.name,
@@ -465,124 +465,128 @@ export function ReportsPage() {
           return;
         }
 
-        const presetSums: Record<string, number> = {};
-        PRESETS.forEach(p => presetSums[p] = 0);
-        let otherSums = 0;
+        dayEntries.forEach((entry, idx) => {
+          const displayDate = format(dateObj, 'dd/MM/yyyy') + (isSun ? ' (อาทิตย์)' : '') + (idx > 0 ? ` [ครั้งที่ ${idx + 1}]` : '');
 
-        if (!entry.isLeave) {
-          entry.adjustments?.forEach(a => {
-            const amount = a.type === 'add' ? Number(a.amount) : -Number(a.amount);
-            const note = (a.note || '').trim();
-            if (PRESETS.includes(note)) {
-              presetSums[note] += amount;
-            } else {
-              otherSums += amount;
-            }
-          });
-        }
+          const presetSums: Record<string, number> = {};
+          PRESETS.forEach(p => presetSums[p] = 0);
+          let otherSums = 0;
 
-        const formatSlipUrl = (url?: string) => {
-          if (!url) return '-';
-          if (url.startsWith('http')) return url;
-          if (url.startsWith('data:image')) return 'มี(ระบบเก่า)';
-          return '-';
-        };
-
-        let notes = entry.adjustments?.map(a => {
-          let s = `${a.note || 'ไม่มีหมายเหตุ'} (${a.type === 'add' ? '+' : '-'}${a.amount})`;
-          if (a.receiptUrl && a.receiptUrl.startsWith('http')) {
-            s += ` ${a.receiptUrl}`;
-          } else if (a.receiptUrl) {
-            s += ' (มีรูปเก่า)';
-          }
-          return s;
-        }).join(', ') || '';
-
-        if (entry.tollFee > 0) {
-          const tDates: string[] = [];
-          if (entry.tolls && entry.tolls.length > 0) {
-            entry.tolls.forEach(t => {
-              if (t.date && t.date !== entry.date) {
-                const fDate = format(parseISO(t.date), 'dd/MM/yyyy');
-                if (!tDates.includes(fDate)) tDates.push(fDate);
+          if (!entry.isLeave) {
+            entry.adjustments?.forEach(a => {
+              const amount = a.type === 'add' ? Number(a.amount) : -Number(a.amount);
+              const note = (a.note || '').trim();
+              if (PRESETS.includes(note)) {
+                presetSums[note] += amount;
+              } else {
+                otherSums += amount;
               }
             });
-          } else if (entry.tollDate && entry.tollDate !== entry.date) {
-            tDates.push(format(parseISO(entry.tollDate), 'dd/MM/yyyy'));
           }
-          if (tDates.length > 0) {
-            notes += (notes ? ', ' : '') + `ทางด่วนวันที่ ${tDates.join(', ')}`;
+
+          const formatSlipUrl = (url?: string) => {
+            if (!url) return '-';
+            if (url.startsWith('http')) return url;
+            if (url.startsWith('data:image')) return 'มี(ระบบเก่า)';
+            return '-';
+          };
+
+          let notes = entry.adjustments?.map(a => {
+            let s = `${a.note || 'ไม่มีหมายเหตุ'} (${a.type === 'add' ? '+' : '-'}${a.amount})`;
+            if (a.receiptUrl && a.receiptUrl.startsWith('http')) {
+              s += ` ${a.receiptUrl}`;
+            } else if (a.receiptUrl) {
+              s += ' (มีรูปเก่า)';
+            }
+            return s;
+          }).join(', ') || '';
+
+          if (entry.tollFee > 0) {
+            const tDates: string[] = [];
+            if (entry.tolls && entry.tolls.length > 0) {
+              entry.tolls.forEach(t => {
+                if (t.date && t.date !== entry.date) {
+                  const fDate = format(parseISO(t.date), 'dd/MM/yyyy');
+                  if (!tDates.includes(fDate)) tDates.push(fDate);
+                }
+              });
+            } else if (entry.tollDate && entry.tollDate !== entry.date) {
+              tDates.push(format(parseISO(entry.tollDate), 'dd/MM/yyyy'));
+            }
+            if (tDates.length > 0) {
+              notes += (notes ? ', ' : '') + `ทางด่วนวันที่ ${tDates.join(', ')}`;
+            }
           }
-        }
 
-        workerTotal += entry.totalPay;
+          workerTotal += entry.totalPay || 0;
 
-        const getLeaveText = (e: typeof entry) => {
-          let str = e.leaveType || 'ลากิจ';
-          if (e.leaveNote) str += ` (${e.leaveNote})`;
-          return str;
-        };
+          const getLeaveText = (e: typeof entry) => {
+            let str = e.leaveType || 'ลากิจ';
+            if (e.leaveNote) str += ` (${e.leaveNote})`;
+            return str;
+          };
 
-        const wStart = worker.shiftStart || '07:00';
-        const wEnd = worker.shiftEnd || '16:00';
-        const actualStart = entry.clockIn > wStart ? entry.clockIn : wStart;
-        const actualEnd = entry.clockOut < wEnd ? entry.clockOut : wEnd;
+          const wStart = worker.shiftStart || '07:00';
+          const wEnd = worker.shiftEnd || '16:00';
+          const actualStart = entry.clockIn > wStart ? entry.clockIn : wStart;
+          const actualEnd = entry.clockOut < wEnd ? entry.clockOut : wEnd;
 
-        // Calculate late minutes and deduction first!
-        let lateMinsStr = '';
-        let lateDeductionValue: number | string = '';
+          // Calculate late minutes and deduction first!
+          let lateMinsStr = '';
+          let lateDeductionValue: number | string = '';
 
-        if (!entry.isLeave && entry.lateDeduction > 0) {
-           const inMins = timeToMins(entry.clockIn);
-           const startMins = timeToMins(wStart);
-           const outMins = timeToMins(entry.clockOut);
-           let endMins = timeToMins(wEnd);
-           if (endMins < startMins) endMins += 24 * 60;
-           let actualOutMins = outMins;
-           if (actualOutMins < inMins) actualOutMins += 24 * 60;
-           
-           let lateMins = 0;
-           let earlyLeaveMins = 0;
-           if (inMins > startMins) lateMins += (inMins - startMins);
-           if (actualOutMins < endMins) earlyLeaveMins += (endMins - actualOutMins);
-           
-           const totalMissingMins = (entry.lateRateRule || worker.lateRateRule) === 'special' ? lateMins : lateMins + earlyLeaveMins;
-           
-           lateMinsStr = `${totalMissingMins} นาที`;
-           lateDeductionValue = -entry.lateDeduction;
-        }
+          if (!entry.isLeave && entry.lateDeduction > 0) {
+            const inMins = timeToMins(entry.clockIn);
+            const startMins = timeToMins(wStart);
+            const outMins = timeToMins(entry.clockOut);
+            let endMins = timeToMins(wEnd);
+            if (endMins < startMins) endMins += 24 * 60;
+            let actualOutMins = outMins;
+            if (actualOutMins < inMins) actualOutMins += 24 * 60;
+            
+            let lateMins = 0;
+            let earlyLeaveMins = 0;
+            if (inMins > startMins) lateMins += (inMins - startMins);
+            if (actualOutMins < endMins) earlyLeaveMins += (endMins - actualOutMins);
+            
+            const totalMissingMins = (entry.lateRateRule || worker.lateRateRule) === 'special' ? lateMins : lateMins + earlyLeaveMins;
+            
+            lateMinsStr = `${totalMissingMins} นาที`;
+            lateDeductionValue = -entry.lateDeduction;
+          }
 
-        const isHalfDay = entry.isLeave && entry.leaveType === 'ลาครึ่งวัน';
-        const isFullLeave = entry.isLeave && !isHalfDay;
+          const isHalfDay = entry.isLeave && entry.leaveType === 'ลาครึ่งวัน';
+          const isFullLeave = entry.isLeave && !isHalfDay;
 
-        const row: any = {
-          'วันที่': displayDate,
-          'ชื่อช่าง': worker.name,
-          'เวลาทำงาน': isFullLeave ? 'ลาหยุด' : (isHalfDay ? 'ลาครึ่งวัน' : `${actualStart} - ${actualEnd}`),
-          'จำนวนเวลาสาย': lateMinsStr,
-          'หักสาย': lateDeductionValue,
-          'ค่าแรง': isFullLeave ? '' : (isHalfDay ? (entry.baseWage / 2) : (entry.baseWage || '')),
-          'เวลาทำโอที': isFullLeave || !entry.overtimePay ? '' : `${wEnd} - ${entry.clockOut}`,
-          'โอที': isFullLeave || !entry.overtimePay ? '' : entry.overtimePay,
-          'ค่ารถ': isFullLeave || isHalfDay ? '' : (entry.travelAllowance || ''),
-          'ประเภทการลา': entry.isLeave ? getLeaveText(entry) : '',
-        };
+          const row: any = {
+            'วันที่': displayDate,
+            'ชื่อช่าง': worker.name,
+            'เวลาทำงาน': isFullLeave ? 'ลาหยุด' : (isHalfDay ? 'ลาครึ่งวัน' : `${actualStart} - ${actualEnd}`),
+            'จำนวนเวลาสาย': lateMinsStr,
+            'หักสาย': lateDeductionValue,
+            'ค่าแรง': isFullLeave ? '' : (isHalfDay ? (entry.baseWage / 2) : (entry.baseWage || '')),
+            'เวลาทำโอที': isFullLeave || !entry.overtimePay ? '' : `${wEnd} - ${entry.clockOut}`,
+            'โอที': isFullLeave || !entry.overtimePay ? '' : entry.overtimePay,
+            'ค่ารถ': isFullLeave || isHalfDay ? '' : (entry.travelAllowance || ''),
+            'ยอดสุทธิประจำวัน': isFullLeave ? '' : entry.totalPay,
+            'ประเภทการลา': entry.isLeave ? getLeaveText(entry) : '',
+          };
 
-        PRESETS.forEach(p => {
-          row[p] = isFullLeave || isHalfDay || !presetSums[p] ? '' : presetSums[p];
+          PRESETS.forEach(p => {
+            row[p] = isFullLeave || isHalfDay || !presetSums[p] ? '' : presetSums[p];
+          });
+
+          row['ทางด่วน'] = isFullLeave || isHalfDay || !entry.tollFee ? '' : entry.tollFee;
+          row['หักประกันสะสม'] = isFullLeave || !entry.guaranteeDeduction ? '' : (isHalfDay ? -(entry.guaranteeDeduction / 2) : -entry.guaranteeDeduction);
+          row['รวมอื่นๆ'] = isFullLeave || isHalfDay || !otherSums ? '' : otherSums;
+          row['หมายเหตุอื่นๆ'] = entry.isLeave ? getLeaveText(entry) : notes;
+          row['หักเบิกล่วงหน้า'] = '';
+          row['ยอดสุทธิ(หลังหักเบิก)'] = '';
+          row['สลิปโอนเงิน'] = isFullLeave || !entry.transferSlipUrl ? '' : formatSlipUrl(entry.transferSlipUrl);
+          row['สลิปทางด่วน'] = isFullLeave || isHalfDay || !entry.tollFee || !entry.tollReceiptUrl ? '' : formatSlipUrl(entry.tollReceiptUrl);
+
+          workerRows.push(row);
         });
-
-        row['ทางด่วน'] = isFullLeave || isHalfDay || !entry.tollFee ? '' : entry.tollFee;
-        row['หักประกันสะสม'] = isFullLeave || !entry.guaranteeDeduction ? '' : (isHalfDay ? -(entry.guaranteeDeduction / 2) : -entry.guaranteeDeduction);
-        row['รวมอื่นๆ'] = isFullLeave || isHalfDay || !otherSums ? '' : otherSums;
-        row['หมายเหตุอื่นๆ'] = entry.isLeave ? getLeaveText(entry) : notes;
-        row['ยอดสุทธิประจำวัน'] = isFullLeave ? '' : entry.totalPay;
-        row['หักเบิกล่วงหน้า'] = '';
-        row['ยอดสุทธิ(หลังหักเบิก)'] = '';
-        row['สลิปโอนเงิน'] = isFullLeave || !entry.transferSlipUrl ? '' : formatSlipUrl(entry.transferSlipUrl);
-        row['สลิปทางด่วน'] = isFullLeave || isHalfDay || !entry.tollFee || !entry.tollReceiptUrl ? '' : formatSlipUrl(entry.tollReceiptUrl);
-
-        workerRows.push(row);
       });
 
       const workerTotalRow: any = {
