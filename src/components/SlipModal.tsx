@@ -193,9 +193,9 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
                       <span className="font-semibold text-emerald-600">+฿{data.netAdjustments.toLocaleString()}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-[13px] pt-1.5 border-t border-emerald-50/50 mt-1">
-                    <span className="text-emerald-700 font-bold">รวมรายรับ (คาดหวัง)</span>
-                    <span className="font-bold text-emerald-600">฿{potentialEarnings.toLocaleString()}</span>
+                  <div className="flex justify-between items-center text-[15px] pt-2 pb-1 border-t-2 border-emerald-100 mt-2 bg-emerald-50/30 px-2 -mx-2 rounded-lg">
+                    <span className="text-emerald-800 font-extrabold tracking-wide">รวมรายรับ (คาดหวัง)</span>
+                    <span className="font-black text-emerald-600 text-lg">฿{potentialEarnings.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
