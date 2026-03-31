@@ -1,8 +1,11 @@
 import React, { useRef, useState } from 'react';
 import { Modal, Button } from './ui';
 import * as htmlToImage from 'html-to-image';
-import { Download, Loader2, Share2, Image as ImageIcon, Copy } from 'lucide-react';
+import { Download, Loader2, Share2, Image as ImageIcon, Copy, Eraser, Cloud, CheckCircle } from 'lucide-react';
 import { Worker } from '../types';
+import SignatureCanvas from 'react-signature-canvas';
+import { supabase } from '../lib/supabase';
+import { v4 as uuidv4 } from 'uuid';
 
 interface SlipModalProps {
   isOpen: boolean;
@@ -31,8 +34,12 @@ interface SlipModalProps {
 
 export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProps) {
   const slipRef = useRef<HTMLDivElement>(null);
+  const signatureRef = useRef<SignatureCanvas>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isUploadSuccess, setIsUploadSuccess] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [isSignatureEmpty, setIsSignatureEmpty] = useState(true);
 
   if (!data) return null;
 
@@ -66,6 +73,59 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
       alert(`เกิดข้อผิดพลาดในการสร้างสลิป: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleUploadToDrive = async () => {
+    if (!generatedImage) return;
+
+    try {
+      setIsUploading(true);
+      const response = await fetch(generatedImage);
+      const blob = await response.blob();
+      const file = new File([blob], `slip_${data.worker.name}_${dateRangeStr}.png`, { type: 'image/png' });
+
+      // 1. Upload to Supabase Storage (like in DailyEntryPage)
+      const fileName = `${uuidv4()}.png`;
+      const filePath = `${data.worker.id}/signed_slips/${fileName}`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('slips')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabase.storage
+        .from('slips')
+        .getPublicUrl(filePath);
+
+      const publicUrl = publicUrlData.publicUrl;
+
+      // 2. Trigger Google Drive Webhook
+      const webhookUrl = import.meta.env.VITE_GOOGLE_DRIVE_WEBHOOK_URL;
+      if (webhookUrl) {
+        const driveFormData = new URLSearchParams();
+        driveFormData.append('workerName', data.worker.name || 'Unknown');
+        driveFormData.append('date', dateRangeStr);
+        driveFormData.append('imageUrl', publicUrl);
+        driveFormData.append('type', 'signed_slip'); // Metadata hint
+
+        await fetch(webhookUrl, {
+          method: 'POST',
+          mode: 'no-cors', // Ignore CORS block from Google Apps Script
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: driveFormData.toString()
+        }).catch(err => console.error("Webhook error:", err));
+      }
+
+      setIsUploadSuccess(true);
+      setTimeout(() => setIsUploadSuccess(false), 3000);
+      alert('บันทึกลง Google Drive เรียบร้อยแล้วครับ!');
+    } catch (error) {
+      console.error('Error uploading to drive:', error);
+      alert(`เกิดข้อผิดพลาดในการบันทึกลง Google Drive: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -120,7 +180,14 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
 
   const resetModal = () => {
     setGeneratedImage(null);
+    setIsSignatureEmpty(true);
+    setIsUploadSuccess(false);
     onClose();
+  };
+
+  const clearSignature = () => {
+    signatureRef.current?.clear();
+    setIsSignatureEmpty(true);
   };
 
   return (
@@ -177,7 +244,7 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
               {/* Earnings */}
               <div>
                 <div className="text-[11px] font-bold text-emerald-600 uppercase tracking-wide mb-2 flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> รายรับ (หากมาทำงานเต็ม)
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> รายรับ
                 </div>
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-sm">
@@ -264,9 +331,32 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
             {/* Signature Area */}
             <div className="mt-6 pt-6 pb-2">
               <div className="flex flex-col items-center">
-                <span className="text-xs text-gray-500 mb-8 font-medium">ยืนยันการรับเงินถูกต้อง</span>
-                <div className="w-48 border-b-2 border-dotted border-gray-300 relative">
-                  <span className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-[10px] text-gray-400 bg-white px-2">
+                <span className="text-xs text-gray-500 mb-2 font-medium">ยืนยันการรับเงินถูกต้อง</span>
+                <div className="relative group">
+                  <div className="w-64 h-32 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50/50 flex items-center justify-center overflow-hidden">
+                    <SignatureCanvas
+                      ref={signatureRef}
+                      penColor="black"
+                      canvasProps={{
+                        width: 256,
+                        height: 128,
+                        className: 'signature-canvas w-full h-full cursor-crosshair'
+                      }}
+                      onEnd={() => setIsSignatureEmpty(false)}
+                    />
+                  </div>
+                  {!isSignatureEmpty && (
+                    <button
+                      onClick={clearSignature}
+                      className="absolute -top-2 -right-2 bg-red-100 p-1.5 rounded-full text-red-600 hover:bg-red-200 transition-colors shadow-sm"
+                      title="ลบเซ็น"
+                    >
+                      <Eraser className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+                <div className="mt-4 w-48 border-b-2 border-dotted border-gray-300 relative text-center">
+                  <span className="text-[10px] text-gray-400">
                     ({data.worker.name})
                   </span>
                 </div>
@@ -297,20 +387,36 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
         </Button>
 
         {generatedImage ? (
-          <div className="flex gap-2 flex-1">
-            <Button onClick={handleCopyImage} className="flex-1 py-3.5 bg-blue-600 hover:bg-blue-700 shadow-sm text-white flex items-center justify-center gap-1.5 px-2">
-              <Copy className="w-5 h-5 shrink-0" />
-              <span className="text-sm font-medium">คัดลอกรูปภาพ</span>
-            </Button>
-            <Button onClick={handleShare} className="flex-1 py-3.5 bg-[#00B900] hover:bg-[#009900] shadow-sm text-white flex items-center justify-center gap-1.5 px-2">
-              <Share2 className="w-5 h-5 shrink-0" />
-              <span className="text-sm font-medium">แชร์รูปให้ช่าง</span>
-            </Button>
+          <div className="flex flex-col gap-2 flex-1">
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleUploadToDrive} 
+                disabled={isUploading || isUploadSuccess}
+                className={`flex-1 py-3.5 ${isUploadSuccess ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-orange-500 hover:bg-orange-600'} shadow-sm text-white flex items-center justify-center gap-1.5 px-2`}
+              >
+                {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : (isUploadSuccess ? <CheckCircle className="w-5 h-5" /> : <Cloud className="w-5 h-5" />)}
+                <span className="text-sm font-medium">{isUploadSuccess ? 'บันทึกสำเร็จ' : (isUploading ? 'กำลังบันทึก...' : 'บันทึกเข้า Google Drive')}</span>
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={handleCopyImage} className="flex-1 py-3.5 bg-blue-600 hover:bg-blue-700 shadow-sm text-white flex items-center justify-center gap-1.5 px-2">
+                <Copy className="w-5 h-5 shrink-0" />
+                <span className="text-sm font-medium">คัดลอกรูปภาพ</span>
+              </Button>
+              <Button onClick={handleShare} className="flex-1 py-3.5 bg-[#00B900] hover:bg-[#009900] shadow-sm text-white flex items-center justify-center gap-1.5 px-2">
+                <Share2 className="w-5 h-5 shrink-0" />
+                <span className="text-sm font-medium">แชร์ให้ช่าง</span>
+              </Button>
+            </div>
           </div>
         ) : (
-          <Button onClick={handleGenerate} disabled={isGenerating} className="flex-1 py-3.5 bg-sky-600 hover:bg-sky-700 shadow-sky-200 text-white flex items-center justify-center gap-2">
+          <Button 
+            onClick={handleGenerate} 
+            disabled={isGenerating || isSignatureEmpty} 
+            className="flex-1 py-3.5 bg-sky-600 hover:bg-sky-700 shadow-sky-200 text-white flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <ImageIcon className="w-5 h-5" />}
-            {isGenerating ? 'กำลังสร้างรูป...' : 'ดูภาพก่อนส่ง'}
+            {isGenerating ? 'กำลังสร้างรูป...' : isSignatureEmpty ? 'กรุณาเซ็นชื่อก่อน' : 'ดูภายพร้อมลายเซ็น'}
           </Button>
         )}
       </div>
