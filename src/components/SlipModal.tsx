@@ -36,13 +36,14 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
 
   if (!data) return null;
 
-  const expectedDays = data.totalDays + data.leaveDays;
-  const leaveDeduction = data.leaveDays * (data.worker.baseWage || 0);
-  const expectedBaseWage = data.totalBaseWage + leaveDeduction;
-  
+  const absentDays = data.absentDays || 0;
+  const expectedDays = data.totalDays + absentDays;
+  const absentDeduction = absentDays * (data.worker.baseWage || 0);
+  const expectedBaseWage = data.totalBaseWage + absentDeduction;
+
   const potentialEarnings = expectedBaseWage + data.totalTravel + data.totalToll + data.totalOT + (data.netAdjustments > 0 ? data.netAdjustments : 0);
-  const totalDeductions = leaveDeduction + data.totalLate + data.rangeGuaranteeDeduction + (data.netAdjustments < 0 ? Math.abs(data.netAdjustments) : 0) + (data.advanceDeduction || 0);
-  
+  const totalDeductions = absentDeduction + data.totalLate + data.rangeGuaranteeDeduction + (data.netAdjustments < 0 ? Math.abs(data.netAdjustments) : 0) + (data.advanceDeduction || 0);
+
   const actualNetPay = data.finalPay !== undefined ? data.finalPay : data.grandTotal;
 
   const handleGenerate = async () => {
@@ -70,11 +71,11 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
 
   const handleShare = async () => {
     if (!generatedImage) return;
-    
+
     try {
       const blob = await (await fetch(generatedImage)).blob();
       const file = new File([blob], `slip_${data.worker.name}.png`, { type: 'image/png' });
-      
+
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           title: `สลิปเงินเดือน ${data.worker.name}`,
@@ -82,7 +83,7 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
         });
         return;
       }
-      
+
       const link = document.createElement('a');
       link.href = generatedImage;
       link.download = `slip_${data.worker.name}_${dateRangeStr.replace(/ /g, '_')}.png`;
@@ -102,12 +103,12 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
     try {
       const response = await fetch(generatedImage);
       const blob = await response.blob();
-      
+
       // Feature check for clipboard image copying
       if (!window.ClipboardItem) {
         throw new Error("ClipboardItem not supported");
       }
-      
+
       const item = new ClipboardItem({ 'image/png': blob });
       await navigator.clipboard.write([item]);
       alert('คัดลอกรูปภาพเรียบร้อยแล้ว! สามารถกดวาง (Paste) ในแชทไลน์ได้เลยครับ');
@@ -125,16 +126,16 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
   return (
     <Modal isOpen={isOpen} onClose={resetModal} title={generatedImage ? "สลิปพร้อมส่งแล้ว!" : "พรีวิวสลิปเงินเดือน"}>
       <div className={`flex flex-col items-center max-h-[70vh] overflow-y-auto w-full mx-auto relative ${generatedImage ? 'pb-4' : 'pb-20 sm:pb-4'}`}>
-        
+
         {generatedImage ? (
           <div className="w-full flex justify-center flex-col items-center space-y-4 pt-2">
             <div className="bg-emerald-50 text-emerald-700 px-4 py-2 rounded-xl text-sm font-semibold mb-2">
               ✅ สร้างรูปภาพสำเร็จ!
             </div>
             {/* The generated image ready for long press to save */}
-            <img 
-              src={generatedImage} 
-              alt="Generated Slip" 
+            <img
+              src={generatedImage}
+              alt="Generated Slip"
               className="w-[350px] shadow-lg border border-gray-200 rounded-xl"
             />
             <div className="text-xs text-gray-500 text-center px-4">
@@ -143,8 +144,8 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
           </div>
         ) : (
           /* The Slip Card (What will be captured) */
-          <div 
-            ref={slipRef} 
+          <div
+            ref={slipRef}
             className="bg-white w-[350px] p-6 shadow-sm border border-gray-100 font-sans relative overflow-hidden shrink-0 transition-opacity"
           >
             {/* Header */}
@@ -161,6 +162,10 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
               <div className="flex justify-between items-center mb-1">
                 <span className="text-xs text-gray-500 font-medium">ชื่อช่าง / Name</span>
                 <span className="text-sm font-bold text-gray-900">{data.worker.name}</span>
+              </div>
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-xs text-gray-500 font-medium">มาทำงานจริง / Actual Days</span>
+                <span className="text-sm font-bold text-emerald-600">{data.totalDays} วัน</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-xs text-gray-500 font-medium">รอบวันที่ / Period</span>
@@ -198,7 +203,7 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
                     </div>
                   )}
                   <div className="flex justify-between items-center text-[15px] pt-2 pb-1 border-t-2 border-emerald-100 mt-2 bg-emerald-50/30 px-2 -mx-2 rounded-lg">
-                    <span className="text-emerald-800 font-extrabold tracking-wide">รวมรายรับ (คาดหวัง)</span>
+                    <span className="text-emerald-800 font-extrabold tracking-wide">รวมรายรับ </span>
                     <span className="font-black text-emerald-600 text-lg">฿{potentialEarnings.toLocaleString()}</span>
                   </div>
                 </div>
@@ -211,16 +216,11 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
                     <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div> รายการหัก (คุณขาดงาน / สาย / เบิก)
                   </div>
                   <div className="space-y-1.5">
-                    {data.leaveDays > 0 && (
+                    {absentDays > 0 && (
                       <div className="pb-0.5">
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">หักขาดงาน/ลาหยุด ({data.leaveDays} วัน)</span>
-                          <span className="font-semibold text-red-600">-฿{leaveDeduction.toLocaleString()}</span>
-                        </div>
-                        <div className="text-[10px] text-gray-400 mt-0.5 ml-1">
-                          {data.sickDays && data.sickDays > 0 ? `ป่วย ${data.sickDays} วัน • ` : ''}
-                          {data.personalDays && data.personalDays > 0 ? `ลากิจ/ธุระ ${data.personalDays} วัน • ` : ''}
-                          {data.absentDays && data.absentDays > 0 ? `ขาดงาน ${data.absentDays} วัน` : ''}
+                          <span className="text-gray-600">หักขาดงาน ({absentDays} วัน)</span>
+                          <span className="font-semibold text-red-600">-฿{absentDeduction.toLocaleString()}</span>
                         </div>
                       </div>
                     )}
@@ -261,16 +261,28 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
               </div>
             </div>
 
+            {/* Signature Area */}
+            <div className="mt-6 pt-6 pb-2">
+              <div className="flex flex-col items-center">
+                <span className="text-xs text-gray-500 mb-8 font-medium">ยืนยันการรับเงินถูกต้อง</span>
+                <div className="w-48 border-b-2 border-dotted border-gray-300 relative">
+                  <span className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-[10px] text-gray-400 bg-white px-2">
+                    ({data.worker.name})
+                  </span>
+                </div>
+              </div>
+            </div>
+
             {/* Footer note */}
             <div className="mt-8 pt-3 border-t border-dashed border-gray-200 text-center">
-               {data.guaranteeTotal > 0 && (
-                 <div className="text-[10px] text-sky-600 font-medium mb-1">
-                   ล็อคยอดเงินประกันสะสม: ฿{data.guaranteeTotal.toLocaleString()}
-                 </div>
-               )}
-               <p className="text-[10px] text-gray-400 font-medium tracking-wide">THANK YOU FOR YOUR HARD WORK</p>
+              {data.guaranteeTotal > 0 && (
+                <div className="text-[10px] text-sky-600 font-medium mb-1">
+                  ล็อคยอดเงินประกันสะสม: ฿{data.guaranteeTotal.toLocaleString()}
+                </div>
+              )}
+              <p className="text-[10px] text-gray-400 font-medium tracking-wide">THANK YOU FOR YOUR HARD WORK</p>
             </div>
-            
+
             {/* Watermark / Decorative shape */}
             <div className="absolute -bottom-16 -right-16 w-40 h-40 bg-gray-100 rounded-full opacity-50 -z-10 pointer-events-none"></div>
             <div className="absolute -top-16 -left-16 w-40 h-40 bg-red-50 rounded-full opacity-80 -z-10 pointer-events-none"></div>
@@ -283,7 +295,7 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
         <Button onClick={resetModal} variant="secondary" className="px-6 py-3.5">
           ปิด
         </Button>
-        
+
         {generatedImage ? (
           <div className="flex gap-2 flex-1">
             <Button onClick={handleCopyImage} className="flex-1 py-3.5 bg-blue-600 hover:bg-blue-700 shadow-sm text-white flex items-center justify-center gap-1.5 px-2">
