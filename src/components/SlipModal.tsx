@@ -128,9 +128,9 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
   const absentDays = data.absentDays || 0;
   const expectedDays = data.totalDays + absentDays;
   // If monthly, base wage is fixed, so absent deduction usually requires manual adjustment or custom formula (/30).
-  // We'll set it to 0 here to keep it simple, since baseWage is already the full monthly salary.
+  // We'll set it to 0 here to keep it simple, since monthlyWage is already the full monthly salary.
   const absentDeduction = isMonthly ? 0 : absentDays * (data.worker.baseWage || 0);
-  const expectedBaseWage = isMonthly ? (data.worker.baseWage || 0) : data.totalBaseWage + absentDeduction;
+  const expectedBaseWage = isMonthly ? (data.worker.monthlyWage || 0) : data.totalBaseWage + absentDeduction;
 
   const potentialEarnings = expectedBaseWage + data.totalTravel + data.totalToll + data.totalOT + (data.netAdjustments > 0 ? data.netAdjustments : 0);
   const totalDeductions = absentDeduction + data.totalLate + data.rangeGuaranteeDeduction + (data.netAdjustments < 0 ? Math.abs(data.netAdjustments) : 0) + (data.advanceDeduction || 0) + socialSecurityDeduction;

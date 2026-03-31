@@ -58,12 +58,14 @@ export function WorkersPage({ onNavigateToDate }: { onNavigateToDate?: (date: st
     shiftStart: '07:00',
     shiftEnd: '16:00',
     paymentType: 'day' as 'day' | 'month' | 'half-month',
+    monthlyWage: '',
+    hasSocialSecurity: false,
     hasGuarantee: false,
     lateRateRule: 'normal' as 'normal' | 'special',
   });
 
   const resetForm = () => {
-    setFormData({ name: '', baseWage: '', defaultTravelAllowance: '', shiftStart: '07:00', shiftEnd: '16:00', paymentType: 'day', hasGuarantee: false, lateRateRule: 'normal' });
+    setFormData({ name: '', baseWage: '', defaultTravelAllowance: '', shiftStart: '07:00', shiftEnd: '16:00', paymentType: 'day', monthlyWage: '', hasSocialSecurity: false, hasGuarantee: false, lateRateRule: 'normal' });
     setEditingId(null);
     setIsModalOpen(false);
   };
@@ -76,6 +78,8 @@ export function WorkersPage({ onNavigateToDate }: { onNavigateToDate?: (date: st
       shiftStart: worker.shiftStart || '07:00',
       shiftEnd: worker.shiftEnd || '16:00',
       paymentType: worker.paymentType || 'day',
+      monthlyWage: (worker.monthlyWage || '').toString(),
+      hasSocialSecurity: worker.hasSocialSecurity || false,
       hasGuarantee: worker.hasGuarantee || false,
       lateRateRule: worker.lateRateRule || 'normal',
     });
@@ -94,6 +98,8 @@ export function WorkersPage({ onNavigateToDate }: { onNavigateToDate?: (date: st
       shiftStart: formData.shiftStart,
       shiftEnd: formData.shiftEnd,
       paymentType: formData.paymentType,
+      monthlyWage: formData.paymentType === 'month' ? (Number(formData.monthlyWage) || 0) : 0,
+      hasSocialSecurity: formData.paymentType === 'month' ? formData.hasSocialSecurity : false,
       hasGuarantee: formData.hasGuarantee,
       lateRateRule: formData.lateRateRule,
     };
@@ -396,6 +402,40 @@ export function WorkersPage({ onNavigateToDate }: { onNavigateToDate?: (date: st
               <option value="month">จ่ายสิ้นเดือน (ทุก 30 วัน)</option>
             </select>
           </div>
+
+          {formData.paymentType === 'month' && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              className="space-y-4"
+            >
+              <div className="space-y-2">
+                <Label htmlFor="monthlyWage">ฐานเงินเดือนรายเดือน (บาท)</Label>
+                <Input
+                  id="monthlyWage"
+                  type="number"
+                  min="0"
+                  value={formData.monthlyWage}
+                  onChange={(e) => setFormData({ ...formData, monthlyWage: e.target.value })}
+                  placeholder="เช่น 20000"
+                  className="bg-emerald-50 border-emerald-100 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div className="bg-purple-50/50 p-4 rounded-2xl border border-purple-100">
+                <label className="flex items-center justify-between cursor-pointer">
+                  <div>
+                    <div className="font-semibold text-purple-900">หักประกันสังคม (750 บาท)</div>
+                    <div className="text-xs text-purple-500 mt-0.5">หักอัตโนมัติเมื่อสรุปยอดสิ้นเดือน</div>
+                  </div>
+                  <div className="relative">
+                    <input type="checkbox" className="sr-only peer" checked={formData.hasSocialSecurity} onChange={(e) => setFormData(p => ({ ...p, hasSocialSecurity: e.target.checked }))} />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
+                  </div>
+                </label>
+              </div>
+            </motion.div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="lateRateRule">กฎการหักมาสาย/กลับก่อน</Label>

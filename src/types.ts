@@ -21,6 +21,8 @@ export interface Worker {
   shiftStart: string;
   shiftEnd: string;
   paymentType?: 'half-month' | 'month' | 'day';
+  monthlyWage?: number;
+  hasSocialSecurity?: boolean;
   hasGuarantee?: boolean;
   historicalGuarantee?: number;
   lateRateRule?: 'normal' | 'special';

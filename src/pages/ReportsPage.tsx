@@ -50,8 +50,8 @@ export function ReportsPage() {
       const halfDaysCount = workerEntries.filter(e => e.isLeave && e.leaveType === 'ลาครึ่งวัน').length;
       const isMonthly = worker.paymentType === 'month';
       
-      let totalBaseWage = isMonthly ? worker.baseWage : 0;
-      let socialSecurityDeduction = isMonthly ? 750 : 0;
+      let totalBaseWage = isMonthly ? (worker.monthlyWage || 0) : 0;
+      let socialSecurityDeduction = (isMonthly && worker.hasSocialSecurity) ? 750 : 0;
       
       let totalTravel = 0;
       let totalToll = 0;
@@ -107,7 +107,7 @@ export function ReportsPage() {
 
       const netAdjustments = totalAdditions - totalDeductions + totalToll;
 
-      let grandTotal = isMonthly ? worker.baseWage - socialSecurityDeduction : 0;
+      let grandTotal = isMonthly ? (worker.monthlyWage || 0) - socialSecurityDeduction : 0;
       let rangeGuaranteeDeduction = 0;
       const processedDates = new Set<string>();
 

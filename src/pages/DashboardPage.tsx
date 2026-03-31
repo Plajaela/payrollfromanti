@@ -79,7 +79,8 @@ export function DashboardPage() {
       
       let finalWorkerMonthTotal = workerMonthTotal;
       if (worker.paymentType === 'month') {
-        finalWorkerMonthTotal += (worker.baseWage || 0) - 750;
+        const ss = worker.hasSocialSecurity ? 750 : 0;
+        finalWorkerMonthTotal += (worker.monthlyWage || 0) - ss;
       }
       
       totalWagesMonth += (finalWorkerMonthTotal - advanceDeduction);
@@ -139,7 +140,8 @@ export function DashboardPage() {
       
       let finalWorkerMonthTotal = workerMonthTotal;
       if (w.paymentType === 'month') {
-        finalWorkerMonthTotal += (w.baseWage || 0) - 750;
+        const ss = w.hasSocialSecurity ? 750 : 0;
+        finalWorkerMonthTotal += (w.monthlyWage || 0) - ss;
       }
       
       const finalMonthTotal = finalWorkerMonthTotal - advanceDeduction;
@@ -187,8 +189,8 @@ export function DashboardPage() {
       if (advanceTotal > 0) totalAdvanceDeduction += advanceTotal;
       
       if (worker.paymentType === 'month') {
-        monthlyBaseWageSum += (worker.baseWage || 0);
-        totalSocialSecurityDeduction += 750;
+        monthlyBaseWageSum += (worker.monthlyWage || 0);
+        if (worker.hasSocialSecurity) totalSocialSecurityDeduction += 750;
       }
     });
     
