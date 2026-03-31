@@ -48,22 +48,32 @@ export function ReportsPage() {
       const personalDays = workerEntries.filter(e => e.isLeave && (e.leaveType === 'ลากิจ' || !e.leaveType || (e.leaveType as any) === 'ลาพักผ่อน')).length;
       const absentDays = workerEntries.filter(e => e.isLeave && e.leaveType === 'ขาดงาน').length;
       const halfDaysCount = workerEntries.filter(e => e.isLeave && e.leaveType === 'ลาครึ่งวัน').length;
-      const totalBaseWage = workerEntries.reduce((sum, e) => sum + e.baseWage, 0);
-      const totalTravel = workerEntries.reduce((sum, e) => sum + e.travelAllowance, 0);
-      const totalToll = workerEntries.reduce((sum, e) => sum + e.tollFee, 0);
-      const totalLate = workerEntries.reduce((sum, e) => sum + e.lateDeduction, 0);
-      const totalOT = workerEntries.reduce((sum, e) => sum + e.overtimePay, 0);
-
-      const totalAdditions = workerEntries.reduce((sum, e) =>
-        sum + (e.adjustments?.filter(a => a.type === 'add').reduce((s, a) => s + Number(a.amount), 0) || 0)
-        , 0);
-      const totalDeductions = workerEntries.reduce((sum, e) =>
-        sum + (e.adjustments?.filter(a => a.type === 'deduct').reduce((s, a) => s + Number(a.amount), 0) || 0)
-        , 0);
-      const netAdjustments = totalAdditions - totalDeductions + totalToll;
+      let totalBaseWage = 0;
+      let totalTravel = 0;
+      let totalToll = 0;
+      let totalLate = 0;
+      let totalOT = 0;
+      let totalAdditions = 0;
+      let totalDeductions = 0;
 
       const adjustmentsList: { note: string, amount: number, type: 'add' | 'deduct', date: string, receiptUrl?: string }[] = [];
+
       workerEntries.forEach(e => {
+        if (e.isLeave && e.leaveType !== 'ลาครึ่งวัน') {
+          return; // Skip component sum for full absence
+        }
+
+        if (e.isLeave && e.leaveType === 'ลาครึ่งวัน') {
+          totalBaseWage += (e.baseWage || 0) / 2;
+          return; // Half day gets only half base wage, skip others
+        }
+
+        totalBaseWage += (e.baseWage || 0);
+        totalTravel += (e.travelAllowance || 0);
+        totalToll += (e.tollFee || 0);
+        totalLate += (e.lateDeduction || 0);
+        totalOT += (e.overtimePay || 0);
+
         if (e.tollFee > 0) {
           adjustmentsList.push({
              note: 'ค่าทางด่วน',
@@ -75,6 +85,11 @@ export function ReportsPage() {
         }
         if (e.adjustments && e.adjustments.length > 0) {
           e.adjustments.forEach(a => {
+            if (a.type === 'add') {
+              totalAdditions += Number(a.amount);
+            } else {
+              totalDeductions += Number(a.amount);
+            }
             adjustmentsList.push({
                note: a.note || (a.type === 'add' ? 'เพิ่มเงิน' : 'หักเงิน'),
                amount: Number(a.amount),
@@ -85,6 +100,8 @@ export function ReportsPage() {
           });
         }
       });
+
+      const netAdjustments = totalAdditions - totalDeductions + totalToll;
 
       let grandTotal = 0;
       let rangeGuaranteeDeduction = 0;
@@ -311,6 +328,8 @@ export function ReportsPage() {
       let otherSums = 0;
 
       workerEntries.forEach(entry => {
+        if (entry.isLeave) return; // Skip all adjustments for leaves and half days mathematically
+
         entry.adjustments?.forEach(adj => {
           const amount = adj.type === 'add' ? Number(adj.amount) : -Number(adj.amount);
           const note = (adj.note || '').trim();
@@ -444,15 +463,17 @@ export function ReportsPage() {
         PRESETS.forEach(p => presetSums[p] = 0);
         let otherSums = 0;
 
-        entry.adjustments?.forEach(a => {
-          const amount = a.type === 'add' ? Number(a.amount) : -Number(a.amount);
-          const note = (a.note || '').trim();
-          if (PRESETS.includes(note)) {
-            presetSums[note] += amount;
-          } else {
-            otherSums += amount;
-          }
-        });
+        if (!entry.isLeave) {
+          entry.adjustments?.forEach(a => {
+            const amount = a.type === 'add' ? Number(a.amount) : -Number(a.amount);
+            const note = (a.note || '').trim();
+            if (PRESETS.includes(note)) {
+              presetSums[note] += amount;
+            } else {
+              otherSums += amount;
+            }
+          });
+        }
 
         const formatSlipUrl = (url?: string) => {
           if (!url) return '-';
