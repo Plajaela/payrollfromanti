@@ -1,11 +1,88 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Modal, Button } from './ui';
 import * as htmlToImage from 'html-to-image';
 import { Download, Loader2, Share2, Image as ImageIcon, Copy, Eraser, Cloud, CheckCircle } from 'lucide-react';
 import { Worker } from '../types';
-import SignatureCanvas from 'react-signature-canvas';
 import { supabase } from '../lib/supabase';
 import { v4 as uuidv4 } from 'uuid';
+
+const SimpleSignaturePad = ({ onEnd, clearRef }: { onEnd: () => void, clearRef: React.MutableRefObject<(() => void) | null> }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+
+  useEffect(() => {
+    clearRef.current = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    };
+    return () => { clearRef.current = null; };
+  }, [clearRef]);
+
+  const getCoordinates = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+    return { x, y };
+  };
+
+  const startDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.beginPath();
+    const { x, y } = getCoordinates(e);
+    ctx.moveTo(x, y);
+    ctx.lineTo(x, y);
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "black";
+    ctx.stroke();
+
+    setIsDrawing(true);
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const draw = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!isDrawing) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const { x, y } = getCoordinates(e);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  };
+
+  const stopDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!isDrawing) return;
+    setIsDrawing(false);
+    e.currentTarget.releasePointerCapture(e.pointerId);
+    onEnd();
+  };
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={400} // Higher internal resolution for better lines
+      height={200}
+      className="w-full h-full cursor-crosshair touch-none"
+      onPointerDown={startDrawing}
+      onPointerMove={draw}
+      onPointerUp={stopDrawing}
+      onPointerCancel={stopDrawing}
+    />
+  );
+};
 
 interface SlipModalProps {
   isOpen: boolean;
@@ -34,7 +111,7 @@ interface SlipModalProps {
 
 export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProps) {
   const slipRef = useRef<HTMLDivElement>(null);
-  const signatureRef = useRef<SignatureCanvas>(null);
+  const clearSignatureRef = useRef<(() => void) | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isUploadSuccess, setIsUploadSuccess] = useState(false);
@@ -188,7 +265,7 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
   };
 
   const clearSignature = () => {
-    signatureRef.current?.clear();
+    if (clearSignatureRef.current) clearSignatureRef.current();
     setIsSignatureEmpty(true);
   };
 
@@ -338,14 +415,8 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
                     <span className="text-xs text-gray-500 mb-2 font-medium">ยืนยันการรับเงินถูกต้อง</span>
                     <div className="relative group">
                       <div className="w-64 h-32 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50/50 flex items-center justify-center overflow-hidden">
-                        <SignatureCanvas
-                          ref={signatureRef}
-                          penColor="black"
-                          canvasProps={{
-                            width: 256,
-                            height: 128,
-                            className: 'signature-canvas w-full h-full cursor-crosshair'
-                          }}
+                        <SimpleSignaturePad
+                          clearRef={clearSignatureRef}
                           onEnd={() => setIsSignatureEmpty(false)}
                         />
                       </div>
