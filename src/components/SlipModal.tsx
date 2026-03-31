@@ -183,10 +183,12 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
       const webhookUrl = import.meta.env.VITE_GOOGLE_DRIVE_WEBHOOK_URL;
       if (webhookUrl) {
         const driveFormData = new URLSearchParams();
-        driveFormData.append('workerName', data.worker.name || 'Unknown');
+        driveFormData.append('workerName', `เซ็นสลิป - ${data.worker.name || 'Unknown'}`);
         driveFormData.append('date', dateRangeStr);
         driveFormData.append('imageUrl', publicUrl);
         driveFormData.append('type', 'signed_slip'); // Metadata hint
+        driveFormData.append('folderGroup', 'เซ็นสลิป'); // Optional param for Google Apps Script
+        driveFormData.append('originalWorkerName', data.worker.name || 'Unknown');
 
         await fetch(webhookUrl, {
           method: 'POST',
@@ -481,16 +483,18 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
 
         {generatedImage ? (
           <div className="flex flex-col gap-2 flex-1">
-            <div className="flex gap-2">
-              <Button 
-                onClick={handleUploadToDrive} 
-                disabled={isUploading || isUploadSuccess}
-                className={`flex-1 py-3.5 ${isUploadSuccess ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-orange-500 hover:bg-orange-600'} shadow-sm text-white flex items-center justify-center gap-1.5 px-2`}
-              >
-                {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : (isUploadSuccess ? <CheckCircle className="w-5 h-5" /> : <Cloud className="w-5 h-5" />)}
-                <span className="text-sm font-medium">{isUploadSuccess ? 'บันทึกสำเร็จ' : (isUploading ? 'กำลังบันทึก...' : 'บันทึกเข้า Google Drive')}</span>
-              </Button>
-            </div>
+            {useSignature && (
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleUploadToDrive} 
+                  disabled={isUploading || isUploadSuccess}
+                  className={`flex-1 py-3.5 ${isUploadSuccess ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-orange-500 hover:bg-orange-600'} shadow-sm text-white flex items-center justify-center gap-1.5 px-2`}
+                >
+                  {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : (isUploadSuccess ? <CheckCircle className="w-5 h-5" /> : <Cloud className="w-5 h-5" />)}
+                  <span className="text-sm font-medium">{isUploadSuccess ? 'บันทึกสำเร็จ' : (isUploading ? 'กำลังบันทึก...' : 'บันทึกเข้า Google Drive')}</span>
+                </Button>
+              </div>
+            )}
             <div className="flex gap-2">
               <Button onClick={handleCopyImage} className="flex-1 py-3.5 bg-blue-600 hover:bg-blue-700 shadow-sm text-white flex items-center justify-center gap-1.5 px-2">
                 <Copy className="w-5 h-5 shrink-0" />
