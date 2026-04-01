@@ -80,7 +80,7 @@ export default function App() {
 
       {/* Header */}
       <header className="bg-white dark:bg-zinc-900 sticky top-0 z-10 border-b border-gray-100/80 dark:border-zinc-800 backdrop-blur-md transition-colors duration-300">
-        <div className="max-w-5xl mx-auto px-5 py-4 flex items-center justify-between">
+        <div className={cn("mx-auto px-5 py-4 flex items-center justify-between transition-all duration-500", activeTab === 'reports' ? "max-w-[98%]" : "max-w-5xl")}>
           <div className="flex items-center gap-3">
             <motion.div 
               initial={{ scale: 0.8, opacity: 0 }}
@@ -139,7 +139,7 @@ export default function App() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-5xl mx-auto px-4 py-6">
+      <main className={cn("mx-auto px-4 py-6 transition-all duration-500", activeTab === 'reports' ? "max-w-[98%]" : "max-w-5xl")}>
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -159,7 +159,7 @@ export default function App() {
 
       {/* Bottom Navigation for Mobile */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-t border-gray-100 dark:border-zinc-800 z-20 pb-safe transition-all duration-500">
-        <div className="max-w-5xl mx-auto flex justify-around px-2 py-3">
+        <div className={cn("mx-auto flex justify-around px-2 py-3 transition-all duration-500", activeTab === 'reports' ? "max-w-[98%]" : "max-w-5xl")}>
           {[
             { id: 'dashboard', label: 'ภาพรวม', icon: LayoutDashboard },
             { id: 'daily', label: 'รายวัน', icon: CalendarDays },
