@@ -62,7 +62,7 @@ export interface AdvancePayment {
   workerId: string;
   date: string;
   amount: number;
-  type: 'borrow' | 'repay';
+  type: 'borrow' | 'repay' | 'guarantee_refund';
   note: string;
 }
 

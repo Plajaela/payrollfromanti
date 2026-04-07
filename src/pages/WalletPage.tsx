@@ -10,7 +10,7 @@ export function WalletPage() {
     const { workers, entries, advances, addAdvance, deleteAdvance, updateWorker } = useStore();
     const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [isAddMode, setIsAddMode] = useState<false | 'advance' | 'add_advance'>(false);
+    const [isAddMode, setIsAddMode] = useState<false | 'advance' | 'add_advance' | 'add_guarantee_refund'>(false);
     const [isEditingGuarantee, setIsEditingGuarantee] = useState(false);
     const [editGuaranteeAmount, setEditGuaranteeAmount] = useState('');
     const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
@@ -30,7 +30,7 @@ export function WalletPage() {
         const workerEntries = entries.filter(e => e.workerId === workerId && !e.isDraft).sort((a,b) => b.date.localeCompare(a.date));
         
         let entriesSum = 0;
-        const guaranteeHistory: {id: string, date: string, amount: number}[] = [];
+        const guaranteeHistory: {id: string, date: string, amount: number, isRefund?: boolean}[] = [];
 
         workerEntries.forEach(e => {
              // This condition skips entries that are leave AND NOT half-day leave.
@@ -53,20 +53,30 @@ export function WalletPage() {
              }
         });
 
-        const guaranteeTotal = (worker?.historicalGuarantee || 0) + entriesSum;
+        const workerAdvances = advances.filter(a => a.workerId === workerId);
+        const guaranteeRefunds = workerAdvances.filter(a => a.type === 'guarantee_refund');
+        const refundTotal = guaranteeRefunds.reduce((sum, a) => sum + a.amount, 0);
+
+        const guaranteeTotal = (worker?.historicalGuarantee || 0) + entriesSum - refundTotal;
+        
+        guaranteeRefunds.forEach(r => {
+            guaranteeHistory.push({ id: r.id, date: r.date, amount: -r.amount, isRefund: true });
+        });
+        guaranteeHistory.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
         // Calculate Advance Balance for Selected Month
-        const workerAdvances = advances.filter(a => a.workerId === workerId);
-        const thisMonthAdvances = workerAdvances.filter(a => a.date.startsWith(selectedMonth));
+        const thisMonthAdvances = workerAdvances.filter(a => a.type !== 'guarantee_refund' && a.date.startsWith(selectedMonth));
         const advanceTotal = thisMonthAdvances.reduce((sum, a) => {
             return sum + (a.type === 'borrow' ? a.amount : -a.amount);
         }, 0);
+
+        const advanceHistoryOnly = workerAdvances.filter(a => a.type !== 'guarantee_refund');
 
         return {
             entriesSum,
             guaranteeTotal,
             advanceTotal,
-            workerAdvances,
+            workerAdvances: advanceHistoryOnly,
             guaranteeHistory
         };
     };
@@ -149,6 +159,69 @@ export function WalletPage() {
             </div>
         </form>
     );
+
+    const handleRefundSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedWorker || !formData.amount) return;
+
+        addAdvance({
+            workerId: selectedWorker.id,
+            date: formData.date,
+            type: 'guarantee_refund',
+            amount: Number(formData.amount),
+            note: formData.note
+        });
+
+        setFormData(p => ({ ...p, amount: '', note: '' }));
+        setIsAddMode(false);
+    };
+
+    const renderRefundForm = () => {
+        const stats = selectedWorker ? getWorkerStats(selectedWorker.id) : null;
+        return (
+            <form onSubmit={handleRefundSubmit} className="space-y-4 bg-orange-50 p-4 rounded-xl mt-4 border border-orange-100">
+                <h4 className="font-semibold text-orange-800 border-b border-orange-200 pb-2">ทำรายการคืนเงินประกัน</h4>
+
+                <div className="space-y-2">
+                    <Label>วันที่คืนเงิน</Label>
+                    <Input
+                        type="date"
+                        value={formData.date}
+                        onChange={e => setFormData(p => ({ ...p, date: e.target.value }))}
+                        required
+                    />
+                </div>
+
+                <div className="space-y-2">
+                    <Label>จำนวนเงิน (บาท) *สูงสุด {stats?.guaranteeTotal.toLocaleString()}</Label>
+                    <Input
+                        type="number"
+                        min="1"
+                        max={stats?.guaranteeTotal || 0}
+                        placeholder="ระบุจำนวนเงินที่คืน"
+                        value={formData.amount}
+                        onChange={e => setFormData(p => ({ ...p, amount: e.target.value }))}
+                        required
+                    />
+                </div>
+
+                <div className="space-y-2">
+                    <Label>หมายเหตุ / ช่องทางการคืนเงิน</Label>
+                    <Input
+                        type="text"
+                        placeholder="เช่น ลาออกโอนคืนผ่านแนบสลิป, ค่าปรับของเสียหาย"
+                        value={formData.note}
+                        onChange={e => setFormData(p => ({ ...p, note: e.target.value }))}
+                    />
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                    <Button type="button" variant="secondary" onClick={() => setIsAddMode(false)} className="flex-1">ยกเลิก</Button>
+                    <Button type="submit" className="flex-1 bg-orange-500 hover:bg-orange-600 shadow-orange-200 shadow-lg text-white">บันทึกการคืนเงิน</Button>
+                </div>
+            </form>
+        );
+    };
 
     return (
         <div className="space-y-4 pb-20">
@@ -335,33 +408,58 @@ export function WalletPage() {
                                         <div className="flex justify-between items-center mb-3">
                                             <h4 className="font-semibold text-gray-900 flex items-center gap-1.5">
                                                 <History className="w-4 h-4 text-gray-500" />
-                                                ประวัติหักเงินประกันสะสม
+                                                ประวัติหัก/คืนเงินประกัน
                                             </h4>
+                                            {!isAddMode ? (
+                                                <button
+                                                    onClick={() => setIsAddMode('add_guarantee_refund')}
+                                                    className="text-xs font-semibold text-orange-600 bg-orange-50 px-3 py-1.5 rounded-full hover:bg-orange-100 transition-colors flex items-center gap-1 border border-orange-200"
+                                                >
+                                                    <Plus className="w-3 h-3" /> คืนเงินประกัน
+                                                </button>
+                                            ) : null}
                                         </div>
-                                        <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1 pb-4">
+                                        
+                                        {isAddMode === 'add_guarantee_refund' && renderRefundForm()}
+                                        
+                                        <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1 pb-4 mt-3">
                                             {stats.guaranteeHistory.length === 0 ? (
                                                 <div className="text-center py-6 text-gray-400 text-sm border border-dashed rounded-xl">
-                                                    ยังไม่มีประวัติการหักเงินประกัน
+                                                    ยังไม่มีประวัติเงินประกันสะสม
                                                 </div>
                                             ) : (
                                                 <div className="space-y-2">
                                                     {stats.guaranteeHistory.map(g => (
                                                         <div key={g.id} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-white">
                                                             <div className="flex items-center gap-3">
-                                                                <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                                                                    <ArrowUpCircle className="w-5 h-5" />
+                                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${g.isRefund ? 'bg-orange-100 text-orange-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                                                                    {g.isRefund ? <ArrowDownCircle className="w-5 h-5" /> : <ArrowUpCircle className="w-5 h-5" />}
                                                                 </div>
                                                                 <div>
                                                                     <div className="text-sm font-semibold text-gray-900">
-                                                                        หักจากบันทึกรายวัน
+                                                                        {g.isRefund ? 'ถอน/คืนเงินประกัน' : 'หักจากบันทึกรายวัน'}
                                                                     </div>
                                                                     <div className="text-[10px] text-gray-500">
                                                                         {format(new Date(g.date), 'd MMM yyyy', { locale: th })}
                                                                     </div>
                                                                 </div>
                                                             </div>
-                                                            <div className="font-bold text-emerald-600">
-                                                                +฿{g.amount.toLocaleString()}
+                                                            <div className="flex items-center gap-3">
+                                                                <span className={`font-bold ${g.isRefund ? 'text-orange-600' : 'text-emerald-600'}`}>
+                                                                    {g.isRefund ? '-' : '+'}฿{Math.abs(g.amount).toLocaleString()}
+                                                                </span>
+                                                                {g.isRefund && (
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            if (window.confirm('ต้องการลบรายการคืนเงินนี้ใช่หรือไม่?')) {
+                                                                                deleteAdvance(g.id);
+                                                                            }
+                                                                        }}
+                                                                        className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                                                                    >
+                                                                        <Trash2 className="w-4 h-4" />
+                                                                    </button>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     ))}
