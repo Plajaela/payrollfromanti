@@ -10,9 +10,10 @@ export function WalletPage() {
     const { workers, entries, advances, addAdvance, deleteAdvance, updateWorker } = useStore();
     const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [isAddMode, setIsAddMode] = useState(false);
+    const [isAddMode, setIsAddMode] = useState<false | 'advance' | 'add_advance'>(false);
     const [isEditingGuarantee, setIsEditingGuarantee] = useState(false);
     const [editGuaranteeAmount, setEditGuaranteeAmount] = useState('');
+    const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
 
     const [formData, setFormData] = useState({
         date: format(new Date(), 'yyyy-MM-dd'),
@@ -54,9 +55,10 @@ export function WalletPage() {
 
         const guaranteeTotal = (worker?.historicalGuarantee || 0) + entriesSum;
 
-        // Calculate Advance Balance
+        // Calculate Advance Balance for Selected Month
         const workerAdvances = advances.filter(a => a.workerId === workerId);
-        const advanceTotal = workerAdvances.reduce((sum, a) => {
+        const thisMonthAdvances = workerAdvances.filter(a => a.date.startsWith(selectedMonth));
+        const advanceTotal = thisMonthAdvances.reduce((sum, a) => {
             return sum + (a.type === 'borrow' ? a.amount : -a.amount);
         }, 0);
 
@@ -150,8 +152,14 @@ export function WalletPage() {
 
     return (
         <div className="space-y-4 pb-20">
-            <div className="flex items-center justify-between mb-2">
-                <div className="text-gray-500 text-sm">สรุปยอดบัญชีสะสมรายบุคคล</div>
+            <div className="flex items-center justify-between mb-4">
+                <div className="text-gray-500 text-sm font-semibold">สรุปยอดบัญชีสะสมรายบุคคล</div>
+                <Input
+                    type="month"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="w-auto h-10 text-sm bg-white"
+                />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -205,7 +213,7 @@ export function WalletPage() {
                                     )}
                                 </div>
                                 <div className={`rounded-xl p-3 border flex flex-col justify-center ${stats.advanceTotal > 0 ? 'bg-orange-50 border-orange-100' : 'bg-emerald-50 border-emerald-100'}`}>
-                                    <div className={`text-[10px] font-medium mb-1 ${stats.advanceTotal > 0 ? 'text-orange-600' : 'text-emerald-600'}`}>ยอดหนี้เบิกล่วงหน้า</div>
+                                    <div className={`text-[10px] font-medium mb-1 ${stats.advanceTotal > 0 ? 'text-orange-600' : 'text-emerald-600'}`}>ยอดหนี้เบิก (เดือนที่เลือก)</div>
                                     <div className={`text-xl font-bold ${stats.advanceTotal > 0 ? 'text-orange-600' : 'text-emerald-600'}`}>฿{stats.advanceTotal.toLocaleString()}</div>
                                 </div>
                             </div>
@@ -283,7 +291,7 @@ export function WalletPage() {
 
                             <div className={`rounded-xl p-4 border flex justify-between items-center ${stats.advanceTotal > 0 ? 'bg-orange-50 border-orange-100' : 'bg-sky-50 border-sky-100'}`}>
                                 <div>
-                                    <div className={`text-sm font-medium ${stats.advanceTotal > 0 ? 'text-orange-600' : 'text-sky-600'}`}>หนี้เบิกล่วงหน้าคงค้าง</div>
+                                    <div className={`text-sm font-medium ${stats.advanceTotal > 0 ? 'text-orange-600' : 'text-sky-600'}`}>หนี้เบิกคงค้าง (เดือนที่เลือก)</div>
                                 </div>
                                 <div className={`text-2xl font-bold ${stats.advanceTotal > 0 ? 'text-orange-600' : 'text-sky-600'}`}>฿{stats.advanceTotal.toLocaleString()}</div>
                             </div>
