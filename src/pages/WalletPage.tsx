@@ -152,14 +152,31 @@ export function WalletPage() {
 
     return (
         <div className="space-y-4 pb-20">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-2">
                 <div className="text-gray-500 text-sm font-semibold">สรุปยอดบัญชีสะสมรายบุคคล</div>
-                <Input
-                    type="month"
-                    value={selectedMonth}
-                    onChange={(e) => setSelectedMonth(e.target.value)}
-                    className="w-auto h-10 text-sm bg-white"
-                />
+                <div className="flex gap-2 w-full sm:w-auto">
+                    <select
+                        value={selectedMonth.split('-')[1]}
+                        onChange={(e) => setSelectedMonth(`${selectedMonth.split('-')[0]}-${e.target.value}`)}
+                        className="h-10 px-3 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 shadow-sm flex-1 sm:flex-none cursor-pointer"
+                    >
+                        {Array.from({ length: 12 }, (_, i) => {
+                            const mm = String(i + 1).padStart(2, '0');
+                            const date = new Date(2024, i, 1);
+                            return <option key={mm} value={mm}>{format(date, 'MMMM', { locale: th })}</option>
+                        })}
+                    </select>
+                    <select
+                        value={selectedMonth.split('-')[0]}
+                        onChange={(e) => setSelectedMonth(`${e.target.value}-${selectedMonth.split('-')[1]}`)}
+                        className="h-10 px-3 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 shadow-sm flex-1 sm:flex-none cursor-pointer"
+                    >
+                        {Array.from({ length: 5 }, (_, i) => {
+                            const yr = new Date().getFullYear() - 2 + i;
+                            return <option key={yr} value={yr}>{yr + 543}</option>
+                        })}
+                    </select>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
