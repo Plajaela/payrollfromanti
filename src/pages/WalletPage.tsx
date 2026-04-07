@@ -390,7 +390,7 @@ export function WalletPage() {
                             <div className="flex gap-2 mb-4 bg-gray-100 p-1 rounded-xl">
                                 <button
                                     onClick={() => setIsAddMode(false)}
-                                    className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${!isAddMode ? 'bg-white text-sky-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                    className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${(!isAddMode || isAddMode === 'add_guarantee_refund') ? 'bg-white text-sky-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                                 >
                                     เงินประกันสะสม ({stats.guaranteeHistory.length})
                                 </button>
@@ -403,7 +403,7 @@ export function WalletPage() {
                             </div>
 
                             <div>
-                                {isAddMode === false && (
+                                {(isAddMode === false || isAddMode === 'add_guarantee_refund') && (
                                     <>
                                         <div className="flex justify-between items-center mb-3">
                                             <h4 className="font-semibold text-gray-900 flex items-center gap-1.5">
