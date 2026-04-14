@@ -142,7 +142,7 @@ export const Toast = ({
   isVisible,
   icon,
   type = 'success',
-  duration = 1500,
+  duration = 1000,
 }: {
   message: string;
   isVisible: boolean;

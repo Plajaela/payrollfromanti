@@ -690,15 +690,15 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
     // Trigger save animation & toast
     setIsSaving(true);
     setSaveToastVisible(true);
-    setTimeout(() => setIsSaving(false), 400);
-    setTimeout(() => setSaveToastVisible(false), 1600);
+    setTimeout(() => setIsSaving(false), 300);
+    setTimeout(() => setSaveToastVisible(false), 1000);
     setIsModalOpen(false);
   };
   const handleCopy = async (text: string, id: string) => {
     try {
       await navigator.clipboard.writeText(text);
       setCopiedId(id);
-      setTimeout(() => setCopiedId(null), 1200);
+      setTimeout(() => setCopiedId(null), 800);
     } catch (err) {
       console.error('Failed to copy text', err);
     }
@@ -959,7 +959,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
         setTimeout(() => {
           setLastCopiedUrl(null);
           setCopiedId(null);
-        }, 1500);
+        }, 1000);
 
     } catch (err) {
       // Ignore AbortError (user cancelled) and NotAllowedError (permission denied or no user gesture)
@@ -1219,7 +1219,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
 
       await navigator.clipboard.write(data);
       setLastCopiedUrl(imageUrl);
-      setTimeout(() => setLastCopiedUrl(null), 1500);
+      setTimeout(() => setLastCopiedUrl(null), 1000);
     } catch (err: any) {
       console.warn("Direct copy failed", err);
       // We only show alert if it truly fails to provide fallback instructions
@@ -1519,7 +1519,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
         isVisible={saveToastVisible}
         message="บันทึกข้อมูลสำเร็จแล้ว! ✓"
         type="success"
-        duration={1500}
+        duration={1000}
       />
       {/* Copy / Upload Toast */}
       <Toast 
