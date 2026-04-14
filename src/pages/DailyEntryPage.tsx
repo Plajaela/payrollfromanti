@@ -2117,10 +2117,10 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
                   </div>
                 )}
 
-                <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1 pb-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300">
+                <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1 pb-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300">
                   {formData.adjustments.map((adj, idx) => (
-                  <div key={adj.id} className="flex gap-2 items-start bg-gray-50 p-3 rounded-2xl border border-gray-100">
-                    <div className="flex-1 space-y-2">
+                  <div key={adj.id} className="flex gap-2 items-start bg-gray-50 p-2.5 rounded-2xl border border-gray-100">
+                    <div className="flex-1 space-y-1.5">
                       <div className="flex gap-2">
                         <select
                           value={adj.type}
@@ -2129,7 +2129,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
                             newAdjs[idx].type = e.target.value as 'add' | 'deduct';
                             setFormData(p => ({ ...p, adjustments: newAdjs }));
                           }}
-                          className={`h-10 rounded-xl border-0 px-3 text-sm focus:ring-2 focus:ring-sky-500 font-medium ${adj.type === 'add' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
+                          className={`h-9 rounded-xl border-0 px-3 text-sm focus:ring-2 focus:ring-sky-500 font-medium ${adj.type === 'add' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
                         >
                           <option value="add">เพิ่มเงิน (+)</option>
                           <option value="deduct">หักเงิน (-)</option>
@@ -2143,7 +2143,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
                             newAdjs[idx].amount = Number(e.target.value);
                             setFormData(p => ({ ...p, adjustments: newAdjs }));
                           }}
-                          className="h-10 text-sm bg-white"
+                          className="h-9 text-sm bg-white"
                         />
                       </div>
                       <div className="relative w-full">
@@ -2157,7 +2157,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
                             newAdjs[idx].note = e.target.value;
                             setFormData(p => ({ ...p, adjustments: newAdjs }));
                           }}
-                          className={`h-10 text-sm bg-white w-full ${adj.receiptUrl ? 'pr-20' : 'pr-8'}`}
+                          className={`h-9 text-sm bg-white w-full ${adj.receiptUrl ? 'pr-20' : 'pr-8'}`}
                         />
                         <datalist id={`note-presets-${adj.id}`}>
                           <option value="ค่ารถไปงานที่ 1" />
