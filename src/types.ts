@@ -25,6 +25,7 @@ export interface Worker {
   hasSocialSecurity?: boolean;
   hasGuarantee?: boolean;
   historicalGuarantee?: number;
+  guaranteeLimit?: number;
   lateRateRule?: 'normal' | 'special';
 }
 

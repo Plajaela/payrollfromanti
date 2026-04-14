@@ -1,0 +1,1 @@
+ALTER TABLE workers ADD COLUMN guarantee_limit NUMERIC DEFAULT 10000;

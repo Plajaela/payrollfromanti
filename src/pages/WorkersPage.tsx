@@ -61,11 +61,12 @@ export function WorkersPage({ onNavigateToDate }: { onNavigateToDate?: (date: st
     monthlyWage: '',
     hasSocialSecurity: false,
     hasGuarantee: false,
+    guaranteeLimit: 10000,
     lateRateRule: 'normal' as 'normal' | 'special',
   });
 
   const resetForm = () => {
-    setFormData({ name: '', baseWage: '', defaultTravelAllowance: '', shiftStart: '07:00', shiftEnd: '16:00', paymentType: 'day', monthlyWage: '', hasSocialSecurity: false, hasGuarantee: false, lateRateRule: 'normal' });
+    setFormData({ name: '', baseWage: '', defaultTravelAllowance: '', shiftStart: '07:00', shiftEnd: '16:00', paymentType: 'day', monthlyWage: '', hasSocialSecurity: false, hasGuarantee: false, guaranteeLimit: 10000, lateRateRule: 'normal' });
     setEditingId(null);
     setIsModalOpen(false);
   };
@@ -81,6 +82,7 @@ export function WorkersPage({ onNavigateToDate }: { onNavigateToDate?: (date: st
       monthlyWage: (worker.monthlyWage || '').toString(),
       hasSocialSecurity: worker.hasSocialSecurity || false,
       hasGuarantee: worker.hasGuarantee || false,
+      guaranteeLimit: worker.guaranteeLimit ?? 10000,
       lateRateRule: worker.lateRateRule || 'normal',
     });
     setEditingId(worker.id);
@@ -101,6 +103,7 @@ export function WorkersPage({ onNavigateToDate }: { onNavigateToDate?: (date: st
       monthlyWage: formData.paymentType === 'month' ? (Number(formData.monthlyWage) || 0) : 0,
       hasSocialSecurity: formData.paymentType === 'month' ? formData.hasSocialSecurity : false,
       hasGuarantee: formData.hasGuarantee,
+      guaranteeLimit: formData.guaranteeLimit,
       lateRateRule: formData.lateRateRule,
     };
 
@@ -481,6 +484,22 @@ export function WorkersPage({ onNavigateToDate }: { onNavigateToDate?: (date: st
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-red-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-500"></div>
               </div>
             </label>
+            {formData.hasGuarantee && (
+              <div className="mt-3 pt-3 border-t border-orange-200 border-dashed">
+                <Label htmlFor="guaranteeLimit" className="text-orange-800 text-xs">ลิมิตหักเงินประกัน (บาท)</Label>
+                <div className="flex gap-2 items-center mt-1">
+                  <Input
+                    id="guaranteeLimit"
+                    type="number"
+                    min="0"
+                    value={formData.guaranteeLimit}
+                    onChange={(e) => setFormData(p => ({ ...p, guaranteeLimit: Number(e.target.value) }))}
+                    className="h-9 bg-white border-orange-200 w-32"
+                  />
+                  <span className="text-xs text-orange-600">เมื่อสะสมครบระบบจะหยุดหักอัตโนมัติ</span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="pt-4 flex gap-3">

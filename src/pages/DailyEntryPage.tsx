@@ -260,7 +260,8 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
       .filter(e => e.workerId === worker.id && !e.isDraft && (!existingEntry || e.id !== existingEntry.id))
       .reduce((sum, e) => sum + (e.guaranteeDeduction || 0), 0);
 
-    const capRemaining = Math.max(0, 10000 - guaranteeTotal);
+    const limit = worker.guaranteeLimit ?? 10000;
+    const capRemaining = Math.max(0, limit - guaranteeTotal);
 
     if (existingEntry) {
       let editTolls = existingEntry.tolls || [];
@@ -1972,25 +1973,51 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
               </div>
 
               {/* Guarantee Deduction (Only show if worker has guarantee AND not on leave) */}
-              {(!formData.isLeave || formData.leaveType === 'ลาครึ่งวัน') && workers.find(w => w.id === formData.workerId)?.hasGuarantee && (
-                <div className="bg-orange-50/50 p-4 rounded-3xl border border-orange-100 flex items-center justify-between gap-4">
-                  <div className="flex flex-col">
-                    <span className="font-semibold text-orange-800 flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-orange-500" /> หักเงินประกันสะสม</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {formData.hasGuaranteeDeduction && (
-                      <div className="flex items-center gap-1">
-                        <span className="text-sm font-semibold text-orange-700">฿</span>
-                        <Input type="number" min="0" value={formData.guaranteeDeductionAmount || ''} onChange={(e) => setFormData(p => ({ ...p, guaranteeDeductionAmount: Number(e.target.value) }))} className="w-20 font-semibold h-9 text-sm px-2 text-right border-orange-200" />
+              {(() => {
+                const w = workers.find(w => w.id === formData.workerId);
+                if (!w?.hasGuarantee || (formData.isLeave && formData.leaveType !== 'ลาครึ่งวัน')) return null;
+
+                const limit = w.guaranteeLimit ?? 10000;
+                const total = (w.historicalGuarantee || 0) + entries
+                  .filter(e => e.workerId === w.id && !e.isDraft && e.id !== editingId)
+                  .reduce((sum, e) => sum + (e.guaranteeDeduction || 0), 0);
+                const cap = Math.max(0, limit - total);
+                const isReached = cap <= 0;
+                const isNear = cap > 0 && cap <= 300;
+
+                return (
+                  <div className="bg-orange-50/50 p-4 rounded-3xl border border-orange-100 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-orange-800 flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-orange-500" /> หักเงินประกันสะสม</span>
+                        <span className="text-[11px] text-orange-600 mt-0.5">ยอดสะสม: ฿{total.toLocaleString()} / ลิมิต: ฿{limit.toLocaleString()}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {formData.hasGuaranteeDeduction && !isReached && (
+                          <div className="flex items-center gap-1">
+                            <span className="text-sm font-semibold text-orange-700">฿</span>
+                            <Input type="number" min="0" max={cap} value={formData.guaranteeDeductionAmount || ''} onChange={(e) => setFormData(p => ({ ...p, guaranteeDeductionAmount: Math.min(Number(e.target.value), cap) }))} className="w-20 font-semibold h-9 text-sm px-2 text-right border-orange-200" />
+                          </div>
+                        )}
+                        <label className={`relative inline-flex items-center ml-auto ${isReached ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+                          <input type="checkbox" className="sr-only peer" disabled={isReached} checked={formData.hasGuaranteeDeduction && !isReached} onChange={(e) => setFormData(p => ({ ...p, hasGuaranteeDeduction: e.target.checked }))} />
+                          <div className="w-11 h-6 bg-orange-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+                        </label>
+                      </div>
+                    </div>
+                    {isReached && (
+                      <div className="text-xs text-red-600 bg-red-50 p-2 rounded-xl flex items-center gap-2 font-medium border border-red-100">
+                        เงินประกันครบกำหนดแล้ว - ระบบหยุดหักเงินอัตโนมัติ
                       </div>
                     )}
-                    <label className="relative inline-flex items-center cursor-pointer ml-auto">
-                      <input type="checkbox" className="sr-only peer" checked={formData.hasGuaranteeDeduction} onChange={(e) => setFormData(p => ({ ...p, hasGuaranteeDeduction: e.target.checked }))} />
-                      <div className="w-11 h-6 bg-orange-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
-                    </label>
+                    {isNear && !isReached && (
+                      <div className="text-xs text-orange-700 bg-orange-100/50 p-2 rounded-xl flex items-center gap-2 font-medium border border-orange-200">
+                        ข้อควรระวัง: เงินประกันใกล้ครบกำหนดแล้ว (เหลืออีก {cap.toLocaleString()} ฿)
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Adjustments */}
               <div className="space-y-3">
