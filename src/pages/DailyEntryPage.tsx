@@ -252,13 +252,39 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
     }));
   };
 
+  const getWorkerGuaranteeTotal = (workerId: string, excludeEntryId?: string) => {
+    const worker = workers.find(w => w.id === workerId);
+    if (!worker) return 0;
+    
+    const processedDates = new Set<string>();
+    let entriesSum = 0;
+    
+    entries
+      .filter(e => e.workerId === workerId && !e.isDraft && e.id !== excludeEntryId)
+      .sort((a,b) => b.date.localeCompare(a.date))
+      .forEach(e => {
+        if (e.isLeave && e.leaveType !== 'ลาครึ่งวัน') return;
+        const dedAmount = Number(e.guaranteeDeduction || 0);
+        if (dedAmount > 0) {
+          if (!processedDates.has(e.date)) {
+            processedDates.add(e.date);
+            entriesSum += dedAmount;
+          }
+        }
+      });
+
+    const refundTotal = advances
+      .filter(a => a.workerId === workerId && a.type === 'guarantee_refund')
+      .reduce((sum, a) => sum + Number(a.amount || 0), 0);
+
+    return Number(worker.historicalGuarantee || 0) + entriesSum - refundTotal;
+  };
+
   const openModal = (worker: any, existingEntry?: any) => {
     setShowShiftSettings(false);
 
     // Calculate current guarantee total
-    const guaranteeTotal = (worker.historicalGuarantee || 0) + entries
-      .filter(e => e.workerId === worker.id && !e.isDraft && (!existingEntry || e.id !== existingEntry.id))
-      .reduce((sum, e) => sum + (e.guaranteeDeduction || 0), 0);
+    const guaranteeTotal = getWorkerGuaranteeTotal(worker.id, existingEntry?.id);
 
     const limit = worker.guaranteeLimit ?? 10000;
     const capRemaining = Math.max(0, limit - guaranteeTotal);
@@ -1978,9 +2004,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
                 if (!w?.hasGuarantee || (formData.isLeave && formData.leaveType !== 'ลาครึ่งวัน')) return null;
 
                 const limit = w.guaranteeLimit ?? 10000;
-                const total = (w.historicalGuarantee || 0) + entries
-                  .filter(e => e.workerId === w.id && !e.isDraft && e.id !== editingId)
-                  .reduce((sum, e) => sum + (e.guaranteeDeduction || 0), 0);
+                const total = getWorkerGuaranteeTotal(w.id, editingId || undefined);
                 const cap = Math.max(0, limit - total);
                 const isReached = cap <= 0;
                 const isNear = cap > 0 && cap <= 300;
