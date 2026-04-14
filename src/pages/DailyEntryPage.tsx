@@ -1691,9 +1691,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
         maxWidth="max-w-4xl"
       >
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-            <div className="space-y-6">
-              <div className="flex flex-col gap-3 bg-red-50 p-4 rounded-2xl border border-red-100">
+          <div className="flex flex-col gap-3 bg-red-50 p-4 rounded-2xl border border-red-100">
             <div className="flex items-center justify-between">
               <div className="flex flex-col">
                 <span className="font-semibold text-red-700">ลางาน / ขาดงาน</span>
@@ -1747,8 +1745,9 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
           </div>
 
           {!formData.isLeave && (
-            <>
-              {/* Time Inputs */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+              <div className="space-y-6">
+                {/* Time Inputs */}
               <div className="bg-sky-50/50 p-4 rounded-3xl border border-sky-100">
                 <div className="flex justify-between items-center mb-3">
                   <h4 className="font-medium text-gray-900 flex items-center gap-2">
@@ -1893,7 +1892,9 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
                   </div>
                 </div>
               </div>
+            </div>
 
+            <div className="space-y-6">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs">ค่าแรง</Label>
@@ -1916,12 +1917,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
                   />
                 </div>
               </div>
-            </>
-          )}
-          </div>
 
-          {!formData.isLeave && (
-            <div className="space-y-6">
               {/* Tolls section */}
               <div className="bg-sky-50/30 p-3 rounded-2xl border border-sky-100">
                 <div className="flex justify-between items-center mb-2">
@@ -2218,8 +2214,8 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
                 )}
               </div>
             </div>
+            </div>
           )}
-          </div>
 
           <div className="flex flex-col gap-4 pt-4 mt-2 border-t border-gray-100">
             <div className="flex items-center justify-between">
