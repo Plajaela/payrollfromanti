@@ -92,7 +92,7 @@ export const Card = React.forwardRef<
 ));
 Card.displayName = 'Card';
 
-export const Modal = ({ isOpen, onClose, title, children }: { isOpen: boolean; onClose: () => void; title: string; children: React.ReactNode }) => {
+export const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-lg' }: { isOpen: boolean; onClose: () => void; title: string; children: React.ReactNode; maxWidth?: string }) => {
   return (
     <AnimatePresence>
       {isOpen && (
@@ -109,7 +109,7 @@ export const Modal = ({ isOpen, onClose, title, children }: { isOpen: boolean; o
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: '100%', opacity: 0 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="relative bg-white w-full max-w-lg rounded-t-[2rem] sm:rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+            className={`relative bg-white w-full ${maxWidth} rounded-t-[2rem] sm:rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]`}
           >
             <div className="flex justify-between items-center p-5 border-b border-gray-100 shrink-0">
               <h3 className="text-xl font-bold text-gray-900">{title}</h3>
