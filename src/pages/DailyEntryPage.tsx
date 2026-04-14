@@ -2491,7 +2491,6 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
         </form>
       </Modal>
 
-    </div>
       </>
       )}
     </div>
