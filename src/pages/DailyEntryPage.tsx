@@ -1937,7 +1937,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
                 {formData.tolls.length === 0 && (
                   <div className="text-[10px] text-gray-500 text-center py-2 bg-white rounded-xl border border-dashed border-sky-200">ไม่มีรายการทางด่วน</div>
                 )}
-                <div className="space-y-2">
+                <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1 pb-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300">
                   {formData.tolls.map((toll) => (
                     <div key={toll.id} className="flex gap-2 items-center bg-white p-2 text-sm rounded-xl border border-sky-100 shadow-sm animate-in fade-in slide-in-from-top-1">
                       <div className="flex-1 relative">
@@ -2048,7 +2048,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
               })()}
 
               {/* Adjustments */}
-              <div className="space-y-3">
+              <div className="flex flex-col gap-3">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
                     <Label className="mb-0 text-gray-900">รายการอื่นๆ (เพิ่ม/หักเงิน)</Label>
@@ -2117,7 +2117,8 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
                   </div>
                 )}
 
-                {formData.adjustments.map((adj, idx) => (
+                <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1 pb-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300">
+                  {formData.adjustments.map((adj, idx) => (
                   <div key={adj.id} className="flex gap-2 items-start bg-gray-50 p-3 rounded-2xl border border-gray-100">
                     <div className="flex-1 space-y-2">
                       <div className="flex gap-2">
@@ -2212,6 +2213,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
                     ไม่มีรายการเพิ่มเติม
                   </div>
                 )}
+                </div>
               </div>
             </div>
             </div>
