@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useStore } from '../useStore';
-import { Button, Input, Label, Card, Modal, Toast } from '../components/ui';
+import { Button, Input, Label, Card, Modal, Toast, Skeleton } from '../components/ui';
 import { format, addDays, subDays, isSunday, parseISO } from 'date-fns';
 import { th } from 'date-fns/locale';
 import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Settings2, RefreshCw, Copy, Check, Paperclip, ImagePlus, X, AlertTriangle, Loader2, Share2, Wallet, ArrowDownCircle, Send, Activity, CalendarOff } from 'lucide-react';
@@ -18,7 +18,7 @@ const timeToMins = (time: string) => {
 };
 
 export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pendingDate?: string | null; onPendingDateConsumed?: () => void }) {
-  const { workers, entries, advances, addEntry, updateEntry, deleteEntry, addAdvance, holidays, addHoliday, deleteHoliday } = useStore();
+  const { workers, entries, advances, addEntry, updateEntry, deleteEntry, addAdvance, holidays, addHoliday, deleteHoliday, isWorkersLoading, isEntriesLoading } = useStore();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [dailySlipsViewer, setDailySlipsViewer] = useState<{ workerName: string, images: string[] } | null>(null);
@@ -32,6 +32,8 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
   const [showLalamoveCalc, setShowLalamoveCalc] = useState(false);
   const [lalamoveDist, setLalamoveDist] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveToastVisible, setSaveToastVisible] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [isCopyingAllSlips, setIsCopyingAllSlips] = useState(false);
   const [shareProgress, setShareProgress] = useState<{current: number, total: number} | null>(null);
@@ -685,6 +687,11 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
     } else {
       addEntry(entryData);
     }
+    // Trigger save animation & toast
+    setIsSaving(true);
+    setSaveToastVisible(true);
+    setTimeout(() => setIsSaving(false), 600);
+    setTimeout(() => setSaveToastVisible(false), 2600);
     setIsModalOpen(false);
   };
   const handleCopy = async (text: string, id: string) => {
@@ -1503,10 +1510,20 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
     );
   };
 
+  const isLoading = isWorkersLoading || isEntriesLoading;
+
   return (
     <div className="space-y-6 pb-20 relative">
+      {/* Save success Toast */}
+      <Toast
+        isVisible={saveToastVisible}
+        message="บันทึกข้อมูลสำเร็จแล้ว! ✓"
+        type="success"
+        duration={2500}
+      />
+      {/* Copy / Upload Toast */}
       <Toast 
-        isVisible={!!lastCopiedUrl || !!copiedId || !!shareProgress} 
+        isVisible={!saveToastVisible && (!!lastCopiedUrl || !!copiedId || !!shareProgress)}
         message={
           shareProgress ? `กำลังเตรียมรูป ${shareProgress.current}/${shareProgress.total} ⏳` :
           lastCopiedUrl === 'merged_slips_daily' ? 'คัดลอกรูปภาพทุกคนสำเร็จ!' :
@@ -1514,8 +1531,35 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
           copiedId === 'all_slips_loading' ? 'กำลังประมวลผลรูปภาพ...' :
           'คัดลอกข้อความสำเร็จ!'
         }
-        icon={(copiedId === 'all_slips_loading' || shareProgress) ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5 stroke-[2.5px]" />}
+        type={(copiedId === 'all_slips_loading' || shareProgress) ? 'info' : 'success'}
+        icon={(copiedId === 'all_slips_loading' || shareProgress) ? <Loader2 className="w-5 h-5 animate-spin" /> : undefined}
       />
+
+      {/* ─── Skeleton Loading Screen ─── */}
+      {isLoading && (
+        <div className="space-y-4 animate-pulse">
+          <Skeleton className="h-14 w-full rounded-[2rem]" />
+          <div className="grid grid-cols-3 gap-3">
+            <Skeleton className="h-10 rounded-2xl" />
+            <Skeleton className="h-10 rounded-2xl" />
+            <Skeleton className="h-10 rounded-2xl" />
+          </div>
+          {[1,2,3,4].map(i => (
+            <div key={i} className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-gray-100">
+              <Skeleton className="h-12 w-12 rounded-xl shrink-0" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-1/3 rounded-xl" />
+                <Skeleton className="h-3 w-1/2 rounded-xl" />
+              </div>
+              <Skeleton className="h-8 w-20 rounded-xl shrink-0" />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ─── Main Content (hidden while loading) ─── */}
+      {!isLoading && (
+      <>
       {/* Date Selector */}
       <div className="flex items-center justify-between bg-white/80 backdrop-blur-md p-2 rounded-[2rem] shadow-sm border border-white">
         <motion.button 
@@ -2315,22 +2359,26 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
                   <Trash2 className="w-5 h-5 stroke-[2.2px]" fill="currentColor" fillOpacity={0.1} />
                 </Button>
               )}
-              <Button
+              <motion.button
                 type="button"
+                whileTap={{ scale: 0.94 }}
+                animate={isSaving ? { scale: [1, 1.07, 1], transition: { duration: 0.35 } } : {}}
                 disabled={isUploading}
-                className="px-6 py-4 text-base rounded-2xl shadow-sm bg-orange-500 hover:bg-orange-600 text-white flex-1 disabled:opacity-50"
+                className="px-6 py-4 text-base rounded-2xl shadow-sm bg-orange-500 hover:bg-orange-600 text-white flex-1 disabled:opacity-50 inline-flex items-center justify-center font-semibold"
                 onClick={() => handleSave(true)}
               >
                 {isUploading ? 'รออัพโหลดรูป...' : 'บันทึกฉบับร่าง'}
-              </Button>
-              <Button
+              </motion.button>
+              <motion.button
                 type="button"
+                whileTap={{ scale: 0.94 }}
+                animate={isSaving ? { scale: [1, 1.09, 1], transition: { duration: 0.4 } } : {}}
                 disabled={isUploading}
-                className="px-6 py-4 text-base rounded-2xl shadow-lg shadow-sky-200 flex-1 bg-sky-500 hover:bg-sky-600 text-white disabled:opacity-50"
+                className="px-6 py-4 text-base rounded-2xl shadow-lg shadow-sky-200 flex-1 bg-sky-500 hover:bg-sky-600 text-white disabled:opacity-50 inline-flex items-center justify-center font-semibold"
                 onClick={() => handleSave(false)}
               >
                 {isUploading ? 'รออัพโหลดรูป...' : 'บันทึกสมบูรณ์'}
-              </Button>
+              </motion.button>
             </div>
           </div>
         </form>
@@ -2443,6 +2491,9 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
         </form>
       </Modal>
 
-    </div >
+    </div>
+      </>
+      )}
+    </div>
   );
 }

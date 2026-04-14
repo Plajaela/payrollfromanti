@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { motion, AnimatePresence } from 'motion/react';
-import { X } from 'lucide-react';
+import { X, CheckCircle2, AlertTriangle, Info, XCircle } from 'lucide-react';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -127,20 +127,86 @@ export const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-lg' 
   );
 };
 
-export const Toast = ({ message, isVisible, icon }: { message: string; isVisible: boolean; icon?: React.ReactNode }) => {
+// ── Toast ── upgraded with type, auto-progress, and icon
+type ToastType = 'success' | 'error' | 'warning' | 'info';
+
+const toastStyles: Record<ToastType, { border: string; iconColor: string; bar: string; Icon: React.ElementType }> = {
+  success: { border: 'border-emerald-500/40', iconColor: 'text-emerald-400', bar: 'bg-emerald-400', Icon: CheckCircle2 },
+  error:   { border: 'border-red-500/40',     iconColor: 'text-red-400',     bar: 'bg-red-400',     Icon: XCircle },
+  warning: { border: 'border-amber-500/40',   iconColor: 'text-amber-400',   bar: 'bg-amber-400',   Icon: AlertTriangle },
+  info:    { border: 'border-sky-500/40',     iconColor: 'text-sky-400',     bar: 'bg-sky-400',     Icon: Info },
+};
+
+export const Toast = ({
+  message,
+  isVisible,
+  icon,
+  type = 'success',
+  duration = 2500,
+}: {
+  message: string;
+  isVisible: boolean;
+  icon?: React.ReactNode;
+  type?: ToastType;
+  duration?: number;
+}) => {
+  const [progress, setProgress] = useState(100);
+  const style = toastStyles[type];
+
+  useEffect(() => {
+    if (!isVisible) { setProgress(100); return; }
+    setProgress(100);
+    const step = 50;
+    const decrement = (100 / duration) * step;
+    const interval = setInterval(() => {
+      setProgress(prev => Math.max(0, prev - decrement));
+    }, step);
+    return () => clearInterval(interval);
+  }, [isVisible, duration, message]);
+
   return (
     <AnimatePresence>
       {isVisible && (
         <motion.div
-          initial={{ opacity: 0, y: -20, x: '-50%' }}
-          animate={{ opacity: 1, y: 0, x: '-50%' }}
-          exit={{ opacity: 0, y: -20, x: '-50%' }}
-          className="fixed top-24 left-1/2 z-[100] bg-gray-900/90 backdrop-blur-md text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 font-semibold pointer-events-none"
+          initial={{ opacity: 0, y: -28, x: '-50%', scale: 0.92 }}
+          animate={{ opacity: 1, y: 0,   x: '-50%', scale: 1 }}
+          exit={{   opacity: 0, y: -20,  x: '-50%', scale: 0.95 }}
+          transition={{ type: 'spring', damping: 22, stiffness: 320 }}
+          className={cn(
+            'fixed top-20 left-1/2 z-[100] pointer-events-none',
+            'bg-gray-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border overflow-hidden',
+            'min-w-[220px] max-w-[92vw]',
+            style.border
+          )}
         >
-          {icon && <div className="text-emerald-400">{icon}</div>}
-          <span>{message}</span>
+          <div className="flex items-center gap-3 px-5 py-3.5">
+            <div className={cn('shrink-0', style.iconColor)}>
+              {icon ?? <style.Icon className="w-5 h-5 stroke-[2.2px]" />}
+            </div>
+            <span className="text-white font-semibold text-sm leading-snug">{message}</span>
+          </div>
+          {/* Progress drain bar */}
+          <div className="h-[3px] w-full bg-white/10">
+            <div
+              className={cn('h-full rounded-full transition-none', style.bar)}
+              style={{ width: `${progress}%` }}
+            />
+          </div>
         </motion.div>
       )}
     </AnimatePresence>
   );
 };
+
+// ── Skeleton ── animated shimmer placeholder for loading states
+export const Skeleton = ({ className }: { className?: string }) => (
+  <div
+    className={cn(
+      'relative overflow-hidden rounded-2xl bg-gray-100',
+      'after:absolute after:inset-0 after:-translate-x-full',
+      'after:bg-gradient-to-r after:from-transparent after:via-white/70 after:to-transparent',
+      'after:animate-[shimmer_1.5s_ease-in-out_infinite]',
+      className
+    )}
+  />
+);
