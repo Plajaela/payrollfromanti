@@ -19,7 +19,14 @@ const timeToMins = (time: string) => {
 
 export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pendingDate?: string | null; onPendingDateConsumed?: () => void }) {
   const { workers, entries, advances, addEntry, updateEntry, deleteEntry, addAdvance, holidays, addHoliday, deleteHoliday, isWorkersLoading, isEntriesLoading } = useStore();
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const saved = sessionStorage.getItem('dailyEntrySelectedDate');
+    if (saved) {
+      const d = new Date(saved);
+      if (!isNaN(d.getTime())) return d;
+    }
+    return new Date();
+  });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [dailySlipsViewer, setDailySlipsViewer] = useState<{ workerName: string, images: string[] } | null>(null);
   const [isCopyingImageId, setIsCopyingImageId] = useState<string | null>(null);
@@ -46,6 +53,11 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
   });
 
   const activeCardRef = useRef<HTMLDivElement>(null);
+
+  // Save selected date to sessionStorage whenever it changes
+  useEffect(() => {
+    sessionStorage.setItem('dailyEntrySelectedDate', selectedDate.toISOString());
+  }, [selectedDate]);
 
   // Set default tab when workers change or active tab is not set
   useEffect(() => {
