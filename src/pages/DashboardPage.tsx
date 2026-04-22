@@ -22,7 +22,7 @@ import {
   Percent
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { format, subDays, startOfMonth, endOfMonth, isWithinInterval, parseISO, subMonths, isAfter, startOfDay } from 'date-fns';
+import { format, subDays, startOfMonth, endOfMonth, isWithinInterval, parseISO, subMonths, isAfter, startOfDay, eachDayOfInterval, getDay, isSameDay } from 'date-fns';
 import { th } from 'date-fns/locale';
 import { Card, cn } from '../components/ui';
 
@@ -639,6 +639,58 @@ export function DashboardPage() {
                   <div className="mt-4 bg-gradient-to-r from-red-500 to-orange-500 rounded-2xl p-4 flex items-center justify-between text-white">
                     <span className="font-bold text-sm opacity-90">รวมทั้งเดือน ({workerEntries.filter(e => !e.isLeave).length} วัน)</span>
                     <span className="text-2xl font-black">฿{grandTotal.toLocaleString()}</span>
+                  </div>
+                </div>
+
+                {/* Heatmap Calendar */}
+                <div className="px-6 py-4 bg-gray-50/50 border-b border-gray-100 shrink-0">
+                  <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
+                    ความถี่การเข้างาน (Heatmap)
+                  </div>
+                  <div className="grid grid-cols-7 gap-1.5 max-w-[300px] mx-auto">
+                    {['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'].map(d => (
+                      <div key={d} className="text-center text-[9px] font-bold text-gray-400 mb-1">{d}</div>
+                    ))}
+                    {Array.from({ length: getDay(monthStart) }).map((_, i) => (
+                      <div key={`blank-${i}`} className="aspect-square rounded-md bg-transparent" />
+                    ))}
+                    {eachDayOfInterval({ start: monthStart, end: monthEnd }).map((day) => {
+                      const dayStr = format(day, 'yyyy-MM-dd');
+                      const entry = workerEntries.find(e => e.date === dayStr);
+                      
+                      let bgClass = "bg-gray-100";
+                      if (entry) {
+                        if (entry.isLeave) {
+                          bgClass = entry.leaveType === 'ลาครึ่งวัน' ? "bg-orange-300" : "bg-red-300";
+                        } else {
+                          if (entry.lateDeduction > 0) bgClass = "bg-yellow-400";
+                          else if (entry.overtimePay > 0 || (entry.totalPay || 0) > (entry.baseWage || 0) * 1.3) bgClass = "bg-emerald-500 shadow-sm";
+                          else bgClass = "bg-emerald-300";
+                        }
+                      } else if (isAfter(day, now)) {
+                        bgClass = "bg-gray-50 border border-gray-100 border-dashed";
+                      }
+
+                      return (
+                        <div 
+                          key={dayStr} 
+                          className={cn("aspect-square rounded-md transition-all hover:scale-110 cursor-help relative group", bgClass)}
+                        >
+                          <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none shadow-lg">
+                            {format(day, 'd MMM', { locale: th })}
+                            {entry && ` • ฿${(entry.totalPay || 0).toLocaleString()}`}
+                            {!entry && !isAfter(day, now) && ' • ไม่มีบันทึก'}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 mt-4 text-[9px] font-bold text-gray-500">
+                    <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-sm bg-gray-100"/> ว่าง</div>
+                    <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-sm bg-red-300"/> ลา</div>
+                    <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-sm bg-yellow-400"/> สาย</div>
+                    <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-sm bg-emerald-300"/> ปกติ</div>
+                    <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-sm bg-emerald-500"/> มี OT</div>
                   </div>
                 </div>
 
