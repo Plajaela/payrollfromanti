@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Worker, DailyEntry, AdvancePayment, Holiday } from './types';
+import { Worker, DailyEntry, AdvancePayment, Holiday, SalaryHistory } from './types';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from './lib/supabase';
 
@@ -21,6 +21,7 @@ export function useStore() {
 
   const [advances, setAdvances] = useState<AdvancePayment[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [salaryHistory, setSalaryHistory] = useState<SalaryHistory[]>([]);
 
   // Fetch workers from Supabase on mount and subscribe to changes
   useEffect(() => {
@@ -586,6 +587,65 @@ export function useStore() {
     }
   };
 
+  // Fetch salary history from Supabase
+  useEffect(() => {
+    const fetchSalaryHistory = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('worker_salary_history')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (data) {
+          setSalaryHistory(data.map(sh => ({
+            id: sh.id,
+            workerId: sh.worker_id,
+            oldBaseWage: Number(sh.old_base_wage),
+            newBaseWage: Number(sh.new_base_wage),
+            oldMonthlyWage: Number(sh.old_monthly_wage),
+            newMonthlyWage: Number(sh.new_monthly_wage),
+            changeType: sh.change_type,
+            createdAt: sh.created_at
+          })));
+        }
+      } catch (err) {
+        console.error('Failed to fetch salary history:', err);
+      }
+    };
+
+    fetchSalaryHistory();
+
+    const subscription = supabase
+      .channel('salary_history_channel')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'worker_salary_history' },
+        () => {
+          fetchSalaryHistory();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, []);
+
+  const deleteSalaryHistory = async (id: string) => {
+    setSalaryHistory(prev => prev.filter(sh => sh.id !== id));
+    try {
+      const { error } = await supabase
+        .from('worker_salary_history')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    } catch (err) {
+      console.error('Failed to delete salary history:', err);
+    }
+  };
+
   return {
     workers,
     isWorkersLoading,
@@ -603,5 +663,7 @@ export function useStore() {
     holidays,
     addHoliday,
     deleteHoliday,
+    salaryHistory,
+    deleteSalaryHistory,
   };
 }

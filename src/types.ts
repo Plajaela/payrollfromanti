@@ -72,3 +72,14 @@ export interface Holiday {
   date: string; // YYYY-MM-DD
   name: string;
 }
+
+export interface SalaryHistory {
+  id: string;
+  workerId: string;
+  oldBaseWage: number;
+  newBaseWage: number;
+  oldMonthlyWage: number;
+  newMonthlyWage: number;
+  changeType: 'base' | 'monthly' | 'both';
+  createdAt: string;
+}
