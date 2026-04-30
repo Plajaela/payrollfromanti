@@ -321,7 +321,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
         shiftEnd: worker.shiftEnd || '16:00',
         clockIn: existingEntry.clockIn || worker.shiftStart || '07:00',
         clockOut: existingEntry.clockOut || worker.shiftEnd || '16:00',
-        baseWage: existingEntry.baseWage,
+        baseWage: (existingEntry.baseWage === 0 && worker.paymentType === 'day' && (!existingEntry.isLeave || existingEntry.leaveType === 'ลาครึ่งวัน')) ? worker.baseWage : existingEntry.baseWage,
         travelAllowance: existingEntry.travelAllowance,
         tollFee: existingEntry.tollFee,
         lateDeduction: existingEntry.lateDeduction,

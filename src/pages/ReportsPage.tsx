@@ -63,16 +63,21 @@ export function ReportsPage() {
       const adjustmentsList: { note: string, amount: number, type: 'add' | 'deduct', date: string, receiptUrl?: string }[] = [];
 
       workerEntries.forEach(e => {
+        let healedBaseWage = e.baseWage || 0;
+        if (!isMonthly && healedBaseWage === 0 && (!e.isLeave || e.leaveType === 'ลาครึ่งวัน')) {
+          healedBaseWage = (worker.baseWage || 0);
+        }
+
         if (e.isLeave && e.leaveType !== 'ลาครึ่งวัน') {
           return; // Skip component sum for full absence
         }
 
         if (e.isLeave && e.leaveType === 'ลาครึ่งวัน') {
-          if (!isMonthly) totalBaseWage += (e.baseWage || 0) / 2;
+          if (!isMonthly) totalBaseWage += healedBaseWage / 2;
           return; // Half day gets only half base wage (if daily), skip others
         }
 
-        if (!isMonthly) totalBaseWage += (e.baseWage || 0);
+        if (!isMonthly) totalBaseWage += healedBaseWage;
         totalTravel += (e.travelAllowance || 0);
         totalToll += (e.tollFee || 0);
         totalLate += (e.lateDeduction || 0);
@@ -140,6 +145,11 @@ export function ReportsPage() {
           const refundAmount = isHalfDay ? (e.guaranteeDeduction / 2) : e.guaranteeDeduction;
           pay += refundAmount;
         }
+
+        if (!isMonthly && (e.baseWage || 0) === 0 && (!e.isLeave || e.leaveType === 'ลาครึ่งวัน')) {
+          pay += isHalfDay ? ((worker.baseWage || 0) / 2) : (worker.baseWage || 0);
+        }
+
         grandTotal += pay;
       });
 
@@ -565,17 +575,24 @@ export function ReportsPage() {
           const isHalfDay = entry.isLeave && entry.leaveType === 'ลาครึ่งวัน';
           const isFullLeave = entry.isLeave && !isHalfDay;
 
+          let entryBaseWage = entry.baseWage || 0;
+          let entryTotalPay = entry.totalPay || 0;
+          if (worker.paymentType !== 'month' && entryBaseWage === 0 && !isFullLeave) {
+            entryBaseWage = worker.baseWage || 0;
+            entryTotalPay += isHalfDay ? (entryBaseWage / 2) : entryBaseWage;
+          }
+
           const row: any = {
             'วันที่': displayDate,
             'ชื่อช่าง': worker.name,
             'เวลาทำงาน': isFullLeave ? 'ลาหยุด' : (isHalfDay ? 'ลาครึ่งวัน' : `${actualStart} - ${actualEnd}`),
             'จำนวนเวลาสาย': lateMinsStr,
             'หักสาย': lateDeductionValue,
-            'ค่าแรง': isFullLeave ? '' : (isHalfDay ? (entry.baseWage / 2) : (entry.baseWage || '')),
+            'ค่าแรง': isFullLeave ? '' : (isHalfDay ? (entryBaseWage / 2) : (entryBaseWage || '')),
             'เวลาทำโอที': isFullLeave || !entry.overtimePay ? '' : `${wEnd} - ${entry.clockOut}`,
             'โอที': isFullLeave || !entry.overtimePay ? '' : entry.overtimePay,
             'ค่ารถ': isFullLeave || isHalfDay ? '' : (entry.travelAllowance || ''),
-            'ยอดสุทธิประจำวัน': isFullLeave ? '' : entry.totalPay,
+            'ยอดสุทธิประจำวัน': isFullLeave ? '' : entryTotalPay,
             'ประเภทการลา': entry.isLeave ? getLeaveText(entry) : '',
             'หักประกันสังคม': '',
           };
