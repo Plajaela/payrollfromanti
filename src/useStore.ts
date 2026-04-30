@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Worker, DailyEntry, AdvancePayment, Holiday, SalaryHistory } from './types';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from './lib/supabase';
@@ -646,6 +646,30 @@ export function useStore() {
     }
   };
 
+  const healedEntries = useMemo(() => {
+    return entries.map(e => {
+      const worker = workers.find(w => w.id === e.workerId);
+      if (!worker) return e;
+
+      let healedBaseWage = e.baseWage || 0;
+      let healedTotalPay = e.totalPay || 0;
+      
+      const isHalfDay = e.isLeave && e.leaveType === 'ลาครึ่งวัน';
+      const isFullLeave = e.isLeave && !isHalfDay;
+
+      if (worker.paymentType !== 'month' && healedBaseWage === 0 && !isFullLeave) {
+        healedBaseWage = isHalfDay ? ((worker.baseWage || 0) / 2) : (worker.baseWage || 0);
+        healedTotalPay += healedBaseWage;
+        return {
+          ...e,
+          baseWage: healedBaseWage,
+          totalPay: healedTotalPay
+        };
+      }
+      return e;
+    });
+  }, [entries, workers]);
+
   return {
     workers,
     isWorkersLoading,
@@ -653,7 +677,7 @@ export function useStore() {
     addWorker,
     updateWorker,
     deleteWorker,
-    entries,
+    entries: healedEntries,
     addEntry,
     updateEntry,
     deleteEntry,
