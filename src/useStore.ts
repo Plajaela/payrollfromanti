@@ -78,7 +78,8 @@ export function useStore() {
                   has_guarantee: w.hasGuarantee || false,
                   historical_guarantee: w.historicalGuarantee || 0,
                   guarantee_limit: w.guaranteeLimit ?? 10000,
-                  late_rate_rule: w.lateRateRule || 'normal'
+                  late_rate_rule: w.lateRateRule || 'normal',
+                  is_resigned: w.isResigned || false
                 }))
               );
 
@@ -105,7 +106,9 @@ export function useStore() {
             hasGuarantee: w.has_guarantee || false,
             historicalGuarantee: Number(w.historical_guarantee) || 0,
             guaranteeLimit: (w.guarantee_limit !== null && w.guarantee_limit !== undefined) ? Number(w.guarantee_limit) : 10000,
-            lateRateRule: w.late_rate_rule || 'normal'
+            lateRateRule: w.late_rate_rule || 'normal',
+            createdAt: w.created_at,
+            isResigned: w.is_resigned || false
           }));
           setWorkers(formattedWorkers);
         }
@@ -349,7 +352,8 @@ export function useStore() {
         has_guarantee: worker.hasGuarantee || false,
         historical_guarantee: worker.historicalGuarantee || 0,
         guarantee_limit: worker.guaranteeLimit ?? 10000,
-        late_rate_rule: worker.lateRateRule || 'normal'
+        late_rate_rule: worker.lateRateRule || 'normal',
+        is_resigned: worker.isResigned || false
       }]);
 
       if (error) throw error;
@@ -380,6 +384,7 @@ export function useStore() {
       if (updated.historicalGuarantee !== undefined) updateData.historical_guarantee = updated.historicalGuarantee;
       if (updated.guaranteeLimit !== undefined) updateData.guarantee_limit = updated.guaranteeLimit;
       if (updated.lateRateRule !== undefined) updateData.late_rate_rule = updated.lateRateRule;
+      if (updated.isResigned !== undefined) updateData.is_resigned = updated.isResigned;
 
       const { error } = await supabase
         .from('workers')

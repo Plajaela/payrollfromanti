@@ -27,6 +27,8 @@ export interface Worker {
   historicalGuarantee?: number;
   guaranteeLimit?: number;
   lateRateRule?: 'normal' | 'special';
+  createdAt?: string;
+  isResigned?: boolean;
 }
 
 export interface DailyEntry {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../useStore';
 import { Button, Input, Label, Card, Modal } from '../components/ui';
-import { Plus, Trash2, UserPlus, CalendarOff, PlusCircle, Sparkles, Check, Settings2, Wallet, ShieldCheck, History, TrendingUp, TrendingDown, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, UserPlus, UserMinus, CalendarOff, PlusCircle, Sparkles, Check, Settings2, Wallet, ShieldCheck, History, TrendingUp, TrendingDown, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../components/ui';
 import { format, parseISO } from 'date-fns';
@@ -42,6 +42,7 @@ const THAI_PUBLIC_HOLIDAYS_2025 = [
 
 export function WorkersPage({ onNavigateToDate }: { onNavigateToDate?: (date: string) => void }) {
   const { workers, addWorker, updateWorker, deleteWorker, holidays, addHoliday, deleteHoliday, salaryHistory, deleteSalaryHistory } = useStore();
+  const [showResigned, setShowResigned] = useState(false);
   const [selectedWorkerForHistory, setSelectedWorkerForHistory] = useState<any | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -119,20 +120,28 @@ export function WorkersPage({ onNavigateToDate }: { onNavigateToDate?: (date: st
   return (
     <div className="space-y-4 pb-20">
       <div className="flex items-center justify-between mb-2">
-        <div className="text-gray-500 text-sm">จำนวนช่างทั้งหมด {workers.length} คน</div>
+        <div className="text-gray-500 text-sm">จำนวนช่างทั้งหมด {workers.filter(w => (w.isResigned || false) === showResigned).length} คน</div>
+        <select
+          value={showResigned ? 'resigned' : 'active'}
+          onChange={(e) => setShowResigned(e.target.value === 'resigned')}
+          className="bg-white border border-gray-200 text-gray-700 text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-red-500"
+        >
+          <option value="active">กำลังทำงาน</option>
+          <option value="resigned">ลาออกแล้ว</option>
+        </select>
       </div>
 
       <div className="space-y-6">
-        {workers.length === 0 ? (
+        {workers.filter(w => (w.isResigned || false) === showResigned).length === 0 ? (
           <div className="text-center py-16 text-gray-500 bg-white rounded-3xl border border-dashed border-gray-200">
             <UserPlus className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-            <p>ยังไม่มีข้อมูลช่าง</p>
-            <p className="text-sm mt-1">กดปุ่ม + ด้านล่างเพื่อเพิ่มช่าง</p>
+            <p>{showResigned ? 'ไม่มีช่างที่ลาออก' : 'ยังไม่มีข้อมูลช่าง'}</p>
+            {!showResigned && <p className="text-sm mt-1">กดปุ่ม + ด้านล่างเพื่อเพิ่มช่าง</p>}
           </div>
         ) : (
           <>
             {['day', 'half-month', 'month'].map((paymentTypeGroup) => {
-              const groupWorkers = workers.filter(w => (w.paymentType || 'day') === paymentTypeGroup);
+              const groupWorkers = workers.filter(w => ((w.paymentType || 'day') === paymentTypeGroup) && ((w.isResigned || false) === showResigned));
 
               if (groupWorkers.length === 0) return null;
 
@@ -181,6 +190,12 @@ export function WorkersPage({ onNavigateToDate }: { onNavigateToDate?: (date: st
                                 หักสาย{worker.lateRateRule === 'special' ? 'อัตราพิเศษ' : 'ปกติ'}
                               </span>
                             </div>
+                            {worker.createdAt && (
+                              <div className="text-xs text-gray-400 mt-2 flex items-center gap-1">
+                                <PlusCircle className="w-3 h-3" />
+                                เพิ่มเข้าระบบ: {format(parseISO(worker.createdAt), 'd MMM yyyy', { locale: th })}
+                              </div>
+                            )}
                           </div>
                           
                           {/* Salary History Preview */}
@@ -218,19 +233,37 @@ export function WorkersPage({ onNavigateToDate }: { onNavigateToDate?: (date: st
                         </div>
                       </div>
                       <div className="flex items-center gap-1 pl-2 border-l border-gray-100 ml-2">
-                        <motion.button
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          className="p-2.5 rounded-2xl bg-red-50 text-red-600 hover:bg-red-100 transition-colors shadow-sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (window.confirm(`ต้องการลบช่าง ${worker.name} ใช่หรือไม่?`)) {
-                              deleteWorker(worker.id);
-                            }
-                          }}
-                        >
-                          <Trash2 className="w-5 h-5 stroke-[2.2px]" fill="currentColor" fillOpacity={0.1} />
-                        </motion.button>
+                        {showResigned ? (
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            className="p-2.5 rounded-2xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors shadow-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (window.confirm(`ต้องการให้ช่าง ${worker.name} กลับมาทำงานใช่หรือไม่?`)) {
+                                updateWorker(worker.id, { isResigned: false });
+                              }
+                            }}
+                            title="กลับมาทำงาน"
+                          >
+                            <UserPlus className="w-5 h-5 stroke-[2.2px]" />
+                          </motion.button>
+                        ) : (
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            className="p-2.5 rounded-2xl bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors shadow-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (window.confirm(`ต้องการให้ช่าง ${worker.name} ลาออกใช่หรือไม่?\n(ข้อมูลจะไม่ถูกลบ แต่จะย้ายไปอยู่หมวดหมู่ 'ลาออกแล้ว')`)) {
+                                updateWorker(worker.id, { isResigned: true });
+                              }
+                            }}
+                            title="ให้ลาออก"
+                          >
+                            <UserMinus className="w-5 h-5 stroke-[2.2px]" />
+                          </motion.button>
+                        )}
                       </div>
                     </Card>
                   ))}
