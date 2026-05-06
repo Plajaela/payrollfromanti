@@ -3,7 +3,7 @@ import { useStore } from '../useStore';
 import { Button, Input, Label, Card, Modal, Toast, Skeleton } from '../components/ui';
 import { format, addDays, subDays, isSunday, parseISO } from 'date-fns';
 import { th } from 'date-fns/locale';
-import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Settings2, RefreshCw, Copy, Check, Paperclip, ImagePlus, X, AlertTriangle, Loader2, Share2, Wallet, ArrowDownCircle, Send, Activity, CalendarOff } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Settings2, RefreshCw, Copy, Check, Paperclip, ImagePlus, X, AlertTriangle, Loader2, Share2, Wallet, ArrowDownCircle, Send, Activity, CalendarOff, UserMinus, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../components/ui';
 import { v4 as uuidv4 } from 'uuid';
@@ -36,6 +36,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
   const [showShiftSettings, setShowShiftSettings] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [activeTabWorkerId, setActiveTabWorkerId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [showLalamoveCalc, setShowLalamoveCalc] = useState(false);
   const [lalamoveDist, setLalamoveDist] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
@@ -45,6 +46,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
   const [isCopyingAllSlips, setIsCopyingAllSlips] = useState(false);
   const [shareProgress, setShareProgress] = useState<{current: number, total: number} | null>(null);
   const [isAdvanceModalOpen, setIsAdvanceModalOpen] = useState(false);
+  const [showLeaveDropdown, setShowLeaveDropdown] = useState(false);
   const [advanceFormData, setAdvanceFormData] = useState({
     workerId: '',
     workerName: '',
@@ -1241,102 +1243,167 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
     }
   };
 
-  const renderAllSummaryCard = () => (
-            <Card className="p-6 md:p-8 flex flex-col items-center justify-center min-h-[200px] text-center bg-white border-gray-100 shadow-sm animate-in fade-in zoom-in-95 duration-200 mt-2 mb-4 md:mt-0 md:mb-0">
-              <div className="mb-6">
-                <div className="font-bold text-gray-900 text-2xl mb-2">สรุปข้อมูลช่างทุกคน</div>
-                <div className="text-gray-500 text-sm">
-                  มาทำงานแล้ว <span className="font-bold text-red-600">{entriesForDate.length}</span> จาก {workers.length} คน
-                </div>
-              </div>
+  const renderAllSummaryCard = () => {
+    // group the workers
+    const savedWorkers: typeof workers = [];
+    const draftWorkers: typeof workers = [];
+    const leaveWorkers: typeof workers = [];
+    const pendingWorkers: typeof workers = [];
 
-              <div className="flex flex-col sm:flex-row gap-3 w-full justify-center mb-6">
-                <Button
-                  onClick={handleCopyAllDetailed}
-                  className="w-full sm:w-auto px-6 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white shadow-md shadow-red-200 gap-2"
-                >
-                  {copiedId === 'all_detailed' ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5 stroke-[2.2px]" fill="currentColor" fillOpacity={0.1} />}
-                  คัดลอกรายละเอียดทุกคน ({workers.length} คน)
-                </Button>
+    workers.forEach(worker => {
+      const entry = entriesForDate.find(e => e.workerId === worker.id);
+      if (!entry) {
+        pendingWorkers.push(worker);
+      } else if (entry.isLeave) {
+        leaveWorkers.push(worker);
+      } else if (entry.isDraft) {
+        draftWorkers.push(worker);
+      } else {
+        savedWorkers.push(worker);
+      }
+    });
 
-                <Button
-                  onClick={handleCopyAllSlips}
-                  disabled={isCopyingAllSlips || totalSlipsCount === 0}
-                  className={`w-full sm:w-auto px-6 py-3 rounded-xl shadow-md gap-2 transition-all ${lastCopiedUrl === 'merged_slips_daily' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200' : 'bg-violet-600 hover:bg-violet-700 shadow-violet-200'} text-white`}
-                >
-                  {isCopyingAllSlips ? <Loader2 className="w-5 h-5 animate-spin" /> : lastCopiedUrl === 'merged_slips_daily' ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5 stroke-[2.2px]" fill="currentColor" fillOpacity={0.1} />}
-                  คัดลอกรูปทุกคน ({totalSlipsCount} รูป)
-                </Button>
-              </div>
+    const renderWorkerRow = (worker: typeof workers[0]) => {
+      const entry = entriesForDate.find(e => e.workerId === worker.id);
+      const totalPay = entry ? entry.totalPay : (worker.baseWage + (worker.defaultTravelAllowance || 0));
+      return (
+        <div key={worker.id} onClick={() => { 
+          setActiveTabWorkerId(worker.id); 
+          if (window.innerWidth < 768) {
+            setTimeout(() => {
+              activeCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 50);
+          }
+        }} className="flex justify-between items-center p-3 bg-white hover:bg-sky-50 rounded-xl border border-gray-100 cursor-pointer transition-all duration-300 hover:shadow-sm hover:-translate-y-0.5 active:scale-[0.99] group">
+          <div className="flex-1 min-w-0 pr-2">
+            <div className="font-semibold text-gray-900 group-hover:text-sky-700 transition-colors truncate">{worker.name}</div>
+            <div className="text-xs mt-0.5 text-gray-500 truncate">
+              {entry ? (
+                entry.isLeave ? (
+                  <span className="text-red-600 flex items-center gap-1 font-medium">
+                    <X className="w-3 h-3" /> {entry.leaveType || 'ลากิจ'}
+                  </span>
+                ) : entry.isDraft ? (
+                  <span className="text-amber-600 flex items-center gap-1 font-medium">
+                    <Clock className="w-3 h-3" /> ฉบับร่าง
+                  </span>
+                ) : (
+                  <span className="text-emerald-600 flex items-center gap-1 font-medium">
+                    <CheckCircle2 className="w-3 h-3" /> {entry.clockIn} - {entry.clockOut}
+                  </span>
+                )
+              ) : (
+                <span className="text-gray-400 font-medium">รอการบันทึก ({worker.shiftStart || '07:00'}-{worker.shiftEnd || '16:00'})</span>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Slip image copy — icon only */}
+            {entry && (entry.transferSlipUrl || entry.tolls?.some(t => t.receiptUrl) || entry.adjustments?.some(a => a.receiptUrl)) && (
+              <button
+                type="button"
+                onClick={(e) => handleCopySlipImage(worker, entry, e)}
+                className={`flex items-center justify-center w-8 h-8 rounded-lg border transition-all ${lastCopiedUrl === entry.transferSlipUrl ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-violet-50 border-violet-100 text-violet-600 hover:bg-violet-100'}`}
+                title="คัดลอกรูปสลิป"
+              >
+                {isCopyingImageId === entry.id || isCopyingPreviewUrl === entry.transferSlipUrl ? <Loader2 className="w-4 h-4 animate-spin" /> : lastCopiedUrl === entry.transferSlipUrl ? <Check className="w-4 h-4" /> : <ImagePlus className="w-4 h-4 stroke-[2.2px]" fill="currentColor" fillOpacity={0.1} />}
+              </button>
+            )}
+            {/* Toll receipt copy — icon only, show when any toll receipt exists */}
+            {entry && (entry.tollReceiptUrl || entry.tolls?.some(t => t.receiptUrl)) && (
+              <button
+                type="button"
+                onClick={(e) => handleCopyTollSlip(entry, e)}
+                className={`flex items-center justify-center w-8 h-8 rounded-lg border transition-all ${lastCopiedUrl === entry.tollReceiptUrl || entry.tolls?.some(t => t.receiptUrl && lastCopiedUrl === t.receiptUrl) ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-orange-50 border-orange-100 text-orange-600 hover:bg-orange-100'}`}
+                title="คัดลอกบิลทางด่วน"
+              >
+                {lastCopiedUrl === entry.tollReceiptUrl || entry.tolls?.some(t => t.receiptUrl && lastCopiedUrl === t.receiptUrl) ? <Check className="w-4 h-4" /> : <Paperclip className="w-4 h-4" />}
+              </button>
+            )}
+            <div className={`font-bold text-base transition-colors ml-1 w-16 text-right ${entry?.isDraft ? 'text-amber-500 group-hover:text-amber-600' : 'text-red-500 group-hover:text-red-600'}`}>
+              ฿{totalPay}
+            </div>
+          </div>
+        </div>
+      );
+    };
 
-              <div className="w-full space-y-3 text-left">
-                {workers.map(worker => {
-                  const entry = entriesForDate.find(e => e.workerId === worker.id);
-                  const totalPay = entry ? entry.totalPay : (worker.baseWage + (worker.defaultTravelAllowance || 0));
-                  return (
-                    <div key={worker.id} onClick={() => { 
-                      setActiveTabWorkerId(worker.id); 
-                      if (window.innerWidth < 768) {
-                        setTimeout(() => {
-                          activeCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }, 50);
-                      }
-                    }} className="flex justify-between items-center p-4 bg-white hover:bg-sky-50 rounded-2xl border border-gray-100 cursor-pointer transition-all duration-300 hover:shadow-md hover:shadow-sky-100 hover:-translate-y-0.5 active:scale-[0.99] group">
-                      <div>
-                        <div className="font-bold text-gray-900 group-hover:text-sky-700 transition-colors">{worker.name}</div>
-                        <div className="text-sm mt-0.5">
-                          {entry ? (
-                            entry.isLeave ? (
-                              <span className="text-red-600 flex items-center gap-1.5 font-medium bg-red-50 px-2 py-0.5 rounded-lg inline-flex border border-red-200/50">
-                                <X className="w-3.5 h-3.5" /> {entry.leaveType || 'ลากิจ'}
-                              </span>
-                            ) : entry.isDraft ? (
-                              <span className="text-amber-600 flex items-center gap-1.5 font-medium bg-amber-50 px-2 py-0.5 rounded-lg inline-flex border border-amber-200/50">
-                                <Clock className="w-3.5 h-3.5" /> ฉบับร่าง (ยังไม่เสร็จ)
-                              </span>
-                            ) : (
-                              <span className="text-emerald-600 flex items-center gap-1.5 font-medium bg-emerald-50 px-2 py-0.5 rounded-lg inline-flex">
-                                <CheckCircle2 className="w-3.5 h-3.5" /> บันทึกแล้ว
-                              </span>
-                            )
-                          ) : (
-                            <span className="text-gray-400 font-medium">รอการบันทึก (เวลา {worker.shiftStart || '07:00'}-{worker.shiftEnd || '16:00'})</span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        {/* Slip image copy — icon only */}
-                        {entry && (entry.transferSlipUrl || entry.tolls?.some(t => t.receiptUrl) || entry.adjustments?.some(a => a.receiptUrl)) && (
-                          <button
-                            type="button"
-                            onClick={(e) => handleCopySlipImage(worker, entry, e)}
-                            className={`flex items-center justify-center w-10 h-10 rounded-xl border transition-all ${lastCopiedUrl === entry.transferSlipUrl ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-violet-50 border-violet-100 text-violet-600 hover:bg-violet-100'}`}
-                            title="คัดลอกรูปสลิป"
-                          >
-                            {isCopyingImageId === entry.id || isCopyingPreviewUrl === entry.transferSlipUrl ? <Loader2 className="w-5 h-5 animate-spin" /> : lastCopiedUrl === entry.transferSlipUrl ? <Check className="w-5 h-5" /> : <ImagePlus className="w-5 h-5 stroke-[2.2px]" fill="currentColor" fillOpacity={0.1} />}
-                          </button>
-                        )}
-                        {/* Toll receipt copy — icon only, show when any toll receipt exists */}
-                        {entry && (entry.tollReceiptUrl || entry.tolls?.some(t => t.receiptUrl)) && (
-                          <button
-                            type="button"
-                            onClick={(e) => handleCopyTollSlip(entry, e)}
-                            className={`flex items-center justify-center w-10 h-10 rounded-xl border transition-all ${lastCopiedUrl === entry.tollReceiptUrl || entry.tolls?.some(t => t.receiptUrl && lastCopiedUrl === t.receiptUrl) ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-orange-50 border-orange-100 text-orange-600 hover:bg-orange-100'}`}
-                            title="คัดลอกบิลทางด่วน"
-                          >
-                            {lastCopiedUrl === entry.tollReceiptUrl || entry.tolls?.some(t => t.receiptUrl && lastCopiedUrl === t.receiptUrl) ? <Check className="w-5 h-5" /> : <Paperclip className="w-5 h-5" />}
-                          </button>
-                        )}
-                        <div className={`font-bold text-lg transition-colors ml-1 ${entry?.isDraft ? 'text-amber-500 group-hover:text-amber-600' : 'text-red-500 group-hover:text-red-600'}`}>
-                          ฿{totalPay}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+    return (
+      <Card className="p-4 md:p-6 flex flex-col items-stretch justify-start min-h-[200px] bg-white border-gray-100 shadow-sm animate-in fade-in zoom-in-95 duration-200 mt-2 mb-4 md:mt-0 md:mb-0">
+        <div className="mb-4 text-center">
+          <div className="font-bold text-gray-900 text-xl mb-1">สรุปข้อมูลช่างทุกคน</div>
+          <div className="text-gray-500 text-sm">
+            มาทำงานแล้ว <span className="font-bold text-red-600">{entriesForDate.length}</span> จาก {workers.length} คน
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-2 w-full justify-center mb-6">
+          <Button
+            onClick={handleCopyAllDetailed}
+            className="w-full sm:w-auto px-4 py-2 text-sm rounded-xl bg-red-600 hover:bg-red-700 text-white shadow-sm shadow-red-200 gap-1.5"
+          >
+            {copiedId === 'all_detailed' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            คัดลอกรายละเอียด ({workers.length})
+          </Button>
+
+          <Button
+            onClick={handleCopyAllSlips}
+            disabled={isCopyingAllSlips || totalSlipsCount === 0}
+            className={`w-full sm:w-auto px-4 py-2 text-sm rounded-xl shadow-sm gap-1.5 transition-all ${lastCopiedUrl === 'merged_slips_daily' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200' : 'bg-violet-600 hover:bg-violet-700 shadow-violet-200'} text-white`}
+          >
+            {isCopyingAllSlips ? <Loader2 className="w-4 h-4 animate-spin" /> : lastCopiedUrl === 'merged_slips_daily' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            คัดลอกรูป ({totalSlipsCount})
+          </Button>
+        </div>
+
+        <div className="w-full space-y-5">
+          {pendingWorkers.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-gray-500 mb-2 px-1 flex items-center gap-1.5 border-b pb-1.5">
+                <Clock className="w-4 h-4" /> รอการบันทึก <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-xs ml-1">{pendingWorkers.length}</span>
+              </h3>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                {pendingWorkers.map(renderWorkerRow)}
               </div>
-            </Card>
-  );
+            </div>
+          )}
+
+          {draftWorkers.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-amber-600 mb-2 px-1 flex items-center gap-1.5 border-b border-amber-100 pb-1.5">
+                <Clock className="w-4 h-4" /> ฉบับร่าง <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-xs ml-1">{draftWorkers.length}</span>
+              </h3>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                {draftWorkers.map(renderWorkerRow)}
+              </div>
+            </div>
+          )}
+
+          {savedWorkers.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-emerald-600 mb-2 px-1 flex items-center gap-1.5 border-b border-emerald-100 pb-1.5">
+                <CheckCircle2 className="w-4 h-4" /> บันทึกแล้ว <span className="bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded text-xs ml-1">{savedWorkers.length}</span>
+              </h3>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                {savedWorkers.map(renderWorkerRow)}
+              </div>
+            </div>
+          )}
+
+          {leaveWorkers.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-red-600 mb-2 px-1 flex items-center gap-1.5 border-b border-red-100 pb-1.5">
+                <X className="w-4 h-4" /> ลาหยุด / ขาดงาน <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded text-xs ml-1">{leaveWorkers.length}</span>
+              </h3>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                {leaveWorkers.map(renderWorkerRow)}
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
+    );
+  };
 
   const renderActiveWorkerCard = () => {
     if (!activeWorker) return null;
@@ -1481,39 +1548,48 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
                     >
                       {copiedId === activeWorker.id ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5 stroke-[2.2px]" fill="currentColor" fillOpacity={0.1} />}
                     </Button>
-                    <div className="flex gap-2 flex-wrap items-center">
+                    <div className="relative">
                       <Button
                         variant="danger"
-                        onClick={(e) => handleQuickLeaveInfo(e, 'ลาป่วย')}
-                        className="p-3 text-xs h-auto rounded-xl bg-orange-50 text-orange-600 hover:bg-orange-100 border border-orange-100 font-medium whitespace-nowrap"
-                        title="ป่วย"
+                        onClick={(e) => { e.stopPropagation(); setShowLeaveDropdown(!showLeaveDropdown); }}
+                        className="p-3 text-sm h-auto rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-100 font-medium whitespace-nowrap flex items-center gap-1.5"
                       >
-                        ลาป่วย
+                        <UserMinus className="w-4 h-4" />
+                        ลา / ขาดงาน
+                        <ChevronDown className={`w-4 h-4 transition-transform ${showLeaveDropdown ? 'rotate-180' : ''}`} />
                       </Button>
-                      <Button
-                        variant="danger"
-                        onClick={(e) => handleQuickLeaveInfo(e, 'ลากิจ')}
-                        className="p-3 text-xs h-auto rounded-xl bg-yellow-50 text-yellow-600 hover:bg-yellow-100 border border-yellow-100 font-medium whitespace-nowrap"
-                        title="ลากิจ"
-                      >
-                        ลากิจ
-                      </Button>
-                      <Button
-                        variant="danger"
-                        onClick={(e) => handleQuickLeaveInfo(e, 'ขาดงาน')}
-                        className="p-3 text-xs h-auto rounded-xl bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 font-medium whitespace-nowrap"
-                        title="ขาดงาน"
-                      >
-                        ขาดงาน
-                      </Button>
-                      <Button
-                        variant="danger"
-                        onClick={(e) => handleQuickLeaveInfo(e, 'ลาครึ่งวัน')}
-                        className="p-3 text-xs h-auto rounded-xl bg-pink-50 text-pink-600 hover:bg-pink-100 border border-pink-100 font-medium whitespace-nowrap"
-                        title="ลาครึ่งวัน"
-                      >
-                        ลาครึ่งวัน
-                      </Button>
+                      
+                      {showLeaveDropdown && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setShowLeaveDropdown(false); }}></div>
+                          <div className="absolute bottom-[calc(100%+8px)] left-0 p-2 bg-white rounded-xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-gray-100 z-50 flex flex-col gap-1 min-w-[140px] origin-bottom animate-in fade-in slide-in-from-bottom-2">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleQuickLeaveInfo(e, 'ลาป่วย'); setShowLeaveDropdown(false); }}
+                              className="text-left px-3 py-2.5 text-sm rounded-lg hover:bg-orange-50 text-orange-600 font-medium transition-colors"
+                            >
+                              ลาป่วย
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleQuickLeaveInfo(e, 'ลากิจ'); setShowLeaveDropdown(false); }}
+                              className="text-left px-3 py-2.5 text-sm rounded-lg hover:bg-yellow-50 text-yellow-600 font-medium transition-colors"
+                            >
+                              ลากิจ
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleQuickLeaveInfo(e, 'ขาดงาน'); setShowLeaveDropdown(false); }}
+                              className="text-left px-3 py-2.5 text-sm rounded-lg hover:bg-red-50 text-red-600 font-medium transition-colors"
+                            >
+                              ขาดงาน
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleQuickLeaveInfo(e, 'ลาครึ่งวัน'); setShowLeaveDropdown(false); }}
+                              className="text-left px-3 py-2.5 text-sm rounded-lg hover:bg-pink-50 text-pink-600 font-medium transition-colors"
+                            >
+                              ลาครึ่งวัน
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </>
                 )}
@@ -1665,70 +1741,129 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
       {/* Workers List / Tabs */}
       <div className="flex flex-col md:flex-row gap-4 lg:gap-6 items-start">
         {/* Left Tabs (Workers List) */}
-        <div className="w-full md:w-1/3 lg:w-1/4 flex flex-col gap-2 overflow-y-auto pb-4 md:pb-0 md:max-h-[calc(100vh-250px)]">
+        <div className="w-full md:w-1/3 lg:w-1/4 flex flex-col gap-2 pb-4 md:pb-0">
           {workers.length === 0 ? (
             <div className="text-center py-10 md:py-6 text-sm text-gray-400 bg-white rounded-3xl md:rounded-2xl border border-dashed border-gray-200">
               ไม่มีข้อมูลช่าง
             </div>
           ) : (
             <>
-              <button
-                onClick={() => setActiveTabWorkerId('all')}
-                className={`flex items-center justify-between p-3.5 md:p-3 rounded-2xl md:rounded-xl text-left transition-all duration-300 flex-shrink-0 border hover:scale-[1.02] active:scale-[0.98] ${activeTabWorkerId === 'all' ? 'bg-gradient-to-r from-sky-500 to-sky-600 border-sky-500 text-white shadow-md shadow-sky-200' : 'bg-white border-gray-100 text-gray-700 hover:bg-sky-50 hover:border-sky-200'}`}
-              >
-                <span className="font-semibold text-[15px]">📋 ข้อมูลทุกคน</span>
-              </button>
-              {activeTabWorkerId === 'all' && (
-                <div className="md:hidden relative z-10 w-full">
-                  {renderAllSummaryCard()}
-                </div>
-              )}
-              {workers.map(worker => {
-                const entry = entriesForDate.find(e => e.workerId === worker.id);
-                const isActive = worker.id === activeTabWorkerId;
-                const isDraft = entry?.isDraft;
-                return (
-                  <React.Fragment key={worker.id}>
-                    <button
-                    onClick={() => setActiveTabWorkerId(worker.id)}
-                    className={`flex items-center justify-between p-3.5 md:p-3 rounded-2xl md:rounded-xl text-left transition-all duration-300 flex-shrink-0 border hover:scale-[1.02] active:scale-[0.98] ${isActive ? (entry?.isLeave ? (entry.leaveType === 'ลาครึ่งวัน' ? 'bg-gradient-to-r from-pink-500 to-pink-600 border-pink-500 text-white shadow-md shadow-pink-200' : 'bg-gradient-to-r from-red-500 to-red-600 border-red-500 text-white shadow-md shadow-red-200') : isDraft ? 'bg-gradient-to-r from-amber-500 to-amber-600 border-amber-500 text-white shadow-md shadow-amber-200' : 'bg-gradient-to-r from-sky-500 to-sky-600 border-sky-500 text-white shadow-md shadow-sky-200') : (entry?.isLeave ? (entry.leaveType === 'ลาครึ่งวัน' ? 'bg-pink-50 border-pink-200 text-pink-900 hover:bg-pink-100 shadow-sm' : 'bg-red-50 border-red-200 text-red-900 hover:bg-red-100 shadow-sm') : isDraft ? 'bg-amber-50 border-amber-200 text-amber-900 hover:bg-amber-100 shadow-sm' : 'bg-white border-gray-100 text-gray-700 hover:bg-sky-50 hover:border-sky-200')}`}
+              <div className="sticky top-0 z-20 bg-gray-50/95 backdrop-blur-sm pt-0 pb-2">
+                <input
+                  type="text"
+                  placeholder="🔍 ค้นหาชื่อช่าง..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-2xl border border-gray-200 bg-white shadow-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-200 text-sm transition-all"
+                />
+              </div>
+              <div className="flex flex-col gap-2 overflow-y-auto pr-1 pb-2 md:max-h-[calc(100vh-270px)] custom-scrollbar">
+                {!searchQuery && (
+                  <button
+                    onClick={() => setActiveTabWorkerId('all')}
+                    className={`flex items-center justify-between p-3.5 md:p-3 rounded-2xl md:rounded-xl text-left transition-all duration-300 flex-shrink-0 border hover:scale-[1.02] active:scale-[0.98] ${activeTabWorkerId === 'all' ? 'bg-gradient-to-r from-sky-500 to-sky-600 border-sky-500 text-white shadow-md shadow-sky-200' : 'bg-white border-gray-100 text-gray-700 hover:bg-sky-50 hover:border-sky-200'}`}
                   >
-                    <span className="font-semibold text-[15px]">{worker.name}</span>
-                    {entry && (
-                      <div className="flex items-center gap-1 ml-2">
-                        {/* Transfer slip indicator */}
-                        {entry.transferSlipUrl && <Paperclip className={`w-3.5 h-3.5 flex-shrink-0 stroke-[2.5px] ${isActive ? 'text-white/80' : 'text-sky-400'}`} />}
-                        {/* Toll status indicator */}
-                        {(() => {
-                          const hasTollFee = (entry.tollFee > 0) || entry.tolls?.some(t => t.amount > 0);
-                          const hasTollReceipt = !!(entry.tollReceiptUrl || entry.tolls?.some(t => t.receiptUrl));
-                          if (!hasTollFee) return null;
-                          if (hasTollReceipt) {
-                            // Uploaded ✓
-                            return <Wallet className="w-3.5 h-3.5 flex-shrink-0 stroke-[2.5px] " />;
-                          } else {
-                            // Missing receipt ?
-                            return <AlertTriangle className={`w-3.5 h-3.5 flex-shrink-0 stroke-[2.5px] ${isActive ? 'text-yellow-200' : 'text-yellow-500'}`} />;
-                          }
-                        })()}
-                        {entry.isLeave ? (entry.leaveType === 'ลาครึ่งวัน' ?
-                          <Activity className={`w-4 h-4 flex-shrink-0 stroke-[3px] ${isActive ? 'text-pink-100' : 'text-pink-500'}`} /> :
-                          <X className={`w-4 h-4 flex-shrink-0 stroke-[3px] ${isActive ? 'text-red-100' : 'text-red-500'}`} />) :
-                          isDraft ?
-                            <Clock className={`w-4 h-4 flex-shrink-0 stroke-[3px] ${isActive ? 'text-amber-100' : 'text-amber-500'}`} /> :
-                            <CheckCircle2 className={`w-4 h-4 flex-shrink-0 stroke-[3px] ${isActive ? 'text-sky-100' : 'text-emerald-500'}`} />
-                        }
-                      </div>
-                    )}
+                    <span className="font-semibold text-[15px]">📋 ข้อมูลทุกคน</span>
                   </button>
-                  {isActive && (
-                    <div className="md:hidden relative z-10 w-full">
-                      {renderActiveWorkerCard()}
+                )}
+                
+                {activeTabWorkerId === 'all' && (
+                  <div className="md:hidden relative z-10 w-full mb-4">
+                    {renderAllSummaryCard()}
+                  </div>
+                )}
+                {(() => {
+                  const filteredWorkers = workers.filter(w => w.name.toLowerCase().includes(searchQuery.toLowerCase()));
+                  const pendingW: typeof workers = [];
+                  const draftW: typeof workers = [];
+                  const savedW: typeof workers = [];
+                  const leaveW: typeof workers = [];
+
+                  filteredWorkers.forEach(w => {
+                    const entry = entriesForDate.find(e => e.workerId === w.id);
+                    if (!entry) pendingW.push(w);
+                    else if (entry.isLeave) leaveW.push(w);
+                    else if (entry.isDraft) draftW.push(w);
+                    else savedW.push(w);
+                  });
+
+                  const renderWorkerButton = (worker: typeof workers[0]) => {
+                    const entry = entriesForDate.find(e => e.workerId === worker.id);
+                    const isActive = worker.id === activeTabWorkerId;
+                    const isDraft = entry?.isDraft;
+                    return (
+                      <React.Fragment key={worker.id}>
+                        <button
+                          onClick={() => setActiveTabWorkerId(worker.id)}
+                          className={`flex items-center justify-between p-3.5 md:p-3 rounded-2xl md:rounded-xl text-left transition-all duration-300 flex-shrink-0 border hover:scale-[1.02] active:scale-[0.98] ${isActive ? (entry?.isLeave ? (entry.leaveType === 'ลาครึ่งวัน' ? 'bg-gradient-to-r from-pink-500 to-pink-600 border-pink-500 text-white shadow-md shadow-pink-200' : 'bg-gradient-to-r from-red-500 to-red-600 border-red-500 text-white shadow-md shadow-red-200') : isDraft ? 'bg-gradient-to-r from-amber-500 to-amber-600 border-amber-500 text-white shadow-md shadow-amber-200' : 'bg-gradient-to-r from-sky-500 to-sky-600 border-sky-500 text-white shadow-md shadow-sky-200') : (entry?.isLeave ? (entry.leaveType === 'ลาครึ่งวัน' ? 'bg-pink-50 border-pink-200 text-pink-900 hover:bg-pink-100 shadow-sm' : 'bg-red-50 border-red-200 text-red-900 hover:bg-red-100 shadow-sm') : isDraft ? 'bg-amber-50 border-amber-200 text-amber-900 hover:bg-amber-100 shadow-sm' : 'bg-white border-gray-100 text-gray-700 hover:bg-sky-50 hover:border-sky-200')}`}
+                        >
+                          <span className="font-semibold text-[15px]">{worker.name}</span>
+                          {entry && (
+                            <div className="flex items-center gap-1 ml-2">
+                              {/* Transfer slip indicator */}
+                              {entry.transferSlipUrl && <Paperclip className={`w-3.5 h-3.5 flex-shrink-0 stroke-[2.5px] ${isActive ? 'text-white/80' : 'text-sky-400'}`} />}
+                              {/* Toll status indicator */}
+                              {(() => {
+                                const hasTollFee = (entry.tollFee > 0) || entry.tolls?.some(t => t.amount > 0);
+                                const hasTollReceipt = !!(entry.tollReceiptUrl || entry.tolls?.some(t => t.receiptUrl));
+                                if (!hasTollFee) return null;
+                                if (hasTollReceipt) {
+                                  // Uploaded ✓
+                                  return <Wallet className="w-3.5 h-3.5 flex-shrink-0 stroke-[2.5px] " />;
+                                } else {
+                                  // Missing receipt ?
+                                  return <AlertTriangle className={`w-3.5 h-3.5 flex-shrink-0 stroke-[2.5px] ${isActive ? 'text-yellow-200' : 'text-yellow-500'}`} />;
+                                }
+                              })()}
+                              {entry.isLeave ? (entry.leaveType === 'ลาครึ่งวัน' ?
+                                <Activity className={`w-4 h-4 flex-shrink-0 stroke-[3px] ${isActive ? 'text-pink-100' : 'text-pink-500'}`} /> :
+                                <X className={`w-4 h-4 flex-shrink-0 stroke-[3px] ${isActive ? 'text-red-100' : 'text-red-500'}`} />) :
+                                isDraft ?
+                                  <Clock className={`w-4 h-4 flex-shrink-0 stroke-[3px] ${isActive ? 'text-amber-100' : 'text-amber-500'}`} /> :
+                                  <CheckCircle2 className={`w-4 h-4 flex-shrink-0 stroke-[3px] ${isActive ? 'text-sky-100' : 'text-emerald-500'}`} />
+                              }
+                            </div>
+                          )}
+                        </button>
+                        {isActive && (
+                          <div className="md:hidden relative z-10 w-full mb-4">
+                            {renderActiveWorkerCard()}
+                          </div>
+                        )}
+                      </React.Fragment>
+                    );
+                  };
+
+                  return (
+                    <div className="flex flex-col gap-5 mt-2">
+                      {pendingW.length > 0 && (
+                        <div className="flex flex-col gap-2">
+                          <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider px-2 flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> รอการบันทึก ({pendingW.length})</div>
+                          {pendingW.map(renderWorkerButton)}
+                        </div>
+                      )}
+                      {draftW.length > 0 && (
+                        <div className="flex flex-col gap-2">
+                          <div className="text-[11px] font-bold text-amber-500 uppercase tracking-wider px-2 flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> ฉบับร่าง ({draftW.length})</div>
+                          {draftW.map(renderWorkerButton)}
+                        </div>
+                      )}
+                      {savedW.length > 0 && (
+                        <div className="flex flex-col gap-2">
+                          <div className="text-[11px] font-bold text-emerald-500 uppercase tracking-wider px-2 flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" /> บันทึกแล้ว ({savedW.length})</div>
+                          {savedW.map(renderWorkerButton)}
+                        </div>
+                      )}
+                      {leaveW.length > 0 && (
+                        <div className="flex flex-col gap-2">
+                          <div className="text-[11px] font-bold text-red-500 uppercase tracking-wider px-2 flex items-center gap-1.5"><X className="w-3.5 h-3.5" /> ลาหยุด / ขาดงาน ({leaveW.length})</div>
+                          {leaveW.map(renderWorkerButton)}
+                        </div>
+                      )}
                     </div>
-                  )}
-                  </React.Fragment>
-                )
-              })}
+                  );
+                })()}
+              </div>
             </>
           )}
         </div>
