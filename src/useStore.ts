@@ -88,6 +88,8 @@ export function useStore() {
                 return;
               } else {
                 console.error('Migration failed:', insertError);
+                setWorkers(localWorkers);
+                return;
               }
             }
           }
@@ -213,6 +215,8 @@ export function useStore() {
                 return;
               } else {
                 console.error('Entry Migration failed:', insertError);
+                setEntries(localEntries);
+                return;
               }
             }
           }
