@@ -18,7 +18,8 @@ const timeToMins = (time: string) => {
 };
 
 export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pendingDate?: string | null; onPendingDateConsumed?: () => void }) {
-  const { workers, entries, advances, addEntry, updateEntry, deleteEntry, addAdvance, holidays, addHoliday, deleteHoliday, isWorkersLoading, isEntriesLoading } = useStore();
+  const { workers: allWorkers, entries, advances, addEntry, updateEntry, deleteEntry, addAdvance, holidays, addHoliday, deleteHoliday, isWorkersLoading, isEntriesLoading } = useStore();
+  const workers = useMemo(() => allWorkers.filter(w => !w.isResigned), [allWorkers]);
   const [selectedDate, setSelectedDate] = useState(() => {
     const saved = sessionStorage.getItem('dailyEntrySelectedDate');
     if (saved) {
