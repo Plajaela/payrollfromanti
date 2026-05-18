@@ -224,5 +224,22 @@
   & .hover\:bg-zinc-50\/50:hover {
     background-color: rgba(24, 24, 27, 0.5) !important;
   }
+
+  /* --- CUSTOM ZINC AND COLOR OVERRIDES FOR TEXT ELEMENTS --- */
+  & .text-zinc-900 {
+    color: #fafafa !important;
+  }
+  & .text-zinc-800 {
+    color: #f4f4f5 !important;
+  }
+  & .text-zinc-700 {
+    color: #e4e4e7 !important;
+  }
+  & .text-zinc-600 {
+    color: #d4d4d8 !important;
+  }
+  & .text-zinc-500 {
+    color: #a1a1aa !important;
+  }
 }
 
