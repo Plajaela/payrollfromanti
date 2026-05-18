@@ -5,3 +5,224 @@
   0%   { transform: translateX(-100%); }
   100% { transform: translateX(200%); }
 }
+
+/* 🌟 Premium Dark Mode Theme Overrides 🌟 */
+.dark {
+  color-scheme: dark;
+
+  /* --- FLIP GRAY SCALE --- */
+  /* This maps light gray classes (e.g. bg-gray-50, text-gray-900) automatically to elegant, premium zinc dark equivalents */
+  --color-gray-50: #09090b;   /* zinc-950 (Canvas/Base Background) */
+  --color-gray-100: #27272a;  /* zinc-800 (Subtle panels, inputs, secondary buttons) */
+  --color-gray-200: #3f3f46;  /* zinc-700 (Borders) */
+  --color-gray-300: #52525b;  /* zinc-600 (Darker borders/dividers) */
+  --color-gray-400: #71717a;  /* zinc-500 (Muted / Placeholder text) */
+  --color-gray-500: #a1a1aa;  /* zinc-400 (Icons / Subtext) */
+  --color-gray-600: #d4d4d8;  /* zinc-300 (Secondary readable text) */
+  --color-gray-700: #e4e4e7;  /* zinc-200 (Readable text) */
+  --color-gray-800: #f4f4f5;  /* zinc-100 (Primary text) */
+  --color-gray-900: #fafafa;  /* zinc-50 (Heading text / maximum contrast) */
+  --color-gray-950: #ffffff;  /* High contrast pure white text */
+
+  /* --- FLIP SLATE SCALE (For any slate references) --- */
+  --color-slate-50: #09090b;
+  --color-slate-100: #27272a;
+  --color-slate-200: #3f3f46;
+  --color-slate-300: #52525b;
+  --color-slate-400: #71717a;
+  --color-slate-500: #a1a1aa;
+  --color-slate-600: #d4d4d8;
+  --color-slate-700: #e4e4e7;
+  --color-slate-800: #f4f4f5;
+  --color-slate-900: #fafafa;
+  --color-slate-950: #ffffff;
+
+  /* --- FLIP ZINC SCALE --- */
+  /* Keep lighter zinc scales light for readable dark mode text/elements, while keeping 800+ dark */
+  --color-zinc-50: #fafafa;
+  --color-zinc-100: #f4f4f5;
+  --color-zinc-200: #e4e4e7;
+  --color-zinc-300: #d4d4d8;
+  --color-zinc-400: #a1a1aa;
+  --color-zinc-500: #71717a;
+  --color-zinc-600: #52525b;
+  --color-zinc-700: #3f3f46;
+  --color-zinc-800: #27272a;
+  --color-zinc-900: #18181b;
+  --color-zinc-950: #09090b;
+
+  /* --- SPECIFIC BG-WHITE OVERRIDES --- */
+  /* Targets backgrounds that are hardcoded to bg-white to render as zinc-900 */
+  & .bg-white {
+    background-color: #18181b !important;
+  }
+  
+  /* Opacity Background Overrides */
+  & .bg-white\/5 {
+    background-color: rgba(24, 24, 27, 0.05) !important;
+  }
+  & .bg-white\/50 {
+    background-color: rgba(24, 24, 27, 0.5) !important;
+  }
+  & .bg-white\/80 {
+    background-color: rgba(24, 24, 27, 0.8) !important;
+  }
+  & .bg-white\/90 {
+    background-color: rgba(24, 24, 27, 0.9) !important;
+  }
+
+  /* Target exact gray background opacity classes */
+  & .bg-gray-100\/80 {
+    background-color: rgba(39, 39, 42, 0.8) !important;
+  }
+  & .bg-gray-50\/50 {
+    background-color: rgba(9, 9, 11, 0.5) !important;
+  }
+
+  /* --- SHADOW OVERRIDES --- */
+  /* Remove intense light shadows and replace with soft ambient dark shadows */
+  & .shadow-sm {
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.5) !important;
+  }
+  & .shadow-md {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.5) !important;
+  }
+  & .shadow-lg, & .shadow-xl, & .shadow-2xl {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.6) !important;
+  }
+  
+  /* Remove bright red/orange/sky button/card shadows that clash in dark mode */
+  & .shadow-red-200, 
+  & .shadow-pink-100, 
+  & .shadow-red-100, 
+  & .shadow-amber-100, 
+  & .shadow-sky-100,
+  & .shadow-sky-200 {
+    box-shadow: none !important;
+  }
+
+  /* --- MODAL BACKDROP --- */
+  & .bg-gray-900\/40 {
+    background-color: rgba(0, 0, 0, 0.6) !important;
+  }
+
+  /* --- DAILY ENTRY LIST GRADIENTS --- */
+  /* Custom gorgeous glowing cards for special states in Daily Entry */
+  & .bg-gradient-to-b.from-sky-50\/50.to-white {
+    background-image: linear-gradient(to bottom, rgba(14, 165, 233, 0.1), #18181b) !important;
+  }
+  & .bg-gradient-to-b.from-pink-50\/50.to-white {
+    background-image: linear-gradient(to bottom, rgba(236, 72, 153, 0.1), #18181b) !important;
+  }
+  & .bg-gradient-to-b.from-red-50\/50.to-white {
+    background-image: linear-gradient(to bottom, rgba(239, 68, 68, 0.1), #18181b) !important;
+  }
+  & .bg-gradient-to-b.from-amber-50\/50.to-white {
+    background-image: linear-gradient(to bottom, rgba(245, 158, 11, 0.1), #18181b) !important;
+  }
+
+  /* Hover states */
+  & .hover\:bg-white:hover {
+    background-color: #27272a !important; /* zinc-800 */
+  }
+  & .hover\:bg-gray-50:hover {
+    background-color: #27272a !important; /* zinc-800 */
+  }
+  & .hover\:bg-gray-100:hover {
+    background-color: #3f3f46 !important; /* zinc-700 */
+  }
+  & .hover\:bg-sky-50:hover {
+    background-color: rgba(14, 165, 233, 0.1) !important;
+  }
+
+  /* Subtle colored backgrounds */
+  & .bg-emerald-50 {
+    background-color: rgba(16, 185, 129, 0.1) !important;
+  }
+  & .bg-red-50 {
+    background-color: rgba(239, 68, 68, 0.1) !important;
+  }
+  & .bg-sky-50 {
+    background-color: rgba(14, 165, 233, 0.1) !important;
+  }
+  & .bg-amber-50 {
+    background-color: rgba(245, 158, 11, 0.1) !important;
+  }
+  & .bg-purple-50 {
+    background-color: rgba(168, 85, 247, 0.1) !important;
+  }
+  & .bg-indigo-50 {
+    background-color: rgba(99, 102, 241, 0.1) !important;
+  }
+  & .bg-pink-50 {
+    background-color: rgba(236, 72, 153, 0.1) !important;
+  }
+  
+  /* Scrollbars in dark mode */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #09090b;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #27272a;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #3f3f46;
+  }
+
+  /* --- CUSTOM ZINC AND COLOR OVERRIDES FOR CONTAINER BLOCKS --- */
+  /* Decouples container backgrounds from foreground text colors to keep contrast high */
+  & .bg-zinc-50 {
+    background-color: #09090b !important; /* zinc-950 canvas background */
+  }
+  & .bg-zinc-100 {
+    background-color: #18181b !important; /* zinc-900 panels */
+  }
+  & .bg-zinc-200 {
+    background-color: #27272a !important; /* zinc-800 accents */
+  }
+  & .bg-zinc-50\/80 {
+    background-color: rgba(9, 9, 11, 0.8) !important;
+  }
+  & .bg-zinc-50\/50 {
+    background-color: rgba(9, 9, 11, 0.5) !important;
+  }
+  
+  /* Divide borders and separator lines */
+  & .divide-zinc-100 > * + * {
+    border-color: #27272a !important;
+  }
+  & .border-zinc-100 {
+    border-color: #27272a !important;
+  }
+  & .border-zinc-200 {
+    border-color: #3f3f46 !important;
+  }
+
+  /* Specific background and border overrides for Reports footer and inputs */
+  & .bg-blue-50 {
+    background-color: rgba(59, 130, 246, 0.1) !important;
+  }
+  & .bg-blue-50\/50 {
+    background-color: rgba(59, 130, 246, 0.05) !important;
+  }
+  & .border-blue-100 {
+    border-color: rgba(59, 130, 246, 0.2) !important;
+  }
+  
+  /* Premium dark state hover effects */
+  & .hover\:bg-zinc-50:hover {
+    background-color: #18181b !important;
+  }
+  & .hover\:bg-zinc-100:hover {
+    background-color: #27272a !important;
+  }
+  & .hover\:bg-zinc-50\/50:hover {
+    background-color: rgba(24, 24, 27, 0.5) !important;
+  }
+}
+
