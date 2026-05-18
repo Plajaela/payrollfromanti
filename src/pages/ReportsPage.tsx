@@ -788,16 +788,16 @@ export function ReportsPage() {
               <table className="min-w-full divide-y divide-zinc-200">
                 <thead className="bg-zinc-50/80">
                   <tr>
-                    <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-zinc-900 sm:pl-6 uppercase tracking-wide">ชื่อช่าง</th>
-                    <th scope="col" className="px-3 py-3.5 text-center text-sm font-semibold text-zinc-900 uppercase tracking-wide">วันทำงาน</th>
-                    <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-zinc-900 uppercase tracking-wide flex items-center justify-end gap-1">
+                    <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-zinc-900 dark:text-zinc-100 sm:pl-6 uppercase tracking-wide">ชื่อช่าง</th>
+                    <th scope="col" className="px-3 py-3.5 text-center text-sm font-semibold text-zinc-900 dark:text-zinc-100 uppercase tracking-wide">วันทำงาน</th>
+                    <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-zinc-900 dark:text-zinc-100 uppercase tracking-wide flex items-center justify-end gap-1">
                       <Wallet className="w-4 h-4 text-emerald-500" />
                       ค่าแรง
                     </th>
-                    <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-zinc-900 uppercase tracking-wide">ค่ารถ</th>
-                    <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-zinc-900 uppercase tracking-wide">โอที</th>
+                    <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-zinc-900 dark:text-zinc-100 uppercase tracking-wide">ค่ารถ</th>
+                    <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-zinc-900 dark:text-zinc-100 uppercase tracking-wide">โอที</th>
                     <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-red-600 uppercase tracking-wide">หักสาย</th>
-                    <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-zinc-900 uppercase tracking-wide">อื่นๆ</th>
+                    <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-zinc-900 dark:text-zinc-100 uppercase tracking-wide">อื่นๆ</th>
                     <th scope="col" className="py-3.5 px-3 text-right text-sm font-semibold text-orange-600 uppercase tracking-wide">หักประกันสะสม</th>
                     <th scope="col" className="py-3.5 px-3 text-right text-sm font-semibold text-purple-600 uppercase tracking-wide flex items-center justify-end gap-1">
                       <ShieldCheck className="w-4 h-4" />
@@ -813,7 +813,7 @@ export function ReportsPage() {
                 <tbody className="divide-y divide-zinc-100 bg-white">
                   {reportData.map((row) => (
                     <tr key={row.worker.id} className="hover:bg-zinc-50/50 transition-colors">
-                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-zinc-900 sm:pl-6">
+                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-zinc-900 dark:text-zinc-100 sm:pl-6">
                         <div className="font-bold">{row.worker.name}</div>
                         <div className="flex flex-wrap gap-1 mt-1">
                           {row.worker.paymentType === 'month' && (
@@ -969,7 +969,7 @@ export function ReportsPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl w-full max-w-sm max-h-[80vh] flex flex-col shadow-xl animate-in zoom-in-95 duration-200">
             <div className="p-4 border-b border-zinc-100 flex justify-between items-center">
-              <h3 className="font-semibold text-lg text-zinc-900">รายการอื่นๆ - {selectedAdjustments.workerName}</h3>
+              <h3 className="font-semibold text-lg text-zinc-900 dark:text-zinc-100">รายการอื่นๆ - {selectedAdjustments.workerName}</h3>
               <button 
                 onClick={() => setSelectedAdjustments(null)}
                 className="p-2 bg-zinc-100 hover:bg-zinc-200 rounded-full text-zinc-500 transition-colors focus:outline-none"
@@ -981,7 +981,7 @@ export function ReportsPage() {
               {selectedAdjustments.list.map((adj, i) => (
                 <div key={i} className="flex justify-between items-center p-3 bg-zinc-50 rounded-xl border border-zinc-100">
                   <div>
-                    <div className="text-sm font-medium text-zinc-800">{adj.note}</div>
+                    <div className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{adj.note}</div>
                     <div className="text-xs text-zinc-500 mt-1">{format(parseISO(adj.date), 'dd/MM/yyyy')}</div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -1014,7 +1014,7 @@ export function ReportsPage() {
             <div className="p-4 border-t border-zinc-100">
                <div className="flex justify-between items-center font-bold">
                  <span>รวมยอดอื่นๆสุทธิ</span>
-                 <span className={selectedAdjustments.list.reduce((acc, curr) => acc + (curr.type === 'add' ? curr.amount : -curr.amount), 0) > 0 ? 'text-emerald-600' : selectedAdjustments.list.reduce((acc, curr) => acc + (curr.type === 'add' ? curr.amount : -curr.amount), 0) < 0 ? 'text-red-600' : 'text-zinc-900'}>
+                 <span className={selectedAdjustments.list.reduce((acc, curr) => acc + (curr.type === 'add' ? curr.amount : -curr.amount), 0) > 0 ? 'text-emerald-600' : selectedAdjustments.list.reduce((acc, curr) => acc + (curr.type === 'add' ? curr.amount : -curr.amount), 0) < 0 ? 'text-red-600' : 'text-zinc-900 dark:text-zinc-100'}>
                     {selectedAdjustments.list.reduce((acc, curr) => acc + (curr.type === 'add' ? curr.amount : -curr.amount), 0) > 0 ? '+' : ''}
                     ฿{selectedAdjustments.list.reduce((acc, curr) => acc + (curr.type === 'add' ? curr.amount : -curr.amount), 0)}
                  </span>
@@ -1030,7 +1030,7 @@ export function ReportsPage() {
           <div className="bg-white rounded-2xl w-full max-w-sm max-h-[80vh] flex flex-col shadow-xl animate-in zoom-in-95 duration-200">
             <div className="p-4 border-b border-zinc-100 flex justify-between items-center bg-zinc-50 rounded-t-2xl">
               <div>
-                <h3 className="font-semibold text-lg text-zinc-900">{selectedMetric.metricName}</h3>
+                <h3 className="font-semibold text-lg text-zinc-900 dark:text-zinc-100">{selectedMetric.metricName}</h3>
                 <p className="text-xs text-zinc-500 mt-0.5">{selectedMetric.workerName}</p>
               </div>
               <button 
@@ -1131,7 +1131,7 @@ export function ReportsPage() {
                         {items.map((item, i) => (
                         <div key={i} className="flex justify-between items-center p-3 bg-zinc-50 rounded-xl border border-zinc-100/80 hover:border-zinc-200 transition-colors">
                             <div>
-                            <div className="text-[13px] font-medium text-zinc-800">{item.label}</div>
+                            <div className="text-[13px] font-medium text-zinc-800 dark:text-zinc-200">{item.label}</div>
                             {item.date && <div className="text-[11px] text-zinc-500 mt-1">{format(parseISO(item.date), 'dd/MM/yyyy')}</div>}
                             </div>
                              <div className={`font-bold text-sm ${item.isDeduct ? 'text-red-500' : (item.color || 'text-emerald-600')}`}>
@@ -1143,7 +1143,7 @@ export function ReportsPage() {
                     </div>
                     
                     <div className="mt-4 pt-3 border-t border-zinc-100 flex justify-between items-center font-bold px-1">
-                        <span className="text-zinc-700">รวมทั้งหมด</span>
+                        <span className="text-zinc-700 dark:text-zinc-300">รวมทั้งหมด</span>
                         <span className={selectedMetric.metricType === 'advance' ? 'text-red-600' : 'text-blue-600'}>
                             {selectedMetric.metricType === 'days' || selectedMetric.metricType === 'leave' 
                             ? `${items.reduce((s, i) => s + i.amount, 0)} วัน` 
