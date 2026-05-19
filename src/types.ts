@@ -29,6 +29,7 @@ export interface Worker {
   lateRateRule?: 'normal' | 'special';
   createdAt?: string;
   isResigned?: boolean;
+  copyLanguage?: 'th' | 'en';
 }
 
 export interface DailyEntry {

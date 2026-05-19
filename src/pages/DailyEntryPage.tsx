@@ -719,14 +719,13 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
     }
   };
 
-  const handleCopySingle = async (worker: typeof workers[0], entry: typeof entries[0] | undefined, e: React.MouseEvent) => {
-    e.stopPropagation(); // prevent modal opening
-
-    const idToUse = entry ? entry.id : worker.id;
-
-    const thaiYear = selectedDate.getFullYear() + 543;
-    const shortThaiYear = thaiYear.toString().slice(-2);
-    const formattedDate = format(selectedDate, `dd/MM/${shortThaiYear}`);
+  const formatDailyCopyText = (
+    worker: typeof workers[0],
+    entry: typeof entries[0] | undefined,
+    formattedDate: string,
+    isAllDetailed = false
+  ) => {
+    const isEnglish = worker.copyLanguage === 'en';
 
     // Fallbacks to showing only basic wage if there's no entry logged yet
     const baseWage = entry ? entry.baseWage : worker.baseWage;
@@ -742,27 +741,56 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
     const wStart = worker.shiftStart || '07:00';
     const wEnd = worker.shiftEnd || '16:00';
 
-    let text = `📝 แจ้งยอดรายวัน ${worker.name} (วันที่ ${formattedDate})\n`;
+    let text = '';
+    if (isAllDetailed) {
+      text += `👤 ${worker.name}\n`;
+    } else {
+      text += isEnglish
+        ? `📝 Daily payroll update for ${worker.name} (Date: ${formattedDate})\n`
+        : `📝 แจ้งยอดรายวัน ${worker.name} (วันที่ ${formattedDate})\n`;
+    }
+
     if (entry?.isLeave) {
-      // Fallback for older data that had 'ลาพักผ่อน'
-      let leaveStr = (entry.leaveType as any) === 'ลาพักผ่อน' ? 'ลากิจ' : (entry.leaveType || 'ลากิจ');
-      if (leaveStr === 'ลาครึ่งวัน') {
-        text += `ลาครึ่งวัน: ค่าแรง ฿${baseWage / 2}\n`;
+      let leaveTypeRaw = (entry.leaveType as any) === 'ลาพักผ่อน' ? 'ลากิจ' : (entry.leaveType || 'ลากิจ');
+      if (leaveTypeRaw === 'ลาครึ่งวัน') {
+        text += isEnglish
+          ? `Half-day Leave: Wage ฿${baseWage / 2}\n`
+          : `ลาครึ่งวัน: ค่าแรง ฿${baseWage / 2}\n`;
         if (entry.guaranteeDeduction > 0) {
-          text += `- หักสะสม: ฿${entry.guaranteeDeduction}\n`;
+          text += isEnglish
+            ? `- Accumulate Guarantee: -฿${entry.guaranteeDeduction}\n`
+            : `- หักสะสม: ฿${entry.guaranteeDeduction}\n`;
         }
       } else {
-        if (entry.leaveNote) leaveStr += ` (${entry.leaveNote})`;
+        let leaveStr = '';
+        if (isEnglish) {
+          if (leaveTypeRaw === 'ลาป่วย') leaveStr = 'Sick Leave';
+          else if (leaveTypeRaw === 'ลากิจ') leaveStr = 'Personal Leave';
+          else if (leaveTypeRaw === 'ขาดงาน') leaveStr = 'Absent';
+          else leaveStr = leaveTypeRaw;
+        } else {
+          leaveStr = leaveTypeRaw;
+        }
+
+        if (entry.leaveNote) {
+          leaveStr += ` (${entry.leaveNote})`;
+        }
         text += `${leaveStr}\n`;
       }
     } else {
       const actualStart = clockIn > wStart ? clockIn : wStart;
       const actualEnd = clockOut < wEnd ? clockOut : wEnd;
-      text += `เวลาทำงาน: ${actualStart} - ${actualEnd}  ค่าแรง: ฿${baseWage}\n`;
-      if (lateDeduction > 0) text += `หักมาสาย: -฿${lateDeduction}\n`;
+      text += isEnglish
+        ? `Working Hours: ${actualStart} - ${actualEnd}  Wage: ฿${baseWage}\n`
+        : `เวลาทำงาน: ${actualStart} - ${actualEnd}  ค่าแรง: ฿${baseWage}\n`;
+      if (lateDeduction > 0) {
+        text += isEnglish
+          ? `Late Deduction: -฿${lateDeduction}\n`
+          : `หักมาสาย: -฿${lateDeduction}\n`;
+      }
     }
-    if (overtimePay > 0) {
 
+    if (overtimePay > 0) {
       let morningOtMins = 0;
       let eveningOtMins = 0;
 
@@ -773,8 +801,12 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
         const mHours = Math.floor(morningOtMins / 60);
         const mMins = morningOtMins % 60;
         const morningPay = (morningOtMins / 60) * 100;
-        const durationStr = ` (${mHours} ชม.${mMins > 0 ? ` ${mMins} นาที` : ''})`;
-        text += `OT เช้า ${clockIn}-${wStart}${durationStr}: ฿${morningPay.toFixed(0)}\n`;
+        const durationStr = isEnglish
+          ? ` (${mHours} hr${mHours > 1 ? 's' : ''}${mMins > 0 ? ` ${mMins} min${mMins > 1 ? 's' : ''}` : ''})`
+          : ` (${mHours} ชม.${mMins > 0 ? ` ${mMins} นาที` : ''})`;
+        text += isEnglish
+          ? `Morning OT ${clockIn}-${wStart}${durationStr}: ฿${morningPay.toFixed(0)}\n`
+          : `OT เช้า ${clockIn}-${wStart}${durationStr}: ฿${morningPay.toFixed(0)}\n`;
       }
 
       if (clockOut > wEnd) {
@@ -784,22 +816,33 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
         const eHours = Math.floor(eveningOtMins / 60);
         const eMins = eveningOtMins % 60;
         const eveningPay = (eveningOtMins / 60) * 100;
-        const durationStr = ` (${eHours} ชม.${eMins > 0 ? ` ${eMins} นาที` : ''})`;
-        text += `OT เย็น ${wEnd}-${clockOut}${durationStr}: ฿${eveningPay.toFixed(0)}\n`;
+        const durationStr = isEnglish
+          ? ` (${eHours} hr${eHours > 1 ? 's' : ''}${eMins > 0 ? ` ${eMins} min${eMins > 1 ? 's' : ''}` : ''})`
+          : ` (${eHours} ชม.${eMins > 0 ? ` ${eMins} นาที` : ''})`;
+        text += isEnglish
+          ? `Evening OT ${wEnd}-${clockOut}${durationStr}: ฿${eveningPay.toFixed(0)}\n`
+          : `OT เย็น ${wEnd}-${clockOut}${durationStr}: ฿${eveningPay.toFixed(0)}\n`;
       }
 
       if (morningOtMins === 0 && eveningOtMins === 0) {
         const otHours = entry?.overtimeHours || 0;
         const otMins = entry?.overtimeMinutes || 0;
-        const otDurationInfo = ` (${otHours} ชม.${otMins > 0 ? ` ${otMins} นาที` : ''})`;
+        const otDurationInfo = isEnglish
+          ? ` (${otHours} hr${otHours > 1 ? 's' : ''}${otMins > 0 ? ` ${otMins} min${otMins > 1 ? 's' : ''}` : ''})`
+          : ` (${otHours} ชม.${otMins > 0 ? ` ${otMins} นาที` : ''})`;
         text += `OT${otDurationInfo}: ฿${overtimePay}\n`;
       }
     }
+
     if (!entry?.isLeave || entry?.leaveType === 'ลาครึ่งวัน') {
       text += `\n`;
-      if (travelAllowance > 0) text += `- ค่ารถ: ฿${travelAllowance}\n`;
+      if (travelAllowance > 0) {
+        text += isEnglish
+          ? `- Travel Allowance: ฿${travelAllowance}\n`
+          : `- ค่ารถ: ฿${travelAllowance}\n`;
+      }
       if (tollFee > 0) {
-        text += `- ทางด่วน`;
+        text += isEnglish ? `- Toll Fee` : `- ทางด่วน`;
         const tollDates: string[] = [];
         if (entry?.tolls && entry.tolls.length > 0) {
           entry.tolls.forEach(t => {
@@ -813,11 +856,17 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
         }
 
         if (tollDates.length > 0) {
-          text += ` (บิลลงวันที่ ${tollDates.join(', ')})`;
+          text += isEnglish
+            ? ` (Receipt date ${tollDates.join(', ')})`
+            : ` (บิลลงวันที่ ${tollDates.join(', ')})`;
         }
         text += `: ฿${tollFee}\n`;
       }
-      if (entry?.guaranteeDeduction && entry.guaranteeDeduction > 0) text += `- หักเงินประกันสะสม: -฿${entry.guaranteeDeduction}\n`;
+      if (entry?.guaranteeDeduction && entry.guaranteeDeduction > 0) {
+        text += isEnglish
+          ? `- Guarantee Deduction: -฿${entry.guaranteeDeduction}\n`
+          : `- หักเงินประกันสะสม: -฿${entry.guaranteeDeduction}\n`;
+      }
     } else {
       text += `\n`;
     }
@@ -826,16 +875,42 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
       adjustments.forEach(adj => {
         const amountStr = adj.type === 'add' ? `+฿${Number(adj.amount)}` : `-฿${Math.abs(Number(adj.amount))}`;
         const noteStr = adj.note ? ` (${adj.note})` : '';
-        text += `- อื่นๆ: ${amountStr}${noteStr}\n`;
+        text += isEnglish
+          ? `- Other: ${amountStr}${noteStr}\n`
+          : `- อื่นๆ: ${amountStr}${noteStr}\n`;
       });
     }
 
-    text += `\n✅ ยอดสุทธิวันนี้: ฿${totalPay}`;
+    if (isAllDetailed) {
+      text += isEnglish
+        ? `✅ Net Total: ฿${totalPay}`
+        : `✅ ยอดสุทธิ: ฿${totalPay}`;
+    } else {
+      text += isEnglish
+        ? `✅ Net Total Today: ฿${totalPay}`
+        : `✅ ยอดสุทธิวันนี้: ฿${totalPay}`;
+    }
 
-    // Payment type note
     const paymentType = worker.paymentType || 'day';
-    if (paymentType === 'month') text += `\n*รับเงินทุกสิ้นเดือน*`;
-    else if (paymentType === 'half-month') text += `\n*รับเงินกลางเดือน*`;
+    if (paymentType === 'month') {
+      text += isEnglish ? `\n*Paid at end of month*` : `\n*รับเงินทุกสิ้นเดือน*`;
+    } else if (paymentType === 'half-month') {
+      text += isEnglish ? `\n*Paid mid-month*` : `\n*รับเงินกลางเดือน*`;
+    }
+
+    return text;
+  };
+
+  const handleCopySingle = async (worker: typeof workers[0], entry: typeof entries[0] | undefined, e: React.MouseEvent) => {
+    e.stopPropagation(); // prevent modal opening
+
+    const idToUse = entry ? entry.id : worker.id;
+
+    const thaiYear = selectedDate.getFullYear() + 543;
+    const shortThaiYear = thaiYear.toString().slice(-2);
+    const formattedDate = format(selectedDate, `dd/MM/${shortThaiYear}`);
+
+    const text = formatDailyCopyText(worker, entry, formattedDate, false);
 
     handleCopy(text, idToUse);
   };
@@ -1016,112 +1091,8 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
       // Only show people who came to work (have an entry)
       if (!entry) return;
 
-      const baseWage = entry ? entry.baseWage : worker.baseWage;
-      const travelAllowance = entry ? entry.travelAllowance : (worker.defaultTravelAllowance || 0);
-      const tollFee = entry ? entry.tollFee : 0;
-      const overtimePay = entry ? entry.overtimePay : 0;
-      const lateDeduction = entry ? entry.lateDeduction : 0;
-      const adjustments = entry ? entry.adjustments : [];
-      const totalPay = entry ? entry.totalPay : (baseWage + travelAllowance);
-      const clockIn = entry ? entry.clockIn : worker.shiftStart || '07:00';
-      const clockOut = entry ? entry.clockOut : worker.shiftEnd || '16:00';
-
-      const wStart = worker.shiftStart || '07:00';
-      const wEnd = worker.shiftEnd || '16:00';
-
-      text += `👤 ${worker.name}\n`;
-      if (entry?.isLeave) {
-        let leaveStr = (entry.leaveType as any) === 'ลาพักผ่อน' ? 'ลากิจ' : (entry.leaveType || 'ลากิจ');
-        if (leaveStr === 'ลาครึ่งวัน') {
-          text += `ลาครึ่งวัน: ค่าแรง ฿${baseWage / 2}\n`;
-          if (entry.guaranteeDeduction > 0) {
-            text += `- หักสะสม: ฿${entry.guaranteeDeduction}\n`;
-          }
-        } else {
-          if (entry.leaveNote) leaveStr += ` (${entry.leaveNote})`;
-          text += `${leaveStr}\n`;
-        }
-      } else {
-        const actualStart = clockIn > wStart ? clockIn : wStart;
-        const actualEnd = clockOut < wEnd ? clockOut : wEnd;
-        text += `เวลาทำงาน: ${actualStart} - ${actualEnd}  ค่าแรง: ฿${baseWage}\n`;
-        if (lateDeduction > 0) text += `หักมาสาย: -฿${lateDeduction}\n`;
-      }
-      if (overtimePay > 0) {
-
-        let morningOtMins = 0;
-        let eveningOtMins = 0;
-
-        if (clockIn < wStart) {
-          const inTime = clockIn.split(':').map(Number);
-          const startTime = wStart.split(':').map(Number);
-          morningOtMins = (startTime[0] * 60 + startTime[1]) - (inTime[0] * 60 + inTime[1]);
-          const mHours = Math.floor(morningOtMins / 60);
-          const mMins = morningOtMins % 60;
-          const morningPay = (morningOtMins / 60) * 100;
-          const durationStr = ` (${mHours} ชม.${mMins > 0 ? ` ${mMins} นาที` : ''})`;
-          text += `OT เช้า ${clockIn}-${wStart}${durationStr}: ฿${morningPay.toFixed(0)}\n`;
-        }
-
-        if (clockOut > wEnd) {
-          const outTime = clockOut.split(':').map(Number);
-          const endTime = wEnd.split(':').map(Number);
-          eveningOtMins = (outTime[0] * 60 + outTime[1]) - (endTime[0] * 60 + endTime[1]);
-          const eHours = Math.floor(eveningOtMins / 60);
-          const eMins = eveningOtMins % 60;
-          const eveningPay = (eveningOtMins / 60) * 100;
-          const durationStr = ` (${eHours} ชม.${eMins > 0 ? ` ${eMins} นาที` : ''})`;
-          text += `OT เย็น ${wEnd}-${clockOut}${durationStr}: ฿${eveningPay.toFixed(0)}\n`;
-        }
-
-        // Handle case where overtimePay is overridden manually but format doesn't match
-        if (morningOtMins === 0 && eveningOtMins === 0) {
-          const otHours = entry?.overtimeHours || 0;
-          const otMins = entry?.overtimeMinutes || 0;
-          const otDurationInfo = ` (${otHours} ชม.${otMins > 0 ? ` ${otMins} นาที` : ''})`;
-          text += `OT${otDurationInfo}: ฿${overtimePay}\n`;
-        }
-      }
-      if (!entry?.isLeave || entry?.leaveType === 'ลาครึ่งวัน') {
-        if (travelAllowance > 0) text += `- ค่ารถ: ฿${travelAllowance}\n`;
-        if (tollFee > 0) {
-          text += `- ทางด่วน`;
-          const tollDates: string[] = [];
-          if (entry?.tolls && entry.tolls.length > 0) {
-            entry.tolls.forEach(t => {
-              if (t.date) {
-                const fDate = format(parseISO(t.date), 'dd/MM/yy');
-                if (!tollDates.includes(fDate)) tollDates.push(fDate);
-              }
-            });
-          } else if (entry?.tollDate) {
-            tollDates.push(format(parseISO(entry.tollDate), 'dd/MM/yy'));
-          }
-
-          if (tollDates.length > 0) {
-            text += ` (บิลลงวันที่ ${tollDates.join(', ')})`;
-          }
-          text += `: ฿${tollFee}\n`;
-        }
-        if (entry?.guaranteeDeduction && entry.guaranteeDeduction > 0) text += `- หักเงินประกันสะสม: -฿${entry.guaranteeDeduction}\n`;
-      }
-
-      if (adjustments && adjustments.length > 0) {
-        adjustments.forEach(adj => {
-          const amountStr = adj.type === 'add' ? `+฿${Number(adj.amount)}` : `-฿${Math.abs(Number(adj.amount))}`;
-          const noteStr = adj.note ? ` (${adj.note})` : '';
-          text += `- อื่นๆ: ${amountStr}${noteStr}\n`;
-        });
-      }
-
-      text += `✅ ยอดสุทธิ: ฿${totalPay}`;
-
-      // Payment type note
-      const paymentType = worker.paymentType || 'day';
-      if (paymentType === 'month') text += `\n*รับเงินทุกสิ้นเดือน*`;
-      else if (paymentType === 'half-month') text += `\n*รับเงินกลางเดือน*`;
-
-      text += `\n\n`;
+      const workerText = formatDailyCopyText(worker, entry, formattedDate, true);
+      text += workerText + '\n\n';
     });
 
     handleCopy(text, 'all_detailed');

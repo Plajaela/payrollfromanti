@@ -65,10 +65,11 @@ export function WorkersPage({ onNavigateToDate }: { onNavigateToDate?: (date: st
     hasGuarantee: false,
     guaranteeLimit: 10000,
     lateRateRule: 'normal' as 'normal' | 'special',
+    copyLanguage: 'th' as 'th' | 'en',
   });
 
   const resetForm = () => {
-    setFormData({ name: '', baseWage: '', defaultTravelAllowance: '', shiftStart: '07:00', shiftEnd: '16:00', paymentType: 'day', monthlyWage: '', hasSocialSecurity: false, hasGuarantee: false, guaranteeLimit: 10000, lateRateRule: 'normal' });
+    setFormData({ name: '', baseWage: '', defaultTravelAllowance: '', shiftStart: '07:00', shiftEnd: '16:00', paymentType: 'day', monthlyWage: '', hasSocialSecurity: false, hasGuarantee: false, guaranteeLimit: 10000, lateRateRule: 'normal', copyLanguage: 'th' });
     setEditingId(null);
     setIsModalOpen(false);
   };
@@ -86,6 +87,7 @@ export function WorkersPage({ onNavigateToDate }: { onNavigateToDate?: (date: st
       hasGuarantee: worker.hasGuarantee || false,
       guaranteeLimit: worker.guaranteeLimit ?? 10000,
       lateRateRule: worker.lateRateRule || 'normal',
+      copyLanguage: worker.copyLanguage || 'th',
     });
     setEditingId(worker.id);
     setIsModalOpen(true);
@@ -107,6 +109,7 @@ export function WorkersPage({ onNavigateToDate }: { onNavigateToDate?: (date: st
       hasGuarantee: formData.hasGuarantee,
       guaranteeLimit: formData.guaranteeLimit,
       lateRateRule: formData.lateRateRule,
+      copyLanguage: formData.copyLanguage,
     };
 
     if (editingId) {
@@ -188,6 +191,9 @@ export function WorkersPage({ onNavigateToDate }: { onNavigateToDate?: (date: st
                               )}
                               <span className={`px-2 py-0.5 rounded-md shrink-0 ${worker.lateRateRule === 'special' ? 'bg-purple-50 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>
                                 หักสาย{worker.lateRateRule === 'special' ? 'อัตราพิเศษ' : 'ปกติ'}
+                              </span>
+                              <span className="bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/50 border border-amber-100 px-2 py-0.5 rounded-md shrink-0 flex items-center gap-1 font-medium">
+                                {worker.copyLanguage === 'en' ? '🌐 คัดลอก: EN' : '🌐 คัดลอก: TH'}
                               </span>
                             </div>
                             {worker.createdAt && (
@@ -541,6 +547,19 @@ export function WorkersPage({ onNavigateToDate }: { onNavigateToDate?: (date: st
             >
               <option value="normal">เรทปกติ (หัก 100 บาท/ชม.)</option>
               <option value="special">เรทพิเศษ {`(ไม่เกิน 15น. = 0บ., ไม่เกิน 45น. = 25บ., ไม่เกิน 60น. = 50บ.)`}</option>
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="copyLanguage">ภาษาสำหรับคัดลอกรายละเอียดรายวัน/รายงาน</Label>
+            <select
+              id="copyLanguage"
+              value={formData.copyLanguage}
+              onChange={(e) => setFormData({ ...formData, copyLanguage: e.target.value as 'th' | 'en' })}
+              className="w-full rounded-2xl border-0 bg-gray-100/80 px-4 py-3 text-base text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all appearance-none cursor-pointer"
+            >
+              <option value="th">ภาษาไทย (Default - TH)</option>
+              <option value="en">ภาษาอังกฤษ (English - EN)</option>
             </select>
           </div>
 

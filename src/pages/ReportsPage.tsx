@@ -217,27 +217,52 @@ export function ReportsPage() {
   };
 
   const handleCopySingle = (row: typeof reportData[0]) => {
+    const isEnglish = row.worker.copyLanguage === 'en';
     const formattedStart = formatDateThai(startDate);
     const formattedEnd = formatDateThai(endDate);
-    const dateRangeStr = startDate === endDate ? formattedStart : `${formattedStart} ถึง ${formattedEnd}`;
+    const dateRangeStr = startDate === endDate 
+      ? formattedStart 
+      : (isEnglish ? `${formattedStart} to ${formattedEnd}` : `${formattedStart} ถึง ${formattedEnd}`);
 
-    let text = `สรุปยอด ${row.worker.name} (วันที่ ${dateRangeStr})\n` +
-      `- วันทำงาน: ${row.totalDays} วัน${row.leaveDays > 0 ? ` (ลาหยุด ${row.leaveDays} วัน)` : ''}\n` +
-      `- ค่าแรง: ฿${row.totalBaseWage}\n` +
-      `- ค่ารถ: ฿${row.totalTravel}\n` +
-      `- โอที: ฿${row.totalOT}\n` +
-      `- หักสาย: -฿${row.totalLate}\n`;
+    let text = '';
+    if (isEnglish) {
+      text = `Summary for ${row.worker.name} (Date: ${dateRangeStr})\n` +
+        `- Working Days: ${row.totalDays} day${row.totalDays > 1 ? 's' : ''}${row.leaveDays > 0 ? ` (Leave: ${row.leaveDays} day${row.leaveDays > 1 ? 's' : ''})` : ''}\n` +
+        `- Wage: ฿${row.totalBaseWage}\n` +
+        `- Travel Allowance: ฿${row.totalTravel}\n` +
+        `- Overtime: ฿${row.totalOT}\n` +
+        `- Late Deduction: -฿${row.totalLate}\n`;
 
-    if (row.rangeGuaranteeDeduction > 0) {
-      text += `- หักประกันสะสมรอบนี้: -฿${row.rangeGuaranteeDeduction}\n`;
-    }
+      if (row.rangeGuaranteeDeduction > 0) {
+        text += `- Guarantee Deduction: -฿${row.rangeGuaranteeDeduction}\n`;
+      }
 
-    text += `- อื่นๆ: ฿${row.netAdjustments}\n` +
-      `📌 ยอดรวม: ฿${row.grandTotal}`;
+      text += `- Other: ฿${row.netAdjustments}\n` +
+        `📌 Total Gross: ฿${row.grandTotal}`;
 
-    if (row.advanceDeduction > 0) {
-      text += `\n❌ หักหนี้เบิกล่วงหน้า: -฿${row.advanceDeduction}\n` +
-      `✅ คงเหลือรับสุทธิ: ฿${row.finalPay}`;
+      if (row.advanceDeduction > 0) {
+        text += `\n❌ Cash Advance Deduction: -฿${row.advanceDeduction}\n` +
+        `✅ Net Paid: ฿${row.finalPay}`;
+      }
+    } else {
+      text = `สรุปยอด ${row.worker.name} (วันที่ ${dateRangeStr})\n` +
+        `- วันทำงาน: ${row.totalDays} วัน${row.leaveDays > 0 ? ` (ลาหยุด ${row.leaveDays} วัน)` : ''}\n` +
+        `- ค่าแรง: ฿${row.totalBaseWage}\n` +
+        `- ค่ารถ: ฿${row.totalTravel}\n` +
+        `- โอที: ฿${row.totalOT}\n` +
+        `- หักสาย: -฿${row.totalLate}\n`;
+
+      if (row.rangeGuaranteeDeduction > 0) {
+        text += `- หักประกันสะสมรอบนี้: -฿${row.rangeGuaranteeDeduction}\n`;
+      }
+
+      text += `- อื่นๆ: ฿${row.netAdjustments}\n` +
+        `📌 ยอดรวม: ฿${row.grandTotal}`;
+
+      if (row.advanceDeduction > 0) {
+        text += `\n❌ หักหนี้เบิกล่วงหน้า: -฿${row.advanceDeduction}\n` +
+        `✅ คงเหลือรับสุทธิ: ฿${row.finalPay}`;
+      }
     }
 
     handleCopy(text, row.worker.id);
@@ -300,12 +325,25 @@ export function ReportsPage() {
     let text = `📋 สรุปยอดช่างทุกคน (วันที่ ${dateRangeStr})\n\n`;
 
     reportData.forEach((row, index) => {
-      let workerText = `${index + 1}. ${row.worker.name}: ทำงาน ${row.totalDays} วัน${row.leaveDays > 0 ? ` (+ ลา ${row.leaveDays})` : ''} | รับสุทธิ ${row.finalPay}`;
-      if (row.advanceDeduction > 0) {
+      const isEnglish = row.worker.copyLanguage === 'en';
+      let workerText = '';
+
+      if (isEnglish) {
+        workerText = `${index + 1}. ${row.worker.name}: Worked ${row.totalDays} day${row.totalDays > 1 ? 's' : ''}${row.leaveDays > 0 ? ` (+ Leave ${row.leaveDays})` : ''} | Net Paid ฿${row.finalPay}`;
+        if (row.advanceDeduction > 0) {
+          workerText += ` (Total ฿${row.grandTotal} Deduct Advance ฿${row.advanceDeduction})`;
+        }
+        if (row.guaranteeTotal > 0) {
+          workerText += ` (Guarantee ฿${row.guaranteeTotal})`;
+        }
+      } else {
+        workerText = `${index + 1}. ${row.worker.name}: ทำงาน ${row.totalDays} วัน${row.leaveDays > 0 ? ` (+ ลา ${row.leaveDays})` : ''} | รับสุทธิ ${row.finalPay}`;
+        if (row.advanceDeduction > 0) {
           workerText += ` (รวม ${row.grandTotal} หักเบิก ${row.advanceDeduction})`;
-      }
-      if (row.guaranteeTotal > 0) {
-        workerText += ` (หักประกันสะสม ฿${row.guaranteeTotal})`;
+        }
+        if (row.guaranteeTotal > 0) {
+          workerText += ` (หักประกันสะสม ฿${row.guaranteeTotal})`;
+        }
       }
       text += workerText + '\n';
     });
