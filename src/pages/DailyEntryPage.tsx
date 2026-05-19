@@ -746,7 +746,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
       text += `👤 ${worker.name}\n`;
     } else {
       text += isEnglish
-        ? `📝 Daily payroll update for ${worker.name} (Date: ${formattedDate})\n`
+        ? `📝 Daily payroll for ${worker.name} (Date: ${formattedDate})\n`
         : `📝 แจ้งยอดรายวัน ${worker.name} (วันที่ ${formattedDate})\n`;
     }
 
@@ -781,7 +781,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
       const actualStart = clockIn > wStart ? clockIn : wStart;
       const actualEnd = clockOut < wEnd ? clockOut : wEnd;
       text += isEnglish
-        ? `Working Hours: ${actualStart} - ${actualEnd}  Wage: ฿${baseWage}\n`
+        ? `Working hrs. : ${actualStart} - ${actualEnd}  Total: ฿${baseWage}\n`
         : `เวลาทำงาน: ${actualStart} - ${actualEnd}  ค่าแรง: ฿${baseWage}\n`;
       if (lateDeduction > 0) {
         text += isEnglish
@@ -802,10 +802,10 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
         const mMins = morningOtMins % 60;
         const morningPay = (morningOtMins / 60) * 100;
         const durationStr = isEnglish
-          ? ` (${mHours} hr${mHours > 1 ? 's' : ''}${mMins > 0 ? ` ${mMins} min${mMins > 1 ? 's' : ''}` : ''})`
+          ? ` (${mHours} hr${(mHours === 0 || mHours === 1) ? '' : 's'}${mMins > 0 ? ` ${mMins} min${mMins === 1 ? '' : 's'}` : ''})`
           : ` (${mHours} ชม.${mMins > 0 ? ` ${mMins} นาที` : ''})`;
         text += isEnglish
-          ? `Morning OT ${clockIn}-${wStart}${durationStr}: ฿${morningPay.toFixed(0)}\n`
+          ? `OT ${clockIn}-${wStart}${durationStr}: ฿${morningPay.toFixed(0)}\n`
           : `OT เช้า ${clockIn}-${wStart}${durationStr}: ฿${morningPay.toFixed(0)}\n`;
       }
 
@@ -817,10 +817,10 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
         const eMins = eveningOtMins % 60;
         const eveningPay = (eveningOtMins / 60) * 100;
         const durationStr = isEnglish
-          ? ` (${eHours} hr${eHours > 1 ? 's' : ''}${eMins > 0 ? ` ${eMins} min${eMins > 1 ? 's' : ''}` : ''})`
+          ? ` (${eHours} hr${(eHours === 0 || eHours === 1) ? '' : 's'}${eMins > 0 ? ` ${eMins} min${eMins === 1 ? '' : 's'}` : ''})`
           : ` (${eHours} ชม.${eMins > 0 ? ` ${eMins} นาที` : ''})`;
         text += isEnglish
-          ? `Evening OT ${wEnd}-${clockOut}${durationStr}: ฿${eveningPay.toFixed(0)}\n`
+          ? `OT ${wEnd}-${clockOut}${durationStr}: ฿${eveningPay.toFixed(0)}\n`
           : `OT เย็น ${wEnd}-${clockOut}${durationStr}: ฿${eveningPay.toFixed(0)}\n`;
       }
 
@@ -828,7 +828,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
         const otHours = entry?.overtimeHours || 0;
         const otMins = entry?.overtimeMinutes || 0;
         const otDurationInfo = isEnglish
-          ? ` (${otHours} hr${otHours > 1 ? 's' : ''}${otMins > 0 ? ` ${otMins} min${otMins > 1 ? 's' : ''}` : ''})`
+          ? ` (${otHours} hr${(otHours === 0 || otHours === 1) ? '' : 's'}${otMins > 0 ? ` ${otMins} min${otMins === 1 ? '' : 's'}` : ''})`
           : ` (${otHours} ชม.${otMins > 0 ? ` ${otMins} นาที` : ''})`;
         text += `OT${otDurationInfo}: ฿${overtimePay}\n`;
       }
