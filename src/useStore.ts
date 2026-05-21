@@ -80,7 +80,8 @@ export function useStore() {
                   guarantee_limit: w.guaranteeLimit ?? 10000,
                   late_rate_rule: w.lateRateRule || 'normal',
                   is_resigned: w.isResigned || false,
-                  copy_language: w.copyLanguage || 'th'
+                  copy_language: w.copyLanguage || 'th',
+                  special_allowance: w.specialAllowance || 0
                 }))
               );
 
@@ -112,7 +113,8 @@ export function useStore() {
             lateRateRule: w.late_rate_rule || 'normal',
             createdAt: w.created_at,
             isResigned: w.is_resigned || false,
-            copyLanguage: w.copy_language || 'th'
+            copyLanguage: w.copy_language || 'th',
+            specialAllowance: Number(w.special_allowance) || 0
           }));
           setWorkers(formattedWorkers);
         }
@@ -360,7 +362,8 @@ export function useStore() {
         guarantee_limit: worker.guaranteeLimit ?? 10000,
         late_rate_rule: worker.lateRateRule || 'normal',
         is_resigned: worker.isResigned || false,
-        copy_language: worker.copyLanguage || 'th'
+        copy_language: worker.copyLanguage || 'th',
+        special_allowance: worker.specialAllowance || 0
       }]);
 
       if (error) throw error;
@@ -393,6 +396,7 @@ export function useStore() {
       if (updated.lateRateRule !== undefined) updateData.late_rate_rule = updated.lateRateRule;
       if (updated.isResigned !== undefined) updateData.is_resigned = updated.isResigned;
       if (updated.copyLanguage !== undefined) updateData.copy_language = updated.copyLanguage;
+      if (updated.specialAllowance !== undefined) updateData.special_allowance = updated.specialAllowance;
 
       const { error } = await supabase
         .from('workers')

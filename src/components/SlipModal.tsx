@@ -107,6 +107,7 @@ interface SlipModalProps {
     advanceDeduction?: number;
     socialSecurityDeduction?: number;
     finalPay?: number;
+    specialAllowanceAdded?: number;
   } | null;
 }
 
@@ -132,8 +133,11 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
   const absentDeduction = isMonthly ? 0 : absentDays * (data.worker.baseWage || 0);
   const expectedBaseWage = isMonthly ? (data.worker.monthlyWage || 0) : data.totalBaseWage + absentDeduction;
 
-  const potentialEarnings = expectedBaseWage + data.totalTravel + data.totalToll + data.totalOT + (data.netAdjustments > 0 ? data.netAdjustments : 0);
-  const totalDeductions = absentDeduction + data.totalLate + data.rangeGuaranteeDeduction + (data.netAdjustments < 0 ? Math.abs(data.netAdjustments) : 0) + (data.advanceDeduction || 0) + socialSecurityDeduction;
+  const specialAllowanceAmount = data.specialAllowanceAdded || 0;
+  const generalNetAdjustments = data.netAdjustments - specialAllowanceAmount;
+
+  const potentialEarnings = expectedBaseWage + data.totalTravel + data.totalToll + data.totalOT + specialAllowanceAmount + (generalNetAdjustments > 0 ? generalNetAdjustments : 0);
+  const totalDeductions = absentDeduction + data.totalLate + data.rangeGuaranteeDeduction + (generalNetAdjustments < 0 ? Math.abs(generalNetAdjustments) : 0) + (data.advanceDeduction || 0) + socialSecurityDeduction;
 
   const actualNetPay = data.finalPay !== undefined ? data.finalPay : data.grandTotal;
 
@@ -368,6 +372,12 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
                     <span className="text-gray-600">ค่าแรงเต็มจำนวน ({expectedDays} วัน)</span>
                     <span className="font-semibold text-gray-900">฿{expectedBaseWage.toLocaleString()}</span>
                   </div>
+                  {specialAllowanceAmount > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">ค่าชำนาญการพิเศษ</span>
+                      <span className="font-semibold text-emerald-600">+฿{specialAllowanceAmount.toLocaleString()}</span>
+                    </div>
+                  )}
                   {data.totalOT > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">ล่วงเวลา (OT)</span>
@@ -380,10 +390,10 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
                       <span className="font-semibold text-gray-900">฿{(data.totalTravel + data.totalToll).toLocaleString()}</span>
                     </div>
                   )}
-                  {data.netAdjustments > 0 && (
+                  {generalNetAdjustments > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">โบนัส/อื่นๆ</span>
-                      <span className="font-semibold text-emerald-600">+฿{data.netAdjustments.toLocaleString()}</span>
+                      <span className="font-semibold text-emerald-600">+฿{generalNetAdjustments.toLocaleString()}</span>
                     </div>
                   )}
                   <div className="flex justify-between items-center text-[15px] pt-2 pb-1 border-t-2 border-emerald-100 mt-2 bg-emerald-50/30 px-2 -mx-2 rounded-lg">
@@ -404,7 +414,7 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
                       <div className="pb-0.5">
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-600">หักขาดงาน ({absentDays} วัน)</span>
-                          <span className="font-semibold text-red-600">-฿{absentDeduction.toLocaleString()}</span>
+                           <span className="font-semibold text-red-600">-฿{absentDeduction.toLocaleString()}</span>
                         </div>
                       </div>
                     )}
@@ -420,10 +430,10 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
                         <span className="font-semibold text-red-600">-฿{data.rangeGuaranteeDeduction.toLocaleString()}</span>
                       </div>
                     )}
-                    {data.netAdjustments < 0 && (
+                    {generalNetAdjustments < 0 && (
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">หักอื่นๆ</span>
-                        <span className="font-semibold text-red-600">-฿{Math.abs(data.netAdjustments).toLocaleString()}</span>
+                        <span className="font-semibold text-red-600">-฿{Math.abs(generalNetAdjustments).toLocaleString()}</span>
                       </div>
                     )}
                     {data.advanceDeduction !== undefined && data.advanceDeduction > 0 && (

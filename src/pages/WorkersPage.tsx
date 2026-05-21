@@ -66,10 +66,11 @@ export function WorkersPage({ onNavigateToDate }: { onNavigateToDate?: (date: st
     guaranteeLimit: 10000,
     lateRateRule: 'normal' as 'normal' | 'special',
     copyLanguage: 'th' as 'th' | 'en',
+    specialAllowance: '',
   });
 
   const resetForm = () => {
-    setFormData({ name: '', baseWage: '', defaultTravelAllowance: '', shiftStart: '07:00', shiftEnd: '16:00', paymentType: 'day', monthlyWage: '', hasSocialSecurity: false, hasGuarantee: false, guaranteeLimit: 10000, lateRateRule: 'normal', copyLanguage: 'th' });
+    setFormData({ name: '', baseWage: '', defaultTravelAllowance: '', shiftStart: '07:00', shiftEnd: '16:00', paymentType: 'day', monthlyWage: '', hasSocialSecurity: false, hasGuarantee: false, guaranteeLimit: 10000, lateRateRule: 'normal', copyLanguage: 'th', specialAllowance: '' });
     setEditingId(null);
     setIsModalOpen(false);
   };
@@ -88,6 +89,7 @@ export function WorkersPage({ onNavigateToDate }: { onNavigateToDate?: (date: st
       guaranteeLimit: worker.guaranteeLimit ?? 10000,
       lateRateRule: worker.lateRateRule || 'normal',
       copyLanguage: worker.copyLanguage || 'th',
+      specialAllowance: (worker.specialAllowance || '').toString(),
     });
     setEditingId(worker.id);
     setIsModalOpen(true);
@@ -110,6 +112,7 @@ export function WorkersPage({ onNavigateToDate }: { onNavigateToDate?: (date: st
       guaranteeLimit: formData.guaranteeLimit,
       lateRateRule: formData.lateRateRule,
       copyLanguage: formData.copyLanguage,
+      specialAllowance: Number(formData.specialAllowance) || 0,
     };
 
     if (editingId) {
@@ -183,6 +186,12 @@ export function WorkersPage({ onNavigateToDate }: { onNavigateToDate?: (date: st
                                   ฿{worker.monthlyWage.toLocaleString()}
                                 </span>
                               )}
+                              {worker.specialAllowance && worker.specialAllowance > 0 ? (
+                                <span className="bg-amber-50 text-amber-700 border border-amber-100 px-2 py-0.5 rounded-md flex items-center gap-1 font-medium">
+                                  <Sparkles className="w-3 h-3 text-amber-600" />
+                                  ชำนาญการพิเศษ ฿{worker.specialAllowance.toLocaleString()}
+                                </span>
+                              ) : null}
                               {worker.hasSocialSecurity && (
                                 <span className="bg-purple-50 text-purple-700 px-2 py-0.5 rounded-md flex items-center gap-1">
                                   <ShieldCheck className="w-3 h-3" />
@@ -455,6 +464,22 @@ export function WorkersPage({ onNavigateToDate }: { onNavigateToDate?: (date: st
                 placeholder="เช่น 100"
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="specialAllowance" className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-500" />
+              ค่าชำนาญการพิเศษ (บาท/เดือน)
+            </Label>
+            <Input
+              id="specialAllowance"
+              type="number"
+              min="0"
+              value={formData.specialAllowance}
+              onChange={(e) => setFormData({ ...formData, specialAllowance: e.target.value })}
+              placeholder="เช่น 2000"
+              className="bg-amber-50/30 border-amber-100 focus:ring-amber-500"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">

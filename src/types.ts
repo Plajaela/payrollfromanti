@@ -30,6 +30,7 @@ export interface Worker {
   createdAt?: string;
   isResigned?: boolean;
   copyLanguage?: 'th' | 'en';
+  specialAllowance?: number;
 }
 
 export interface DailyEntry {

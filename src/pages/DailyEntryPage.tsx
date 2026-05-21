@@ -3,7 +3,7 @@ import { useStore } from '../useStore';
 import { Button, Input, Label, Card, Modal, Toast, Skeleton } from '../components/ui';
 import { format, addDays, subDays, isSunday, parseISO } from 'date-fns';
 import { th } from 'date-fns/locale';
-import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Settings2, RefreshCw, Copy, Check, Paperclip, ImagePlus, X, AlertTriangle, Loader2, Share2, Wallet, ArrowDownCircle, Send, Activity, CalendarOff, UserMinus, ChevronDown } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Settings2, RefreshCw, Copy, Check, Paperclip, ImagePlus, X, AlertTriangle, Loader2, Share2, Wallet, ArrowDownCircle, Send, Activity, CalendarOff, UserMinus, ChevronDown, Award } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../components/ui';
 import { v4 as uuidv4 } from 'uuid';
@@ -383,6 +383,31 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     handleSave(false);
+  };
+
+  const handleSpecialAllowanceToggle = (checked: boolean) => {
+    const worker = workers.find(w => w.id === formData.workerId);
+    if (!worker || !worker.specialAllowance) return;
+    
+    if (checked) {
+      const exists = formData.adjustments.some(a => a.note === 'ค่าชำนาญการพิเศษ');
+      if (!exists) {
+        setFormData(prev => ({
+          ...prev,
+          adjustments: [...prev.adjustments, {
+            id: uuidv4(),
+            type: 'add',
+            amount: worker.specialAllowance!,
+            note: 'ค่าชำนาญการพิเศษ'
+          }]
+        }));
+      }
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        adjustments: prev.adjustments.filter(a => a.note !== 'ค่าชำนาญการพิเศษ')
+      }));
+    }
   };
 
   const handleQuickUploadSlip = async (e: React.ChangeEvent<HTMLInputElement>, worker: typeof workers[0], entry: typeof entries[0] | undefined) => {
@@ -874,10 +899,11 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
     if (adjustments && adjustments.length > 0) {
       adjustments.forEach(adj => {
         const amountStr = adj.type === 'add' ? `+฿${Number(adj.amount)}` : `-฿${Math.abs(Number(adj.amount))}`;
-        const noteStr = adj.note ? ` (${adj.note})` : '';
-        text += isEnglish
-          ? `- Other: ${amountStr}${noteStr}\n`
-          : `- อื่นๆ: ${amountStr}${noteStr}\n`;
+        if (isEnglish) {
+          text += `- ${adj.note || 'Other'}: ${amountStr}\n`;
+        } else {
+          text += `- ${adj.note || 'อื่นๆ'}: ${amountStr}\n`;
+        }
       });
     }
 
@@ -2123,6 +2149,38 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
                 );
               })()}
 
+              {(() => {
+                const w = workers.find(w => w.id === formData.workerId);
+                if (!w?.specialAllowance || w.specialAllowance <= 0) return null;
+                if (formData.isLeave && formData.leaveType !== 'ลาครึ่งวัน') return null;
+
+                const hasSpecialAllowance = formData.adjustments.some(a => a.note === 'ค่าชำนาญการพิเศษ');
+
+                return (
+                  <div className="bg-amber-50/50 p-4 rounded-3xl border border-amber-100 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-amber-800 flex items-center gap-1.5">
+                          <Award className="w-4 h-4 text-amber-500" /> ค่าชำนาญการพิเศษ (ประจำเดือน)
+                        </span>
+                        <span className="text-[11px] text-amber-600 mt-0.5">
+                          ยอดเงินชำนาญการพิเศษที่ตั้งค่าไว้: ฿{w.specialAllowance.toLocaleString()} / เดือน
+                        </span>
+                      </div>
+                      <label className="relative inline-flex items-center ml-auto cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="sr-only peer"
+                          checked={hasSpecialAllowance}
+                          onChange={(e) => handleSpecialAllowanceToggle(e.target.checked)}
+                        />
+                        <div className="w-11 h-6 bg-amber-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                      </label>
+                    </div>
+                  </div>
+                );
+              })()}
+
             </div>
 
             <div className="space-y-6">
@@ -2281,15 +2339,14 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
                 )}
 
                 <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1 pb-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300">
-                  {formData.adjustments.map((adj, idx) => (
+                  {formData.adjustments.filter(a => a.note !== 'ค่าชำนาญการพิเศษ').map((adj) => (
                   <div key={adj.id} className="flex gap-2 items-start bg-gray-50 p-2.5 rounded-2xl border border-gray-100">
                     <div className="flex-1 space-y-1.5">
                       <div className="flex gap-2">
                         <select
                           value={adj.type}
                           onChange={(e) => {
-                            const newAdjs = [...formData.adjustments];
-                            newAdjs[idx].type = e.target.value as 'add' | 'deduct';
+                            const newAdjs = formData.adjustments.map(a => a.id === adj.id ? { ...a, type: e.target.value as 'add' | 'deduct' } : a);
                             setFormData(p => ({ ...p, adjustments: newAdjs }));
                           }}
                           className={`h-9 rounded-xl border-0 px-3 text-sm focus:ring-2 focus:ring-sky-500 font-medium ${adj.type === 'add' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
@@ -2302,8 +2359,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
                           placeholder="จำนวนเงิน"
                           value={adj.amount || ''}
                           onChange={(e) => {
-                            const newAdjs = [...formData.adjustments];
-                            newAdjs[idx].amount = Number(e.target.value);
+                            const newAdjs = formData.adjustments.map(a => a.id === adj.id ? { ...a, amount: Number(e.target.value) } : a);
                             setFormData(p => ({ ...p, adjustments: newAdjs }));
                           }}
                           className="h-9 text-sm bg-white"
@@ -2316,8 +2372,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
                           placeholder="ระบุหมายเหตุ (เช่น ค่ารถไปงานที่ 1, อื่นๆ)"
                           value={adj.note}
                           onChange={(e) => {
-                            const newAdjs = [...formData.adjustments];
-                            newAdjs[idx].note = e.target.value;
+                            const newAdjs = formData.adjustments.map(a => a.id === adj.id ? { ...a, note: e.target.value } : a);
                             setFormData(p => ({ ...p, adjustments: newAdjs }));
                           }}
                           className={`h-9 text-sm bg-white w-full ${adj.receiptUrl ? 'pr-20' : 'pr-8'}`}
@@ -2339,8 +2394,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
                               {lastCopiedUrl === adj.receiptUrl ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                             </button>
                             <button type="button" onClick={() => {
-                              const newAdjs = [...formData.adjustments];
-                              newAdjs[idx].receiptUrl = '';
+                              const newAdjs = formData.adjustments.map(a => a.id === adj.id ? { ...a, receiptUrl: '' } : a);
                               setFormData(p => ({ ...p, adjustments: newAdjs }));
                             }} className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors" title="ลบรูป">
                               <X className="w-3.5 h-3.5" />
@@ -2371,7 +2425,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
                     </button>
                   </div>
                 ))}
-                {formData.adjustments.length === 0 && (
+                {formData.adjustments.filter(a => a.note !== 'ค่าชำนาญการพิเศษ').length === 0 && (
                   <div className="text-sm text-gray-400 text-center py-2 border border-dashed border-gray-200 rounded-2xl">
                     ไม่มีรายการเพิ่มเติม
                   </div>

@@ -59,6 +59,7 @@ export function ReportsPage() {
       let totalOT = 0;
       let totalAdditions = 0;
       let totalDeductions = 0;
+      let specialAllowanceAdded = 0;
 
       const adjustmentsList: { note: string, amount: number, type: 'add' | 'deduct', date: string, receiptUrl?: string }[] = [];
 
@@ -94,10 +95,14 @@ export function ReportsPage() {
         }
         if (e.adjustments && e.adjustments.length > 0) {
           e.adjustments.forEach(a => {
-            if (a.type === 'add') {
-              totalAdditions += Number(a.amount);
+            if (a.note === 'ค่าชำนาญการพิเศษ') {
+              specialAllowanceAdded += Number(a.amount);
             } else {
-              totalDeductions += Number(a.amount);
+              if (a.type === 'add') {
+                totalAdditions += Number(a.amount);
+              } else {
+                totalDeductions += Number(a.amount);
+              }
             }
             adjustmentsList.push({
                note: a.note || (a.type === 'add' ? 'เพิ่มเงิน' : 'หักเงิน'),
@@ -110,7 +115,7 @@ export function ReportsPage() {
         }
       });
 
-      const netAdjustments = totalAdditions - totalDeductions + totalToll;
+      const netAdjustments = totalAdditions - totalDeductions + totalToll + specialAllowanceAdded;
 
       let grandTotal = isMonthly ? (worker.monthlyWage || 0) - socialSecurityDeduction : 0;
       let rangeGuaranteeDeduction = 0;
@@ -176,6 +181,7 @@ export function ReportsPage() {
         netAdjustments,
         adjustmentsList,
         grandTotal,
+        specialAllowanceAdded,
         leaveDays,
         sickDays,
         personalDays,
@@ -224,43 +230,79 @@ export function ReportsPage() {
       ? formattedStart 
       : (isEnglish ? `${formattedStart} to ${formattedEnd}` : `${formattedStart} ถึง ${formattedEnd}`);
 
+    const specialAllowanceAdded = (row as any).specialAllowanceAdded || 0;
+
+    // Group non-special-allowance adjustments by note, separate into additions and deductions
+    const additionItems: { note: string, amount: number }[] = [];
+    const deductionItems: { note: string, amount: number }[] = [];
+
+    // Tally by note
+    const groupedAdjustments: { [note: string]: number } = {};
+    row.adjustmentsList.forEach(adj => {
+      if (adj.note === 'ค่าชำนาญการพิเศษ') return;
+      const amt = adj.type === 'add' ? adj.amount : -adj.amount;
+      const key = isEnglish && adj.note === 'ค่าทางด่วน' ? 'Toll Fee' : adj.note;
+      groupedAdjustments[key] = (groupedAdjustments[key] || 0) + amt;
+    });
+
+    Object.entries(groupedAdjustments).forEach(([note, amount]) => {
+      if (amount === 0) return;
+      if (amount > 0) {
+        additionItems.push({ note, amount });
+      } else {
+        deductionItems.push({ note, amount: Math.abs(amount) });
+      }
+    });
+
     let text = '';
     if (isEnglish) {
-      text = `Summary for ${row.worker.name} (Date: ${dateRangeStr})\n` +
-        `- Working Days: ${row.totalDays} day${row.totalDays > 1 ? 's' : ''}${row.leaveDays > 0 ? ` (Leave: ${row.leaveDays} day${row.leaveDays > 1 ? 's' : ''})` : ''}\n` +
-        `- Wage: ฿${row.totalBaseWage}\n` +
-        `- Travel Allowance: ฿${row.totalTravel}\n` +
-        `- Overtime: ฿${row.totalOT}\n` +
-        `- Late Deduction: -฿${row.totalLate}\n`;
+      text = `Summary for ${row.worker.name} (Date: ${dateRangeStr})\n`;
+      text += `\n💰 Income:\n`;
+      text += `+ Wage: ฿${row.totalBaseWage}\n`;
+      if (row.totalTravel > 0) text += `+ Travel Allowance: ฿${row.totalTravel}\n`;
+      if (row.totalOT > 0) text += `+ Overtime: ฿${row.totalOT}\n`;
+      if (specialAllowanceAdded > 0) text += `+ Special Allowance: ฿${specialAllowanceAdded}\n`;
+      additionItems.forEach(({ note, amount }) => {
+        text += `+ ${note}: ฿${amount}\n`;
+      });
 
-      if (row.rangeGuaranteeDeduction > 0) {
-        text += `- Guarantee Deduction: -฿${row.rangeGuaranteeDeduction}\n`;
-      }
+      text += `\n💸 Deductions:\n`;
+      if (row.totalLate > 0) text += `- Late Deduction: ฿${row.totalLate}\n`;
+      if (row.rangeGuaranteeDeduction > 0) text += `- Guarantee Deduction: ฿${row.rangeGuaranteeDeduction}\n`;
+      deductionItems.forEach(({ note, amount }) => {
+        text += `- ${note}: ฿${amount}\n`;
+      });
 
-      text += `- Other: ฿${row.netAdjustments}\n` +
-        `📌 Total Gross: ฿${row.grandTotal}`;
+      text += `\n📌 Total: ฿${row.grandTotal}`;
+      if (row.leaveDays > 0) text += ` (Leave: ${row.leaveDays} day${row.leaveDays > 1 ? 's' : ''})`;
 
       if (row.advanceDeduction > 0) {
-        text += `\n❌ Cash Advance Deduction: -฿${row.advanceDeduction}\n` +
+        text += `\n- Cash Advance Deduction: ฿${row.advanceDeduction}\n` +
         `✅ Net Paid: ฿${row.finalPay}`;
       }
     } else {
-      text = `สรุปยอด ${row.worker.name} (วันที่ ${dateRangeStr})\n` +
-        `- วันทำงาน: ${row.totalDays} วัน${row.leaveDays > 0 ? ` (ลาหยุด ${row.leaveDays} วัน)` : ''}\n` +
-        `- ค่าแรง: ฿${row.totalBaseWage}\n` +
-        `- ค่ารถ: ฿${row.totalTravel}\n` +
-        `- โอที: ฿${row.totalOT}\n` +
-        `- หักสาย: -฿${row.totalLate}\n`;
+      text = `สรุปยอด ${row.worker.name} (วันที่ ${dateRangeStr})\n`;
+      text += `\n💰 รายรับ:\n`;
+      text += `+ ค่าแรง (${row.totalDays} วัน): ฿${row.totalBaseWage}\n`;
+      if (row.totalTravel > 0) text += `+ ค่ารถ: ฿${row.totalTravel}\n`;
+      if (row.totalOT > 0) text += `+ โอที: ฿${row.totalOT}\n`;
+      if (specialAllowanceAdded > 0) text += `+ ค่าชำนาญการพิเศษ: ฿${specialAllowanceAdded}\n`;
+      additionItems.forEach(({ note, amount }) => {
+        text += `+ ${note}: ฿${amount}\n`;
+      });
 
-      if (row.rangeGuaranteeDeduction > 0) {
-        text += `- หักประกันสะสมรอบนี้: -฿${row.rangeGuaranteeDeduction}\n`;
-      }
+      text += `\n💸 รายหัก:\n`;
+      if (row.totalLate > 0) text += `- หักสาย: ฿${row.totalLate}\n`;
+      if (row.rangeGuaranteeDeduction > 0) text += `- หักประกันสะสมรอบนี้: ฿${row.rangeGuaranteeDeduction}\n`;
+      deductionItems.forEach(({ note, amount }) => {
+        text += `- ${note}: ฿${amount}\n`;
+      });
 
-      text += `- อื่นๆ: ฿${row.netAdjustments}\n` +
-        `📌 ยอดรวม: ฿${row.grandTotal}`;
+      text += `\n📌 ยอดรวม: ฿${row.grandTotal}`;
+      if (row.leaveDays > 0) text += ` (ลาหยุด ${row.leaveDays} วัน)`;
 
       if (row.advanceDeduction > 0) {
-        text += `\n❌ หักหนี้เบิกล่วงหน้า: -฿${row.advanceDeduction}\n` +
+        text += `\n- หักหนี้เบิกล่วงหน้า: ฿${row.advanceDeduction}\n` +
         `✅ คงเหลือรับสุทธิ: ฿${row.finalPay}`;
       }
     }
@@ -392,7 +434,9 @@ export function ReportsPage() {
         entry.adjustments?.forEach(adj => {
           const amount = adj.type === 'add' ? Number(adj.amount) : -Number(adj.amount);
           const note = (adj.note || '').trim();
-          if (PRESETS.includes(note)) {
+          if (note === 'ค่าชำนาญการพิเศษ') {
+            // Isolate Special Allowance - do not put in general otherSums/presetSums
+          } else if (PRESETS.includes(note)) {
             presetSums[note] += amount;
           } else {
             otherSums += amount;
@@ -417,12 +461,14 @@ export function ReportsPage() {
       baseRow['รวมค่าทางด่วน'] = row.totalToll;
       baseRow['รวมหักมาสาย'] = row.totalLate;
       baseRow['รวมโอที'] = row.totalOT;
+      baseRow['ค่าชำนาญการพิเศษ'] = (row as any).specialAllowanceAdded || 0;
       baseRow['รวมอื่นๆ (สุทธิ)'] = otherSums;
       baseRow['หักประกันสะสม(ในรอบ)'] = row.rangeGuaranteeDeduction;
       baseRow['หักประกันสังคม'] = row.socialSecurityDeduction || 0;
       baseRow['ยอดประกันสะสมรวมทั้งหมด'] = row.guaranteeTotal || 0;
       baseRow['หักเบิกล่วงหน้า'] = row.advanceDeduction;
-      baseRow['ยอดสุทธิ(ในรอบ)'] = row.finalPay;
+      // ยอดสุทธิจริงๆ อยู่หลังสุด
+      baseRow['✅ ยอดสุทธิจริง (หลังหักทั้งหมด)'] = row.finalPay;
 
       return baseRow;
     });
@@ -447,12 +493,13 @@ export function ReportsPage() {
     grandTotalRow['รวมค่าทางด่วน'] = reportData.reduce((sum, r) => sum + r.totalToll, 0);
     grandTotalRow['รวมหักมาสาย'] = reportData.reduce((sum, r) => sum + r.totalLate, 0);
     grandTotalRow['รวมโอที'] = reportData.reduce((sum, r) => sum + r.totalOT, 0);
+    grandTotalRow['ค่าชำนาญการพิเศษ'] = reportData.reduce((sum, r) => sum + ((r as any).specialAllowanceAdded || 0), 0);
     grandTotalRow['รวมอื่นๆ (สุทธิ)'] = summaryRows.reduce((sum, r) => sum + (r['รวมอื่นๆ (สุทธิ)'] || 0), 0);
     grandTotalRow['หักประกันสะสม(ในรอบ)'] = reportData.reduce((sum, r) => sum + r.rangeGuaranteeDeduction, 0);
     grandTotalRow['หักประกันสังคม'] = reportData.reduce((sum, r) => sum + r.socialSecurityDeduction, 0);
     grandTotalRow['ยอดประกันสะสมรวมทั้งหมด'] = reportData.reduce((sum, r) => sum + r.guaranteeTotal, 0);
     grandTotalRow['หักเบิกล่วงหน้า'] = reportData.reduce((sum, r) => sum + r.advanceDeduction, 0);
-    grandTotalRow['ยอดสุทธิ(ในรอบ)'] = reportData.reduce((sum, r) => sum + r.finalPay, 0);
+    grandTotalRow['✅ ยอดสุทธิจริง (หลังหักทั้งหมด)'] = reportData.reduce((sum, r) => sum + r.finalPay, 0);
 
     XLSX.utils.sheet_add_json(wsSummary, [grandTotalRow], { skipHeader: true, origin: -1 });
 
@@ -484,6 +531,10 @@ export function ReportsPage() {
       if (!summaryData) return;
 
       const workerEntries = groupedByWorker[worker.id] || [];
+      const workEntries = workerEntries.filter(e => !e.isLeave || e.leaveType === 'ลาครึ่งวัน');
+      const lastWorkEntry = workEntries.length > 0 
+        ? workEntries.reduce((latest, current) => current.date > latest.date ? current : latest)
+        : null;
       const workerRows: any[] = [];
       let workerTotal = 0;
 
@@ -511,11 +562,11 @@ export function ReportsPage() {
           row['ทางด่วน'] = '';
           row['หักประกันสะสม'] = '';
           row['รวมอื่นๆ'] = '';
-          row['หักเบิกล่วงหน้า'] = '';
-          row['ยอดสุทธิ(หลังหักเบิก)'] = '';
           row['หมายเหตุอื่นๆ'] = '';
           row['สลิปโอนเงิน'] = '';
           row['สลิปทางด่วน'] = '';
+          row['หักเบิกล่วงหน้า'] = '';
+          row['✅ ยอดสุทธิจริง (หลังหักทั้งหมด)'] = '';
           workerRows.push(row);
           return;
         }
@@ -531,7 +582,9 @@ export function ReportsPage() {
             entry.adjustments?.forEach(a => {
               const amount = a.type === 'add' ? Number(a.amount) : -Number(a.amount);
               const note = (a.note || '').trim();
-              if (PRESETS.includes(note)) {
+              if (note === 'ค่าชำนาญการพิเศษ') {
+                // Isolate Special Allowance - do not put in general otherSums/presetSums
+              } else if (PRESETS.includes(note)) {
                 presetSums[note] += amount;
               } else {
                 otherSums += amount;
@@ -546,7 +599,7 @@ export function ReportsPage() {
             return '-';
           };
 
-          let notes = entry.adjustments?.map(a => {
+          let notes = entry.adjustments?.filter(a => a.note !== 'ค่าชำนาญการพิเศษ').map(a => {
             let s = `${a.note || 'ไม่มีหมายเหตุ'} (${a.type === 'add' ? '+' : '-'}${a.amount})`;
             if (a.receiptUrl && a.receiptUrl.startsWith('http')) {
               s += ` ${a.receiptUrl}`;
@@ -572,8 +625,6 @@ export function ReportsPage() {
               notes += (notes ? ', ' : '') + `ทางด่วนวันที่ ${tDates.join(', ')}`;
             }
           }
-
-          workerTotal += entry.totalPay || 0;
 
           const getLeaveText = (e: typeof entry) => {
             let str = e.leaveType || 'ลากิจ';
@@ -620,6 +671,15 @@ export function ReportsPage() {
             entryTotalPay += isHalfDay ? (entryBaseWage / 2) : entryBaseWage;
           }
 
+          const specialAllowanceAmount = entry.adjustments?.find(a => a.note === 'ค่าชำนาญการพิเศษ')?.amount || 0;
+
+          workerTotal += entryTotalPay;
+
+          let notesOrLeave = entry.isLeave ? getLeaveText(entry) : notes;
+          if (specialAllowanceAmount > 0) {
+            notesOrLeave = (notesOrLeave ? `${notesOrLeave}, ` : '') + `ค่าชำนาญการพิเศษ (+฿${specialAllowanceAmount.toLocaleString()})`;
+          }
+
           const row: any = {
             'วันที่': displayDate,
             'ชื่อช่าง': worker.name,
@@ -642,11 +702,11 @@ export function ReportsPage() {
           row['ทางด่วน'] = isFullLeave || isHalfDay || !entry.tollFee ? '' : entry.tollFee;
           row['หักประกันสะสม'] = isFullLeave || !entry.guaranteeDeduction ? '' : (isHalfDay ? -(entry.guaranteeDeduction / 2) : -entry.guaranteeDeduction);
           row['รวมอื่นๆ'] = isFullLeave || isHalfDay || !otherSums ? '' : otherSums;
-          row['หมายเหตุอื่นๆ'] = entry.isLeave ? getLeaveText(entry) : notes;
-          row['หักเบิกล่วงหน้า'] = '';
-          row['ยอดสุทธิ(หลังหักเบิก)'] = '';
+          row['หมายเหตุอื่นๆ'] = notesOrLeave;
           row['สลิปโอนเงิน'] = isFullLeave || !entry.transferSlipUrl ? '' : formatSlipUrl(entry.transferSlipUrl);
           row['สลิปทางด่วน'] = isFullLeave || isHalfDay || !entry.tollFee || !entry.tollReceiptUrl ? '' : formatSlipUrl(entry.tollReceiptUrl);
+          row['หักเบิกล่วงหน้า'] = '';
+          row['✅ ยอดสุทธิจริง (หลังหักทั้งหมด)'] = '';
 
           workerRows.push(row);
         });
@@ -675,17 +735,18 @@ export function ReportsPage() {
       workerTotalRow['รวมอื่นๆ'] = '';
       workerTotalRow['หมายเหตุอื่นๆ'] = '';
       workerTotalRow['ยอดสุทธิประจำวัน'] = worker.paymentType === 'month' ? summaryData.grandTotal : workerTotal;
-      workerTotalRow['หักเบิกล่วงหน้า'] = summaryData.advanceDeduction > 0 ? -summaryData.advanceDeduction : '';
-      workerTotalRow['ยอดสุทธิ(หลังหักเบิก)'] = summaryData.finalPay;
       workerTotalRow['สลิปโอนเงิน'] = '';
       workerTotalRow['สลิปทางด่วน'] = '';
+      workerTotalRow['หักเบิกล่วงหน้า'] = summaryData.advanceDeduction > 0 ? -summaryData.advanceDeduction : '';
+      workerTotalRow['✅ ยอดสุทธิจริง (หลังหักทั้งหมด)'] = summaryData.finalPay;
 
       workerRows.push(workerTotalRow);
 
       // Dynamically remove empty columns
       const alwaysShow = [
         'วันที่', 'ชื่อช่าง', 'เวลาทำงาน', 'จำนวนเวลาสาย', 'หักสาย', 'ค่าแรง',
-        'เวลาทำโอที', 'โอที', 'ค่ารถ', 'ยอดสุทธิประจำวัน', 'ประเภทการลา'
+        'เวลาทำโอที', 'โอที', 'ค่ารถ', 'ยอดสุทธิประจำวัน', 'ประเภทการลา',
+        '✅ ยอดสุทธิจริง (หลังหักทั้งหมด)'
       ];
       const allKeys = Object.keys(workerRows[0] || {});
 
@@ -707,8 +768,8 @@ export function ReportsPage() {
           'วันที่': 110, 'ชื่อช่าง': 100, 'เวลาทำงาน': 100, 'จำนวนเวลาสาย': 100, 'หักสาย': 80, 'ค่าแรง': 80,
           'เวลาทำโอที': 110, 'โอที': 60, 'ค่ารถ': 60, 'ยอดสุทธิประจำวัน': 100, 'ประเภทการลา': 120, 
           'ทางด่วน': 60, 'หักประกันสะสม': 90, 'รวมอื่นๆ': 80,
-          'หักเบิกล่วงหน้า': 100, 'ยอดสุทธิ(หลังหักเบิก)': 130,
-          'หมายเหตุอื่นๆ': 180, 'สลิปโอนเงิน': 100, 'สลิปทางด่วน': 100
+          'หมายเหตุอื่นๆ': 180, 'สลิปโอนเงิน': 100, 'สลิปทางด่วน': 100,
+          'หักเบิกล่วงหน้า': 100, '✅ ยอดสุทธิจริง (หลังหักทั้งหมด)': 160
         };
         const detailCols = remainingKeys.map(key => ({ wpx: customWidths[key] || 90 }));
         wsWorker['!cols'] = detailCols;
