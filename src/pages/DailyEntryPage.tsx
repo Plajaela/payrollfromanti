@@ -1918,10 +1918,18 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
       >
         <form onSubmit={handleSubmit} className="space-y-6">
           {customAllowanceMessage && (
-            <div className="bg-emerald-50 text-emerald-700 p-3 rounded-xl border border-emerald-100 flex items-center gap-2 text-sm font-medium">
-              <Award className="w-5 h-5 shrink-0" />
-              {customAllowanceMessage}
-            </div>
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="relative overflow-hidden bg-gradient-to-r from-emerald-500 to-teal-500 p-4 rounded-2xl shadow-lg shadow-emerald-500/25 flex items-center gap-4 border border-emerald-400/50"
+            >
+              <div className="bg-white/20 backdrop-blur-md p-2.5 rounded-xl text-white shadow-inner shrink-0">
+                <Award className="w-6 h-6" />
+              </div>
+              <span className="text-white font-medium text-base tracking-wide drop-shadow-sm">
+                {customAllowanceMessage}
+              </span>
+            </motion.div>
           )}
           <div className="flex flex-col gap-3 bg-red-50 p-4 rounded-2xl border border-red-100">
             <div className="flex items-center justify-between">
