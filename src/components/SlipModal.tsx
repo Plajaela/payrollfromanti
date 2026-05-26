@@ -107,7 +107,7 @@ interface SlipModalProps {
     advanceDeduction?: number;
     socialSecurityDeduction?: number;
     finalPay?: number;
-    specialAllowanceAdded?: number;
+
   } | null;
 }
 
@@ -133,10 +133,9 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
   const absentDeduction = isMonthly ? 0 : absentDays * (data.worker.baseWage || 0);
   const expectedBaseWage = isMonthly ? (data.worker.monthlyWage || 0) : data.totalBaseWage + absentDeduction;
 
-  const specialAllowanceAmount = data.specialAllowanceAdded || 0;
-  const generalNetAdjustments = data.netAdjustments - specialAllowanceAmount;
-
-  const potentialEarnings = expectedBaseWage + data.totalTravel + data.totalToll + data.totalOT + specialAllowanceAmount + (generalNetAdjustments > 0 ? generalNetAdjustments : 0);
+  const generalNetAdjustments = data.netAdjustments;
+  
+  const potentialEarnings = expectedBaseWage + data.totalTravel + data.totalToll + data.totalOT + (generalNetAdjustments > 0 ? generalNetAdjustments : 0);
   const totalDeductions = absentDeduction + data.totalLate + data.rangeGuaranteeDeduction + (generalNetAdjustments < 0 ? Math.abs(generalNetAdjustments) : 0) + (data.advanceDeduction || 0) + socialSecurityDeduction;
 
   const actualNetPay = data.finalPay !== undefined ? data.finalPay : data.grandTotal;
@@ -372,12 +371,7 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
                     <span className="text-gray-600">ค่าแรงเต็มจำนวน ({expectedDays} วัน)</span>
                     <span className="font-semibold text-gray-900">฿{expectedBaseWage.toLocaleString()}</span>
                   </div>
-                  {specialAllowanceAmount > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">ค่าชำนาญการพิเศษ</span>
-                      <span className="font-semibold text-emerald-600">+฿{specialAllowanceAmount.toLocaleString()}</span>
-                    </div>
-                  )}
+
                   {data.totalOT > 0 && (
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">ล่วงเวลา (OT)</span>

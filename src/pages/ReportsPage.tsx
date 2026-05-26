@@ -59,7 +59,7 @@ export function ReportsPage() {
       let totalOT = 0;
       let totalAdditions = 0;
       let totalDeductions = 0;
-      let specialAllowanceAdded = 0;
+
 
       const adjustmentsList: { note: string, amount: number, type: 'add' | 'deduct', date: string, receiptUrl?: string }[] = [];
 
@@ -95,14 +95,10 @@ export function ReportsPage() {
         }
         if (e.adjustments && e.adjustments.length > 0) {
           e.adjustments.forEach(a => {
-            if (a.note === 'ค่าชำนาญการพิเศษ') {
-              specialAllowanceAdded += Number(a.amount);
+            if (a.type === 'add') {
+              totalAdditions += Number(a.amount);
             } else {
-              if (a.type === 'add') {
-                totalAdditions += Number(a.amount);
-              } else {
-                totalDeductions += Number(a.amount);
-              }
+              totalDeductions += Number(a.amount);
             }
             adjustmentsList.push({
                note: a.note || (a.type === 'add' ? 'เพิ่มเงิน' : 'หักเงิน'),
@@ -115,7 +111,7 @@ export function ReportsPage() {
         }
       });
 
-      const netAdjustments = totalAdditions - totalDeductions + totalToll + specialAllowanceAdded;
+      const netAdjustments = totalAdditions - totalDeductions + totalToll;
 
       let grandTotal = isMonthly ? (worker.monthlyWage || 0) - socialSecurityDeduction : 0;
       let rangeGuaranteeDeduction = 0;
@@ -181,7 +177,7 @@ export function ReportsPage() {
         netAdjustments,
         adjustmentsList,
         grandTotal,
-        specialAllowanceAdded,
+
         leaveDays,
         sickDays,
         personalDays,
@@ -230,7 +226,7 @@ export function ReportsPage() {
       ? formattedStart 
       : (isEnglish ? `${formattedStart} to ${formattedEnd}` : `${formattedStart} ถึง ${formattedEnd}`);
 
-    const specialAllowanceAdded = (row as any).specialAllowanceAdded || 0;
+
 
     // Group non-special-allowance adjustments by note, separate into additions and deductions
     const additionItems: { note: string, amount: number }[] = [];
@@ -261,7 +257,7 @@ export function ReportsPage() {
       text += `+ Wage: ฿${row.totalBaseWage}\n`;
       if (row.totalTravel > 0) text += `+ Travel Allowance: ฿${row.totalTravel}\n`;
       if (row.totalOT > 0) text += `+ Overtime: ฿${row.totalOT}\n`;
-      if (specialAllowanceAdded > 0) text += `+ Special Allowance: ฿${specialAllowanceAdded}\n`;
+
       additionItems.forEach(({ note, amount }) => {
         text += `+ ${note}: ฿${amount}\n`;
       });
@@ -286,7 +282,7 @@ export function ReportsPage() {
       text += `+ ค่าแรง (${row.totalDays} วัน): ฿${row.totalBaseWage}\n`;
       if (row.totalTravel > 0) text += `+ ค่ารถ: ฿${row.totalTravel}\n`;
       if (row.totalOT > 0) text += `+ โอที: ฿${row.totalOT}\n`;
-      if (specialAllowanceAdded > 0) text += `+ ค่าชำนาญการพิเศษ: ฿${specialAllowanceAdded}\n`;
+
       additionItems.forEach(({ note, amount }) => {
         text += `+ ${note}: ฿${amount}\n`;
       });
@@ -461,7 +457,7 @@ export function ReportsPage() {
       baseRow['รวมค่าทางด่วน'] = row.totalToll;
       baseRow['รวมหักมาสาย'] = row.totalLate;
       baseRow['รวมโอที'] = row.totalOT;
-      baseRow['ค่าชำนาญการพิเศษ'] = (row as any).specialAllowanceAdded || 0;
+
       baseRow['รวมอื่นๆ (สุทธิ)'] = otherSums;
       baseRow['หักประกันสะสม(ในรอบ)'] = row.rangeGuaranteeDeduction;
       baseRow['หักประกันสังคม'] = row.socialSecurityDeduction || 0;
@@ -493,7 +489,7 @@ export function ReportsPage() {
     grandTotalRow['รวมค่าทางด่วน'] = reportData.reduce((sum, r) => sum + r.totalToll, 0);
     grandTotalRow['รวมหักมาสาย'] = reportData.reduce((sum, r) => sum + r.totalLate, 0);
     grandTotalRow['รวมโอที'] = reportData.reduce((sum, r) => sum + r.totalOT, 0);
-    grandTotalRow['ค่าชำนาญการพิเศษ'] = reportData.reduce((sum, r) => sum + ((r as any).specialAllowanceAdded || 0), 0);
+
     grandTotalRow['รวมอื่นๆ (สุทธิ)'] = summaryRows.reduce((sum, r) => sum + (r['รวมอื่นๆ (สุทธิ)'] || 0), 0);
     grandTotalRow['หักประกันสะสม(ในรอบ)'] = reportData.reduce((sum, r) => sum + r.rangeGuaranteeDeduction, 0);
     grandTotalRow['หักประกันสังคม'] = reportData.reduce((sum, r) => sum + r.socialSecurityDeduction, 0);
