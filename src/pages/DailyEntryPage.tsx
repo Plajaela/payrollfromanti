@@ -703,7 +703,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
     }
   };
 
-  const handleSave = (isDraft: boolean, closeModal = true) => {
+  const handleSave = async (isDraft: boolean, closeModal = true, showToast = true) => {
     if (!formData.workerId) return;
 
     const otRatePerHour = 100;
@@ -742,17 +742,36 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
     };
 
     if (editingId) {
-      updateEntry(editingId, entryData);
+      await updateEntry(editingId, entryData);
     } else {
-      addEntry(entryData);
+      const newId = await addEntry(entryData);
+      setEditingId(newId);
     }
-    // Trigger save animation & toast
-    setIsSaving(true);
-    setSaveToastVisible(true);
-    setTimeout(() => setIsSaving(false), 300);
-    setTimeout(() => setSaveToastVisible(false), 1000);
+    
+    if (showToast) {
+      // Trigger save animation & toast
+      setIsSaving(true);
+      setSaveToastVisible(true);
+      setTimeout(() => setIsSaving(false), 300);
+      setTimeout(() => setSaveToastVisible(false), 1000);
+    }
     if (closeModal) setIsModalOpen(false);
   };
+
+  // Auto-save draft when form changes
+  useEffect(() => {
+    if (!isModalOpen || !formData.workerId) return;
+
+    const timer = setTimeout(() => {
+      // Only auto-save if it doesn't revert a finalized entry to a draft
+      const isCurrentlyDraft = editingId ? (entries.find(e => e.id === editingId)?.isDraft ?? true) : true;
+      handleSave(isCurrentlyDraft, false, false);
+    }, 1500);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData, isModalOpen]);
+
   const handleCopy = async (text: string, id: string) => {
     try {
       await navigator.clipboard.writeText(text);
