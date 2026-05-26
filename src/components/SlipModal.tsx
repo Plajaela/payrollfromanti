@@ -274,15 +274,23 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
   const handleCopyImage = async () => {
     if (!generatedImage) return;
     try {
-      const response = await fetch(generatedImage);
-      const blob = await response.blob();
-
       // Feature check for clipboard image copying
       if (!window.ClipboardItem) {
         throw new Error("ClipboardItem not supported");
       }
 
-      const item = new ClipboardItem({ 'image/png': blob });
+      // Convert data URL to Blob synchronously to avoid browser blocking async clipboard writes
+      const arr = generatedImage.split(',');
+      const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/png';
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      const blob = new Blob([u8arr], { type: mime });
+
+      const item = new ClipboardItem({ [mime]: blob });
       await navigator.clipboard.write([item]);
       alert('คัดลอกรูปภาพเรียบร้อยแล้ว! สามารถกดวาง (Paste) ในแชทไลน์ได้เลยครับ');
     } catch (error) {
