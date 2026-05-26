@@ -439,9 +439,9 @@ export function DashboardPage() {
                 className="h-full bg-gradient-to-r from-amber-500 to-orange-400 transition-all duration-1000 ease-out delay-200" 
                 style={{ width: `${(stats.breakdown.travel / stats.totalBreakdown) * 100}%` }} 
               />
-              <div 
-                className="h-full bg-gradient-to-r from-rose-500 to-red-400 rounded-r-xl transition-all duration-1000 ease-out delay-300" 
-                style={{ width: `${(stats.breakdown.others / stats.totalBreakdown) * 100}%` }} 
+              <div
+                className="h-full bg-gradient-to-r from-rose-500 to-red-400 rounded-r-xl transition-all duration-1000 ease-out delay-300"
+                style={{ width: `${(stats.breakdown.adjustments / stats.totalBreakdown) * 100}%` }}
               />
             </div>
 

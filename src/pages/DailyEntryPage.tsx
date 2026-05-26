@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useStore } from '../useStore';
 import { Button, Input, Label, Card, Modal, Toast, Skeleton } from '../components/ui';
-import { format, addDays, subDays, isSunday, parseISO } from 'date-fns';
+import { format, addDays, subDays, isSunday, parseISO, endOfMonth, previousSaturday, isSaturday } from 'date-fns';
 import { th } from 'date-fns/locale';
 import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Plus, Trash2, Settings2, RefreshCw, Copy, Check, Paperclip, ImagePlus, X, AlertTriangle, Loader2, Share2, Wallet, ArrowDownCircle, Send, Activity, CalendarOff, UserMinus, ChevronDown, Award } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -48,6 +48,8 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
   const [shareProgress, setShareProgress] = useState<{current: number, total: number} | null>(null);
   const [isAdvanceModalOpen, setIsAdvanceModalOpen] = useState(false);
   const [showLeaveDropdown, setShowLeaveDropdown] = useState(false);
+  const [customAllowanceMessage, setCustomAllowanceMessage] = useState<string | null>(null);
+  const [autoDraftPending, setAutoDraftPending] = useState(false);
   const [advanceFormData, setAdvanceFormData] = useState({
     workerId: '',
     workerName: '',
@@ -306,6 +308,36 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
     const limit = worker.guaranteeLimit ?? 10000;
     const capRemaining = Math.max(0, limit - guaranteeTotal);
 
+    const currentDateParsed = parseISO(dateStr);
+    const lastSat = isSaturday(endOfMonth(currentDateParsed)) ? endOfMonth(currentDateParsed) : previousSaturday(endOfMonth(currentDateParsed));
+    const isLastSaturday = format(lastSat, 'yyyy-MM-dd') === dateStr;
+    const currentMonthPrefix = dateStr.substring(0, 7);
+
+    const hasAutoAllowanceThisMonth = entries.find(e => 
+      e.workerId === worker.id && 
+      e.date.startsWith(currentMonthPrefix) && 
+      e.adjustments?.some((a: any) => a.note?.startsWith('[อัตโนมัติ]'))
+    );
+
+    let autoAddedMessage = null;
+    let injectedAdjustments: any[] = [];
+    let isAutoAddingNow = false;
+
+    if (hasAutoAllowanceThisMonth) {
+      autoAddedMessage = `เพิ่มค่าอื่นๆ ประจำเดือนอัตโนมัติไปแล้วเมื่อวันที่ ${format(parseISO(hasAutoAllowanceThisMonth.date), 'd MMM yyyy', { locale: th })}`;
+    } else if (isLastSaturday && worker.customAllowances && worker.customAllowances.length > 0) {
+      injectedAdjustments = worker.customAllowances.map((ca: any) => ({
+        id: uuidv4(),
+        type: 'add' as const,
+        amount: Number(ca.amount),
+        note: `[อัตโนมัติ] ${ca.name}`
+      }));
+      autoAddedMessage = `เพิ่มค่าอื่นๆ ประจำเดือน ${worker.customAllowances.length} รายการ (บันทึกเป็นแบบร่างอัตโนมัติ)`;
+      isAutoAddingNow = true;
+    }
+
+    setCustomAllowanceMessage(autoAddedMessage);
+
     if (existingEntry) {
       let editTolls = existingEntry.tolls || [];
       if (editTolls.length === 0 && existingEntry.tollFee > 0) {
@@ -330,7 +362,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
         lateDeduction: existingEntry.lateDeduction,
         overtimeHours: existingEntry.overtimeHours,
         overtimeMinutes: existingEntry.overtimeMinutes,
-        adjustments: existingEntry.adjustments || [],
+        adjustments: existingEntry.adjustments ? [...existingEntry.adjustments, ...injectedAdjustments] : injectedAdjustments,
         note: existingEntry.note || '',
         transferSlipUrl: existingEntry.transferSlipUrl || '',
         transferSlips: (existingEntry.transferSlips && existingEntry.transferSlips.length > 0) ? existingEntry.transferSlips : (existingEntry.transferSlipUrl ? [existingEntry.transferSlipUrl] : []),
@@ -361,7 +393,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
         lateDeduction: 0,
         overtimeHours: 0,
         overtimeMinutes: 0,
-        adjustments: [],
+        adjustments: injectedAdjustments,
         note: '',
         transferSlipUrl: '',
         transferSlips: [],
@@ -378,37 +410,24 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
       setEditingId(null);
     }
     setIsModalOpen(true);
+    if (isAutoAddingNow) {
+      setAutoDraftPending(true);
+    }
   };
+
+  useEffect(() => {
+    if (autoDraftPending && isModalOpen) {
+      handleSave(true, false);
+      setAutoDraftPending(false);
+    }
+  }, [autoDraftPending, isModalOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     handleSave(false);
   };
 
-  const handleSpecialAllowanceToggle = (checked: boolean) => {
-    const worker = workers.find(w => w.id === formData.workerId);
-    if (!worker || !worker.specialAllowance) return;
-    
-    if (checked) {
-      const exists = formData.adjustments.some(a => a.note === 'ค่าชำนาญการพิเศษ');
-      if (!exists) {
-        setFormData(prev => ({
-          ...prev,
-          adjustments: [...prev.adjustments, {
-            id: uuidv4(),
-            type: 'add',
-            amount: worker.specialAllowance!,
-            note: 'ค่าชำนาญการพิเศษ'
-          }]
-        }));
-      }
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        adjustments: prev.adjustments.filter(a => a.note !== 'ค่าชำนาญการพิเศษ')
-      }));
-    }
-  };
+
 
   const handleQuickUploadSlip = async (e: React.ChangeEvent<HTMLInputElement>, worker: typeof workers[0], entry: typeof entries[0] | undefined) => {
     e.stopPropagation();
@@ -684,7 +703,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
     }
   };
 
-  const handleSave = (isDraft: boolean) => {
+  const handleSave = (isDraft: boolean, closeModal = true) => {
     if (!formData.workerId) return;
 
     const otRatePerHour = 100;
@@ -732,7 +751,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
     setSaveToastVisible(true);
     setTimeout(() => setIsSaving(false), 300);
     setTimeout(() => setSaveToastVisible(false), 1000);
-    setIsModalOpen(false);
+    if (closeModal) setIsModalOpen(false);
   };
   const handleCopy = async (text: string, id: string) => {
     try {
@@ -1872,7 +1891,6 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
         </div>
       </div>
 
-      {/* Entry Form Modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -1880,6 +1898,12 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
         maxWidth="max-w-4xl"
       >
         <form onSubmit={handleSubmit} className="space-y-6">
+          {customAllowanceMessage && (
+            <div className="bg-emerald-50 text-emerald-700 p-3 rounded-xl border border-emerald-100 flex items-center gap-2 text-sm font-medium">
+              <Award className="w-5 h-5 shrink-0" />
+              {customAllowanceMessage}
+            </div>
+          )}
           <div className="flex flex-col gap-3 bg-red-50 p-4 rounded-2xl border border-red-100">
             <div className="flex items-center justify-between">
               <div className="flex flex-col">
@@ -2149,37 +2173,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
                 );
               })()}
 
-              {(() => {
-                const w = workers.find(w => w.id === formData.workerId);
-                if (!w?.specialAllowance || w.specialAllowance <= 0) return null;
-                if (formData.isLeave && formData.leaveType !== 'ลาครึ่งวัน') return null;
 
-                const hasSpecialAllowance = formData.adjustments.some(a => a.note === 'ค่าชำนาญการพิเศษ');
-
-                return (
-                  <div className="bg-amber-50/50 p-4 rounded-3xl border border-amber-100 flex flex-col gap-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-amber-800 flex items-center gap-1.5">
-                          <Award className="w-4 h-4 text-amber-500" /> ค่าชำนาญการพิเศษ (ประจำเดือน)
-                        </span>
-                        <span className="text-[11px] text-amber-600 mt-0.5">
-                          ยอดเงินชำนาญการพิเศษที่ตั้งค่าไว้: ฿{w.specialAllowance.toLocaleString()} / เดือน
-                        </span>
-                      </div>
-                      <label className="relative inline-flex items-center ml-auto cursor-pointer">
-                        <input
-                          type="checkbox"
-                          className="sr-only peer"
-                          checked={hasSpecialAllowance}
-                          onChange={(e) => handleSpecialAllowanceToggle(e.target.checked)}
-                        />
-                        <div className="w-11 h-6 bg-amber-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
-                      </label>
-                    </div>
-                  </div>
-                );
-              })()}
 
             </div>
 
@@ -2339,7 +2333,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
                 )}
 
                 <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1 pb-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300">
-                  {formData.adjustments.filter(a => a.note !== 'ค่าชำนาญการพิเศษ').map((adj) => (
+                  {formData.adjustments.map((adj) => (
                   <div key={adj.id} className="flex gap-2 items-start bg-gray-50 p-2.5 rounded-2xl border border-gray-100">
                     <div className="flex-1 space-y-1.5">
                       <div className="flex gap-2">
@@ -2425,7 +2419,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
                     </button>
                   </div>
                 ))}
-                {formData.adjustments.filter(a => a.note !== 'ค่าชำนาญการพิเศษ').length === 0 && (
+                {formData.adjustments.length === 0 && (
                   <div className="text-sm text-gray-400 text-center py-2 border border-dashed border-gray-200 rounded-2xl">
                     ไม่มีรายการเพิ่มเติม
                   </div>

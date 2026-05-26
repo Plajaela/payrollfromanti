@@ -2,7 +2,7 @@ export interface Adjustment {
   id: string;
   type: 'add' | 'deduct';
   amount: number;
-  note: string;
+  note?: string;
   receiptUrl?: string;
 }
 
@@ -11,6 +11,12 @@ export interface TollEntry {
   amount: number;
   receiptUrl?: string;
   date?: string;
+}
+
+export interface CustomAllowance {
+  id: string;
+  name: string;
+  amount: number;
 }
 
 export interface Worker {
@@ -31,6 +37,7 @@ export interface Worker {
   isResigned?: boolean;
   copyLanguage?: 'th' | 'en';
   specialAllowance?: number;
+  customAllowances?: CustomAllowance[];
 }
 
 export interface DailyEntry {

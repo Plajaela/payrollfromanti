@@ -114,7 +114,8 @@ export function useStore() {
             createdAt: w.created_at,
             isResigned: w.is_resigned || false,
             copyLanguage: w.copy_language || 'th',
-            specialAllowance: Number(w.special_allowance) || 0
+            specialAllowance: Number(w.special_allowance) || 0,
+            customAllowances: w.custom_allowances || []
           }));
           setWorkers(formattedWorkers);
         }
@@ -363,7 +364,8 @@ export function useStore() {
         late_rate_rule: worker.lateRateRule || 'normal',
         is_resigned: worker.isResigned || false,
         copy_language: worker.copyLanguage || 'th',
-        special_allowance: worker.specialAllowance || 0
+        special_allowance: worker.specialAllowance || 0,
+        custom_allowances: worker.customAllowances || []
       }]);
 
       if (error) throw error;
@@ -397,6 +399,7 @@ export function useStore() {
       if (updated.isResigned !== undefined) updateData.is_resigned = updated.isResigned;
       if (updated.copyLanguage !== undefined) updateData.copy_language = updated.copyLanguage;
       if (updated.specialAllowance !== undefined) updateData.special_allowance = updated.specialAllowance;
+      if (updated.customAllowances !== undefined) updateData.custom_allowances = updated.customAllowances;
 
       const { error } = await supabase
         .from('workers')
