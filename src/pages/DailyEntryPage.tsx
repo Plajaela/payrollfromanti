@@ -42,6 +42,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
   const [lalamoveDist, setLalamoveDist] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
   const isUploadingRef = useRef(false);
+  const hasUserEditedRef = useRef(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveToastVisible, setSaveToastVisible] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
@@ -410,6 +411,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
       });
       setEditingId(null);
     }
+    hasUserEditedRef.current = false;
     setIsModalOpen(true);
     if (isAutoAddingNow) {
       setAutoDraftPending(true);
@@ -787,6 +789,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
   // Auto-save draft when form changes
   useEffect(() => {
     if (!isModalOpen || !formData.workerId || isUploading) return;
+    if (!hasUserEditedRef.current) return;
 
     const timer = setTimeout(() => {
       // Double-check ref as a synchronous guard against React batching edge cases
@@ -1944,7 +1947,28 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
         title={formData.workerName}
         maxWidth="max-w-4xl"
       >
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-6"
+          onChange={() => {
+            hasUserEditedRef.current = true;
+          }}
+          onInput={() => {
+            hasUserEditedRef.current = true;
+          }}
+          onClick={(e) => {
+            const target = e.target as HTMLElement;
+            if (
+              target.closest('button') ||
+              target.closest('input') ||
+              target.closest('label') ||
+              target.closest('select') ||
+              target.closest('textarea')
+            ) {
+              hasUserEditedRef.current = true;
+            }
+          }}
+        >
           {customAllowanceMessage && (
             <motion.div 
               initial={{ opacity: 0, y: -10 }}
