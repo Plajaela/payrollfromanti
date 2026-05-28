@@ -266,13 +266,93 @@ export function useStore() {
 
     fetchEntries();
 
+    const mapEntry = (e: any): DailyEntry => ({
+      id: e.id,
+      workerId: e.worker_id,
+      date: e.date,
+      clockIn: e.clock_in,
+      clockOut: e.clock_out,
+      baseWage: Number(e.base_wage),
+      travelAllowance: Number(e.travel_allowance),
+      tollFee: Number(e.toll_fee),
+      lateDeduction: Number(e.late_deduction),
+      overtimeHours: Number(e.overtime_hours),
+      overtimeMinutes: Number(e.overtime_minutes),
+      overtimePay: Number(e.overtime_pay),
+      adjustments: e.adjustments,
+      totalPay: Number(e.total_pay),
+      note: e.note,
+      isDraft: e.is_draft,
+      isLeave: e.is_leave,
+      leaveType: e.leave_type,
+      leaveNote: e.leave_note,
+      transferSlipUrl: e.transfer_slip_url,
+      transferSlips: (e.transfer_slips && e.transfer_slips.length > 0) ? e.transfer_slips : (e.transfer_slip_url ? [e.transfer_slip_url] : []),
+      tollReceiptUrl: e.toll_receipt_url,
+      tollDate: e.toll_date,
+      tolls: e.tolls || [],
+      guaranteeDeduction: Number(e.guarantee_deduction) || 0,
+      lateRateRule: e.late_rate_rule || 'normal'
+    });
+
     const subscription = supabase
       .channel('entries_channel')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'daily_entries' },
-        () => {
-          fetchEntries();
+        { event: 'INSERT', schema: 'public', table: 'daily_entries' },
+        (payload) => {
+          const newEntry = mapEntry(payload.new);
+          setEntries(prev => {
+            // Only add if not already present (avoids duplicates from optimistic add)
+            if (prev.some(e => e.id === newEntry.id)) return prev;
+            return [newEntry, ...prev];
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'daily_entries' },
+        (payload) => {
+          const updated = mapEntry(payload.new);
+          setEntries(prev => prev.map(existing => {
+            if (existing.id !== updated.id) return existing;
+            // Protect locally-added slip URLs from being overwritten by stale server data.
+            // If local state has slips but server payload doesn't, keep local version.
+            const mergedSlips = (updated.transferSlips && updated.transferSlips.length > 0)
+              ? updated.transferSlips
+              : existing.transferSlips;
+            const mergedSlipUrl = (updated.transferSlipUrl)
+              ? updated.transferSlipUrl
+              : existing.transferSlipUrl;
+            const mergedTollReceipt = (updated.tollReceiptUrl)
+              ? updated.tollReceiptUrl
+              : existing.tollReceiptUrl;
+            // For adjustments, keep the version with more receipt URLs filled in
+            const existingReceiptCount = (existing.adjustments || []).filter(a => a.receiptUrl).length;
+            const updatedReceiptCount = (updated.adjustments || []).filter((a: any) => a.receiptUrl).length;
+            const mergedAdjustments = updatedReceiptCount >= existingReceiptCount
+              ? updated.adjustments
+              : existing.adjustments;
+
+            return {
+              ...existing,
+              ...updated,
+              transferSlips: mergedSlips,
+              transferSlipUrl: mergedSlipUrl,
+              tollReceiptUrl: mergedTollReceipt,
+              adjustments: mergedAdjustments,
+            };
+          }));
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'daily_entries' },
+        (payload) => {
+          const deletedId = (payload.old as any)?.id;
+          if (deletedId) {
+            setEntries(prev => prev.filter(e => e.id !== deletedId));
+          }
         }
       )
       .subscribe();

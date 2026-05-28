@@ -41,6 +41,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
   const [showLalamoveCalc, setShowLalamoveCalc] = useState(false);
   const [lalamoveDist, setLalamoveDist] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
+  const isUploadingRef = useRef(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveToastVisible, setSaveToastVisible] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
@@ -436,6 +437,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
 
     try {
       setIsUploading(true);
+      isUploadingRef.current = true;
       const publicUrls: string[] = [];
       const files = Array.from(filesList) as File[];
 
@@ -487,7 +489,10 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
       }
 
       if (entry) {
-        const newSlips = [...(entry.transferSlips || []), ...publicUrls];
+        // Read the LATEST entry data from state to avoid stale closure reads
+        const latestEntry = entries.find(ent => ent.id === entry.id);
+        const existingSlips = latestEntry?.transferSlips || entry.transferSlips || [];
+        const newSlips = [...existingSlips, ...publicUrls];
         await updateEntry(entry.id, { 
           transferSlipUrl: newSlips[0] || '',
           transferSlips: newSlips 
@@ -523,6 +528,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
       alert('เกิดข้อผิดพลาดในการอัพโหลดรูปภาพ กรุณาลองใหม่อีกครั้ง');
     } finally {
       setIsUploading(false);
+      isUploadingRef.current = false;
       e.target.value = '';
     }
   };
@@ -580,13 +586,14 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
     let file = e.target.files?.[0];
     if (!file) return;
 
+    setIsUploading(true);
+    isUploadingRef.current = true;
+
     if (file.type.startsWith('image/')) {
-      setIsUploading(true);
       file = await compressImage(file);
     }
 
     try {
-      setIsUploading(true);
       const fileExt = file.name.split('.').pop();
       const fileName = `${uuidv4()}.${fileExt}`;
       const filePath = `${formData.workerId || 'unknown'}/${fileName}`;
@@ -606,13 +613,21 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
       const publicUrl = publicUrlData.publicUrl;
 
       if (field === 'transferSlipUrl') {
-        const newSlips = [...formData.transferSlips, publicUrl];
-        setFormData(prev => ({ ...prev, transferSlipUrl: newSlips[0] || '', transferSlips: newSlips }));
+        // Use functional update to always read the LATEST transferSlips array,
+        // preventing stale reads when multiple files are uploaded rapidly.
+        let latestSlips: string[] = [];
+        setFormData(prev => {
+          latestSlips = [...prev.transferSlips, publicUrl];
+          return { ...prev, transferSlipUrl: latestSlips[0] || '', transferSlips: latestSlips };
+        });
         
+        // Wait one tick for setFormData to flush so latestSlips is populated
+        await new Promise(r => setTimeout(r, 0));
+
         if (editingId) {
           await updateEntry(editingId, { 
-            transferSlipUrl: newSlips[0] || '',
-            transferSlips: newSlips 
+            transferSlipUrl: latestSlips[0] || '',
+            transferSlips: latestSlips 
           });
         }
 
@@ -627,7 +642,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
             
             fetch(webhookUrl, {
               method: 'POST',
-              mode: 'no-cors', // Ignore CORS block from Google Apps Script
+              mode: 'no-cors',
               headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
               body: driveFormData.toString()
             }).catch(e => console.error("Webhook error:", e));
@@ -640,56 +655,67 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
         setFormData(prev => ({ ...prev, tollReceiptUrl: publicUrl }));
         if (editingId) await updateEntry(editingId, { tollReceiptUrl: publicUrl });
       } else if (field === 'adjustments' && adjId) {
-        const newAdjustments = formData.adjustments.map(a => a.id === adjId ? { ...a, receiptUrl: publicUrl } : a);
-        setFormData(prev => ({ ...prev, adjustments: newAdjustments }));
-        if (editingId) await updateEntry(editingId, { adjustments: newAdjustments });
+        let latestAdjustments: any[] = [];
+        setFormData(prev => {
+          latestAdjustments = prev.adjustments.map(a => a.id === adjId ? { ...a, receiptUrl: publicUrl } : a);
+          return { ...prev, adjustments: latestAdjustments };
+        });
+        await new Promise(r => setTimeout(r, 0));
+        if (editingId) await updateEntry(editingId, { adjustments: latestAdjustments });
       } else if (field === 'tolls' && adjId) {
-        const newTolls = formData.tolls.map(t => t.id === adjId ? { ...t, receiptUrl: publicUrl } : t);
-        setFormData(prev => ({ ...prev, tolls: newTolls }));
-        if (editingId) await updateEntry(editingId, { tolls: newTolls });
+        let latestTolls: any[] = [];
+        setFormData(prev => {
+          latestTolls = prev.tolls.map(t => t.id === adjId ? { ...t, receiptUrl: publicUrl } : t);
+          return { ...prev, tolls: latestTolls };
+        });
+        await new Promise(r => setTimeout(r, 0));
+        if (editingId) await updateEntry(editingId, { tolls: latestTolls });
       }
 
       // Auto-save logic if it's a new entry (not yet saved)
       if (!editingId) {
-        // Build the latest data representation mixing stale form + new slip
-        const updatedTransferSlips = field === 'transferSlipUrl' ? [...formData.transferSlips, publicUrl] : formData.transferSlips;
-        const updatedTollReceiptUrl = field === 'tollReceiptUrl' ? publicUrl : formData.tollReceiptUrl;
-        const updatedAdjustments = field === 'adjustments' && adjId ? formData.adjustments.map(a => a.id === adjId ? { ...a, receiptUrl: publicUrl } : a) : formData.adjustments;
-        const updatedTolls = field === 'tolls' && adjId ? formData.tolls.map(t => t.id === adjId ? { ...t, receiptUrl: publicUrl } : t) : formData.tolls;
+        // Use functional getter approach to get the true latest form state
+        let currentForm = formData; // fallback
+        setFormData(prev => { currentForm = prev; return prev; }); // read-only peek
+        await new Promise(r => setTimeout(r, 0));
+
+        const updatedTransferSlips = field === 'transferSlipUrl' ? [...currentForm.transferSlips] : currentForm.transferSlips;
+        const updatedTollReceiptUrl = field === 'tollReceiptUrl' ? publicUrl : currentForm.tollReceiptUrl;
+        const updatedAdjustments = field === 'adjustments' && adjId ? currentForm.adjustments : currentForm.adjustments;
+        const updatedTolls = field === 'tolls' && adjId ? currentForm.tolls : currentForm.tolls;
         
         const otRatePerHour = 100;
-        const otPay = (formData.overtimeHours * otRatePerHour) + (formData.overtimeMinutes / 60 * otRatePerHour);
+        const otPay = (currentForm.overtimeHours * otRatePerHour) + (currentForm.overtimeMinutes / 60 * otRatePerHour);
         const tollTotal = updatedTolls.reduce((sum, t) => sum + Number(t.amount || 0), 0);
         
         const entryData = {
-          workerId: formData.workerId,
+          workerId: currentForm.workerId,
           date: dateStr,
-          clockIn: formData.clockIn,
-          clockOut: formData.clockOut,
-          baseWage: formData.baseWage,
-          travelAllowance: formData.travelAllowance,
+          clockIn: currentForm.clockIn,
+          clockOut: currentForm.clockOut,
+          baseWage: currentForm.baseWage,
+          travelAllowance: currentForm.travelAllowance,
           tollFee: tollTotal,
           tolls: updatedTolls,
-          lateDeduction: formData.lateDeduction,
-          overtimeHours: formData.overtimeHours,
-          overtimeMinutes: formData.overtimeMinutes,
+          lateDeduction: currentForm.lateDeduction,
+          overtimeHours: currentForm.overtimeHours,
+          overtimeMinutes: currentForm.overtimeMinutes,
           overtimePay: otPay,
           adjustments: updatedAdjustments,
-          totalPay: formData.baseWage + formData.travelAllowance + tollTotal + otPay + updatedAdjustments.reduce((s, a) => s + (a.type==='add'?Number(a.amount):-Number(a.amount)), 0) - formData.lateDeduction - 0, // No guarantee on drafts
-          note: formData.note,
-          isDraft: true, // AUTO DRAFT!
-          isLeave: formData.isLeave,
-          leaveType: formData.isLeave ? formData.leaveType : undefined,
-          leaveNote: formData.isLeave ? formData.leaveNote : undefined,
+          totalPay: currentForm.baseWage + currentForm.travelAllowance + tollTotal + otPay + updatedAdjustments.reduce((s, a) => s + (a.type==='add'?Number(a.amount):-Number(a.amount)), 0) - currentForm.lateDeduction - 0,
+          note: currentForm.note,
+          isDraft: true,
+          isLeave: currentForm.isLeave,
+          leaveType: currentForm.isLeave ? currentForm.leaveType : undefined,
+          leaveNote: currentForm.isLeave ? currentForm.leaveNote : undefined,
           transferSlipUrl: updatedTransferSlips[0] || '',
           transferSlips: updatedTransferSlips,
           tollReceiptUrl: updatedTollReceiptUrl,
-          tollDate: formData.tollDate,
-          guaranteeDeduction: 0, // User requested: ONLY deduct on finalized save, NEVER on draft
-          lateRateRule: formData.lateRateRule,
+          tollDate: currentForm.tollDate,
+          guaranteeDeduction: 0,
+          lateRateRule: currentForm.lateRateRule,
         };
         
-        // This avoids useStore adding multiple duplicate drafts by checking if we just added it.
         const newId = await addEntry(entryData);
         setEditingId(newId);
       }
@@ -698,7 +724,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
       alert('เกิดข้อผิดพลาดในการอัพโหลดรูปภาพ กรุณาลองใหม่อีกครั้ง');
     } finally {
       setIsUploading(false);
-      // Reset input value so same file can be selected again
+      isUploadingRef.current = false;
       e.target.value = '';
     }
   };
@@ -763,6 +789,8 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
     if (!isModalOpen || !formData.workerId || isUploading) return;
 
     const timer = setTimeout(() => {
+      // Double-check ref as a synchronous guard against React batching edge cases
+      if (isUploadingRef.current) return;
       // Only auto-save if it doesn't revert a finalized entry to a draft
       const isCurrentlyDraft = editingId ? (entries.find(e => e.id === editingId)?.isDraft ?? true) : true;
       handleSave(isCurrentlyDraft, false, false);
