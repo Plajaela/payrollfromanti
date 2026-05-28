@@ -760,7 +760,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
 
   // Auto-save draft when form changes
   useEffect(() => {
-    if (!isModalOpen || !formData.workerId) return;
+    if (!isModalOpen || !formData.workerId || isUploading) return;
 
     const timer = setTimeout(() => {
       // Only auto-save if it doesn't revert a finalized entry to a draft
@@ -770,7 +770,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
 
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData, isModalOpen]);
+  }, [formData, isModalOpen, isUploading]);
 
   const handleCopy = async (text: string, id: string) => {
     try {
