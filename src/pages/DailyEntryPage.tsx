@@ -425,7 +425,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
 
   useEffect(() => {
     if (autoDraftPending && isModalOpen) {
-      handleSave(true, false);
+      handleSave(true, false, false);
       setAutoDraftPending(false);
     }
   }, [autoDraftPending, isModalOpen]);
@@ -823,7 +823,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
       // to prevent race conditions with manual "save complete" actions
       if (!isCurrentlyDraft) return;
       handleSave(true, false, false);
-    }, 1500);
+    }, 10000); // Debounce to 10 seconds of complete idle time to prevent lag/blurs while typing
 
     return () => {
       if (autoSaveTimerRef.current) {
@@ -1974,7 +1974,16 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
 
       <Modal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          // Silent save on close if user edited, to ensure zero data loss
+          if (hasUserEditedRef.current && formData.workerId) {
+            const isCurrentlyDraft = editingId ? (entries.find(e => e.id === editingId)?.isDraft ?? true) : true;
+            if (isCurrentlyDraft) {
+              handleSave(true, false, false);
+            }
+          }
+          setIsModalOpen(false);
+        }}
         title={formData.workerName}
         maxWidth="max-w-4xl"
       >
