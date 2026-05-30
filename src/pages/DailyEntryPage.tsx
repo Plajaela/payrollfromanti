@@ -45,6 +45,13 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
   const hasUserEditedRef = useRef(false);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const formDataRef = useRef<typeof formData>(null as any);
+  // True once the open entry has been persisted as a finalized (non-draft) save.
+  // Used as the authoritative guard so background auto-save / close-save can
+  // never silently revert a finalized entry back to a draft.
+  const isFinalizedRef = useRef(false);
+  // Always points at the freshest entries array so async upload handlers don't
+  // read a stale closure (which previously dropped rapidly-uploaded slips).
+  const entriesRef = useRef(entries);
   const [isSaving, setIsSaving] = useState(false);
   const [saveToastVisible, setSaveToastVisible] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
@@ -105,6 +112,8 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
 
   // Keep formDataRef always in sync so auto-save never reads stale closure data
   useEffect(() => { formDataRef.current = formData; }, [formData]);
+  // Keep entriesRef in sync so async upload handlers read the freshest entries.
+  useEffect(() => { entriesRef.current = entries; }, [entries]);
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
   const currentHoliday = holidays.find(h => h.date === dateStr);
@@ -386,6 +395,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
         lateRateRule: existingEntry.lateRateRule || worker.lateRateRule || 'normal',
       });
       setEditingId(existingEntry.id);
+      isFinalizedRef.current = !existingEntry.isDraft;
     } else {
       setFormData({
         workerId: worker.id,
@@ -415,6 +425,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
         lateRateRule: worker.lateRateRule || 'normal',
       });
       setEditingId(null);
+      isFinalizedRef.current = false;
     }
     hasUserEditedRef.current = false;
     setIsModalOpen(true);
@@ -496,14 +507,16 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
       }
 
       if (entry) {
-        // Read the LATEST entry data from state to avoid stale closure reads
-        const latestEntry = entries.find(ent => ent.id === entry.id);
+        // Read the LATEST entry data via ref to avoid stale closure reads
+        // (previously this dropped slips when several were uploaded quickly).
+        const latestEntry = entriesRef.current.find(ent => ent.id === entry.id);
         const existingSlips = latestEntry?.transferSlips || entry.transferSlips || [];
         const newSlips = [...existingSlips, ...publicUrls];
-        await updateEntry(entry.id, { 
+        const ok = await updateEntry(entry.id, {
           transferSlipUrl: newSlips[0] || '',
-          transferSlips: newSlips 
+          transferSlips: newSlips
         });
+        if (!ok) alert('บันทึกสลิปลงระบบไม่สำเร็จ กรุณาลองอัพโหลดใหม่อีกครั้ง');
       } else {
         const entryData = {
           workerId: worker.id,
@@ -528,7 +541,8 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
           tollDate: dateStr,
           guaranteeDeduction: 0,
         };
-        await addEntry(entryData);
+        const { ok } = await addEntry(entryData);
+        if (!ok) alert('บันทึกสลิปลงระบบไม่สำเร็จ กรุณาลองอัพโหลดใหม่อีกครั้ง');
       }
     } catch (error) {
       console.error('Error uploading image:', error);
@@ -632,10 +646,11 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
         await new Promise(r => setTimeout(r, 0));
 
         if (editingId) {
-          await updateEntry(editingId, { 
+          const ok = await updateEntry(editingId, {
             transferSlipUrl: latestSlips[0] || '',
-            transferSlips: latestSlips 
+            transferSlips: latestSlips
           });
+          if (!ok) alert('บันทึกสลิปลงระบบไม่สำเร็จ กรุณาลองอัพโหลดใหม่อีกครั้ง');
         }
 
         // --- GOOGLE DRIVE WEBHOOK TRIGGER ---
@@ -668,7 +683,10 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
           return { ...prev, adjustments: latestAdjustments };
         });
         await new Promise(r => setTimeout(r, 0));
-        if (editingId) await updateEntry(editingId, { adjustments: latestAdjustments });
+        if (editingId) {
+          const ok = await updateEntry(editingId, { adjustments: latestAdjustments });
+          if (!ok) alert('บันทึกรูปลงระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+        }
       } else if (field === 'tolls' && adjId) {
         let latestTolls: any[] = [];
         setFormData(prev => {
@@ -676,7 +694,10 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
           return { ...prev, tolls: latestTolls };
         });
         await new Promise(r => setTimeout(r, 0));
-        if (editingId) await updateEntry(editingId, { tolls: latestTolls });
+        if (editingId) {
+          const ok = await updateEntry(editingId, { tolls: latestTolls });
+          if (!ok) alert('บันทึกใบเสร็จทางด่วนลงระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+        }
       }
 
       // Auto-save logic if it's a new entry (not yet saved)
@@ -723,8 +744,9 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
           lateRateRule: currentForm.lateRateRule,
         };
         
-        const newId = await addEntry(entryData);
+        const { id: newId, ok } = await addEntry(entryData);
         setEditingId(newId);
+        if (!ok) alert('บันทึกข้อมูลลงระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
       }
     } catch (error) {
       console.error('Error uploading image:', error);
@@ -736,14 +758,22 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
     }
   };
 
-  const handleSave = async (isDraft: boolean, closeModal = true, showToast = true) => {
-    if (!formData.workerId) return;
+  const handleSave = async (isDraft: boolean, closeModal = true, showToast = true): Promise<boolean> => {
+    if (!formData.workerId) return false;
+
+    // A finalized entry must never be silently reverted to a draft by a
+    // background auto-save / close-save. Explicit saves (showToast) still pass.
+    if (isDraft && !showToast && isFinalizedRef.current) return true;
 
     // Cancel any pending auto-save timer to prevent it from overwriting this save
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
       autoSaveTimerRef.current = null;
     }
+
+    // Mark finalize intent synchronously so any in-flight auto-save aborts and
+    // can never enqueue a draft write after this finalize.
+    if (!isDraft) isFinalizedRef.current = true;
 
     const otRatePerHour = 100;
     const otPay = (formData.overtimeHours * otRatePerHour) + (formData.overtimeMinutes / 60 * otRatePerHour);
@@ -780,13 +810,28 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
       lateRateRule: formData.lateRateRule,
     };
 
+    let ok = true;
     if (editingId) {
-      await updateEntry(editingId, entryData);
+      ok = await updateEntry(editingId, entryData);
     } else {
-      const newId = await addEntry(entryData);
-      setEditingId(newId);
+      const res = await addEntry(entryData);
+      setEditingId(res.id);
+      ok = res.ok;
     }
-    
+
+    if (!ok) {
+      // Persisting failed — never pretend it succeeded (payroll integrity).
+      // Clear finalize intent so a draft backup / retry can still run, and the
+      // data the user typed stays on screen.
+      if (!isDraft) isFinalizedRef.current = false;
+      if (showToast) {
+        alert('บันทึกไม่สำเร็จ การเชื่อมต่อมีปัญหา กรุณากดบันทึกอีกครั้ง (ข้อมูลในหน้าจอยังอยู่ครบ)');
+      }
+      return false;
+    }
+
+    // Reflect the persisted draft/final state authoritatively.
+    isFinalizedRef.current = !isDraft;
     // Reset edit tracking after successful save to prevent stale auto-saves
     hasUserEditedRef.current = false;
 
@@ -798,6 +843,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
       setTimeout(() => setSaveToastVisible(false), 1000);
     }
     if (closeModal) setIsModalOpen(false);
+    return true;
   };
 
   // Auto-save draft when form changes
@@ -817,11 +863,9 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
       if (isUploadingRef.current) return;
       // Guard: don't auto-save if user hasn't edited since last save
       if (!hasUserEditedRef.current) return;
-      // Only auto-save if it doesn't revert a finalized entry to a draft
-      const isCurrentlyDraft = editingId ? (entries.find(e => e.id === editingId)?.isDraft ?? true) : true;
-      // If entry is already finalized (not draft), skip auto-save entirely
-      // to prevent race conditions with manual "save complete" actions
-      if (!isCurrentlyDraft) return;
+      // Never let a background auto-save revert a finalized entry to a draft.
+      // (Authoritative synchronous ref — not a possibly-stale entries closure.)
+      if (isFinalizedRef.current) return;
       handleSave(true, false, false);
     }, 10000); // Debounce to 10 seconds of complete idle time to prevent lag/blurs while typing
 
@@ -1975,12 +2019,10 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
       <Modal
         isOpen={isModalOpen}
         onClose={() => {
-          // Silent save on close if user edited, to ensure zero data loss
-          if (hasUserEditedRef.current && formData.workerId) {
-            const isCurrentlyDraft = editingId ? (entries.find(e => e.id === editingId)?.isDraft ?? true) : true;
-            if (isCurrentlyDraft) {
-              handleSave(true, false, false);
-            }
+          // Silent draft save on close if user edited, to ensure zero data loss —
+          // but never revert a finalized entry back to a draft.
+          if (hasUserEditedRef.current && formData.workerId && !isFinalizedRef.current) {
+            handleSave(true, false, false);
           }
           setIsModalOpen(false);
         }}

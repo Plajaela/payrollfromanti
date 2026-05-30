@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Worker, DailyEntry, AdvancePayment, Holiday, SalaryHistory } from './types';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from './lib/supabase';
@@ -517,90 +517,113 @@ export function useStore() {
     }
   };
 
-  const addEntry = async (entry: Omit<DailyEntry, 'id'>): Promise<string> => {
+  // Serialize DB writes per-entry so overlapping saves (e.g. a debounced draft
+  // auto-save and an explicit "save complete") can never reorder and clobber
+  // each other. Optimistic local state is applied immediately; only the network
+  // write is queued, and the queue preserves FIFO order per entry id.
+  const writeChainsRef = useRef<Map<string, Promise<boolean>>>(new Map());
+  const enqueueWrite = (id: string, task: () => Promise<boolean>): Promise<boolean> => {
+    const prev = writeChainsRef.current.get(id) ?? Promise.resolve(true);
+    const next = prev.then(task, task); // run regardless of the previous result
+    // Keep a non-rejecting tail so the chain never breaks for the next writer.
+    writeChainsRef.current.set(id, next.then(() => true, () => true));
+    return next;
+  };
+
+  // Transient failures (flaky mobile network) get one automatic retry before we
+  // report failure to the caller. We never silently swallow a failed write.
+  const insertEntryDb = async (row: any): Promise<boolean> => {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const { error } = await supabase.from('daily_entries').insert([row]);
+      if (!error) return true;
+      console.error(`Failed to add entry to Supabase (attempt ${attempt + 1}):`, error);
+      if (attempt === 0) await new Promise((r) => setTimeout(r, 600));
+    }
+    return false;
+  };
+
+  const updateEntryDb = async (id: string, updateData: any): Promise<boolean> => {
+    if (Object.keys(updateData).length === 0) return true;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const { error } = await supabase.from('daily_entries').update(updateData).eq('id', id);
+      if (!error) return true;
+      console.error(`Failed to update entry in Supabase (attempt ${attempt + 1}):`, error);
+      if (attempt === 0) await new Promise((r) => setTimeout(r, 600));
+    }
+    return false;
+  };
+
+  const addEntry = async (entry: Omit<DailyEntry, 'id'>): Promise<{ id: string; ok: boolean }> => {
     const newId = uuidv4();
     const newEntry = { ...entry, id: newId };
     setEntries((prev) => [...prev, newEntry]);
 
-    try {
-      const { error } = await supabase.from('daily_entries').insert([{
-        id: newId,
-        worker_id: entry.workerId,
-        date: entry.date,
-        clock_in: entry.clockIn,
-        clock_out: entry.clockOut,
-        base_wage: entry.baseWage,
-        travel_allowance: entry.travelAllowance,
-        toll_fee: entry.tollFee,
-        late_deduction: entry.lateDeduction,
-        overtime_hours: entry.overtimeHours,
-        overtime_minutes: entry.overtimeMinutes,
-        overtime_pay: entry.overtimePay,
-        adjustments: entry.adjustments || [],
-        total_pay: entry.totalPay,
-        note: entry.note,
-        is_draft: entry.isDraft || false,
-        is_leave: entry.isLeave || false,
-        leave_type: entry.leaveType,
-        leave_note: entry.leaveNote,
-        transfer_slip_url: entry.transferSlipUrl,
-        transfer_slips: entry.transferSlips || [],
-        toll_receipt_url: entry.tollReceiptUrl,
-        toll_date: entry.tollDate,
-        tolls: entry.tolls || [],
-        guarantee_deduction: entry.guaranteeDeduction || 0,
-        late_rate_rule: entry.lateRateRule || 'normal'
-      }]);
+    const row = {
+      id: newId,
+      worker_id: entry.workerId,
+      date: entry.date,
+      clock_in: entry.clockIn,
+      clock_out: entry.clockOut,
+      base_wage: entry.baseWage,
+      travel_allowance: entry.travelAllowance,
+      toll_fee: entry.tollFee,
+      late_deduction: entry.lateDeduction,
+      overtime_hours: entry.overtimeHours,
+      overtime_minutes: entry.overtimeMinutes,
+      overtime_pay: entry.overtimePay,
+      adjustments: entry.adjustments || [],
+      total_pay: entry.totalPay,
+      note: entry.note,
+      is_draft: entry.isDraft || false,
+      is_leave: entry.isLeave || false,
+      leave_type: entry.leaveType,
+      leave_note: entry.leaveNote,
+      transfer_slip_url: entry.transferSlipUrl,
+      transfer_slips: entry.transferSlips || [],
+      toll_receipt_url: entry.tollReceiptUrl,
+      toll_date: entry.tollDate,
+      tolls: entry.tolls || [],
+      guarantee_deduction: entry.guaranteeDeduction || 0,
+      late_rate_rule: entry.lateRateRule || 'normal'
+    };
 
-      if (error) throw error;
-    } catch (err) {
-      console.error('Failed to add entry to Supabase:', err);
-    }
-    return newId;
+    const ok = await enqueueWrite(newId, () => insertEntryDb(row));
+    return { id: newId, ok };
   };
 
-  const updateEntry = async (id: string, updated: Partial<DailyEntry>) => {
+  const updateEntry = async (id: string, updated: Partial<DailyEntry>): Promise<boolean> => {
     setEntries((prev) =>
       prev.map((e) => (e.id === id ? { ...e, ...updated } : e))
     );
 
-    try {
-      const updateData: any = {};
-      if (updated.workerId !== undefined) updateData.worker_id = updated.workerId;
-      if (updated.date !== undefined) updateData.date = updated.date;
-      if (updated.clockIn !== undefined) updateData.clock_in = updated.clockIn;
-      if (updated.clockOut !== undefined) updateData.clock_out = updated.clockOut;
-      if (updated.baseWage !== undefined) updateData.base_wage = updated.baseWage;
-      if (updated.travelAllowance !== undefined) updateData.travel_allowance = updated.travelAllowance;
-      if (updated.tollFee !== undefined) updateData.toll_fee = updated.tollFee;
-      if (updated.lateDeduction !== undefined) updateData.late_deduction = updated.lateDeduction;
-      if (updated.overtimeHours !== undefined) updateData.overtime_hours = updated.overtimeHours;
-      if (updated.overtimeMinutes !== undefined) updateData.overtime_minutes = updated.overtimeMinutes;
-      if (updated.overtimePay !== undefined) updateData.overtime_pay = updated.overtimePay;
-      if (updated.adjustments !== undefined) updateData.adjustments = updated.adjustments;
-      if (updated.totalPay !== undefined) updateData.total_pay = updated.totalPay;
-      if (updated.note !== undefined) updateData.note = updated.note;
-      if (updated.isDraft !== undefined) updateData.is_draft = updated.isDraft;
-      if (updated.isLeave !== undefined) updateData.is_leave = updated.isLeave;
-      if (updated.leaveType !== undefined) updateData.leave_type = updated.leaveType;
-      if (updated.leaveNote !== undefined) updateData.leave_note = updated.leaveNote;
-      if (updated.transferSlipUrl !== undefined) updateData.transfer_slip_url = updated.transferSlipUrl;
-      if (updated.transferSlips !== undefined) updateData.transfer_slips = updated.transferSlips;
-      if (updated.tollReceiptUrl !== undefined) updateData.toll_receipt_url = updated.tollReceiptUrl;
-      if (updated.tollDate !== undefined) updateData.toll_date = updated.tollDate;
-      if (updated.tolls !== undefined) updateData.tolls = updated.tolls;
-      if (updated.guaranteeDeduction !== undefined) updateData.guarantee_deduction = updated.guaranteeDeduction;
-      if (updated.lateRateRule !== undefined) updateData.late_rate_rule = updated.lateRateRule;
+    const updateData: any = {};
+    if (updated.workerId !== undefined) updateData.worker_id = updated.workerId;
+    if (updated.date !== undefined) updateData.date = updated.date;
+    if (updated.clockIn !== undefined) updateData.clock_in = updated.clockIn;
+    if (updated.clockOut !== undefined) updateData.clock_out = updated.clockOut;
+    if (updated.baseWage !== undefined) updateData.base_wage = updated.baseWage;
+    if (updated.travelAllowance !== undefined) updateData.travel_allowance = updated.travelAllowance;
+    if (updated.tollFee !== undefined) updateData.toll_fee = updated.tollFee;
+    if (updated.lateDeduction !== undefined) updateData.late_deduction = updated.lateDeduction;
+    if (updated.overtimeHours !== undefined) updateData.overtime_hours = updated.overtimeHours;
+    if (updated.overtimeMinutes !== undefined) updateData.overtime_minutes = updated.overtimeMinutes;
+    if (updated.overtimePay !== undefined) updateData.overtime_pay = updated.overtimePay;
+    if (updated.adjustments !== undefined) updateData.adjustments = updated.adjustments;
+    if (updated.totalPay !== undefined) updateData.total_pay = updated.totalPay;
+    if (updated.note !== undefined) updateData.note = updated.note;
+    if (updated.isDraft !== undefined) updateData.is_draft = updated.isDraft;
+    if (updated.isLeave !== undefined) updateData.is_leave = updated.isLeave;
+    if (updated.leaveType !== undefined) updateData.leave_type = updated.leaveType;
+    if (updated.leaveNote !== undefined) updateData.leave_note = updated.leaveNote;
+    if (updated.transferSlipUrl !== undefined) updateData.transfer_slip_url = updated.transferSlipUrl;
+    if (updated.transferSlips !== undefined) updateData.transfer_slips = updated.transferSlips;
+    if (updated.tollReceiptUrl !== undefined) updateData.toll_receipt_url = updated.tollReceiptUrl;
+    if (updated.tollDate !== undefined) updateData.toll_date = updated.tollDate;
+    if (updated.tolls !== undefined) updateData.tolls = updated.tolls;
+    if (updated.guaranteeDeduction !== undefined) updateData.guarantee_deduction = updated.guaranteeDeduction;
+    if (updated.lateRateRule !== undefined) updateData.late_rate_rule = updated.lateRateRule;
 
-      const { error } = await supabase
-        .from('daily_entries')
-        .update(updateData)
-        .eq('id', id);
-
-      if (error) throw error;
-    } catch (err) {
-      console.error('Failed to update entry in Supabase:', err);
-    }
+    return enqueueWrite(id, () => updateEntryDb(id, updateData));
   };
 
   const deleteEntry = async (id: string) => {
