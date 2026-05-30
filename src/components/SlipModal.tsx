@@ -464,7 +464,7 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
             </div>
 
             {/* Signature Area */}
-            <div className="mt-6 pt-6 pb-2">
+            <div className="mt-3 pt-3 pb-0">
               <div className="flex flex-col items-center">
                 {useSignature ? (
                   <>
@@ -488,10 +488,10 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
                     </div>
                   </>
                 ) : (
-                  <div className="w-48 border-b-2 border-dotted border-gray-300 h-8"></div>
+                  <div className="w-48 border-b-2 border-dotted border-gray-300 h-5"></div>
                 )}
                 
-                <div className="mt-4 w-48 border-b-2 border-dotted border-gray-300 relative text-center">
+                <div className="mt-2 w-48 border-b-2 border-dotted border-gray-300 relative text-center">
                   <span className="text-[10px] text-gray-400">
                     ({data.worker.name})
                   </span>
@@ -500,7 +500,7 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
             </div>
 
             {/* Footer note */}
-            <div className="mt-8 pt-3 border-t border-dashed border-gray-200 text-center">
+            <div className="mt-4 pt-2 border-t border-dashed border-gray-200 text-center">
               {data.guaranteeTotal > 0 && (
                 <div className="text-[10px] text-sky-600 font-medium mb-1">
                   ล็อคยอดเงินประกันสะสม: ฿{data.guaranteeTotal.toLocaleString()}
