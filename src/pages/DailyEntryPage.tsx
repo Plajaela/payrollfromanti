@@ -2526,6 +2526,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
                           <option value="ค่ารถไปงานที่ 3" />
                           <option value="ค่ารถไปงานที่ 4" />
                           <option value="เบี้ยเลี้ยง" />
+                          <option value="OT เที่ยง" />
                           <option value="โบนัสพิเศษ" />
                         </datalist>
                         {adj.receiptUrl && (
