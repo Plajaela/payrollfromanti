@@ -2361,8 +2361,8 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
                           </>
                         )}
                       </div>
-                      <button type="button" onClick={() => setFormData(p => ({ ...p, tolls: p.tolls.filter(t => t.id !== toll.id) }))} className="text-red-500 hover:text-white bg-red-50 hover:bg-red-500 p-1.5 rounded-lg shrink-0 transition-colors">
-                        <X className="w-4 h-4" />
+                       <button type="button" onClick={() => setFormData(p => ({ ...p, tolls: p.tolls.filter(t => t.id !== toll.id) }))} className="text-red-500 hover:text-white bg-red-50 hover:bg-red-500 p-1.5 rounded-lg shrink-0 transition-colors" title="ลบรายการทางด่วนนี้">
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   ))}
