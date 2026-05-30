@@ -165,7 +165,7 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
       await new Promise(r => setTimeout(r, 100)); // allow DOM to update
 
       const dataUrl = await htmlToImage.toPng(slipRef.current, {
-        pixelRatio: 2, // Equivalent to scale: 2 for high quality
+        pixelRatio: 4, // Equivalent to scale: 4 for high quality
         backgroundColor: '#ffffff',
         style: {
           transform: 'none',
@@ -335,7 +335,8 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
           /* The Slip Card (What will be captured) */
           <div
             ref={slipRef}
-            className="bg-white w-[350px] p-6 shadow-sm border border-gray-100 font-sans relative overflow-hidden shrink-0 transition-opacity"
+            style={{ colorScheme: 'light', WebkitFontSmoothing: 'antialiased', MozOsxFontSmoothing: 'grayscale', color: '#111827' }}
+            className="bg-white w-[350px] p-6 shadow-sm border border-gray-100 font-sans relative overflow-hidden shrink-0 transition-opacity antialiased"
           >
             {/* Header */}
             <div className="text-center pb-4 border-b-2 border-dashed border-gray-200 relative mb-4">
