@@ -166,7 +166,6 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
 
       const dataUrl = await htmlToImage.toPng(slipRef.current, {
         pixelRatio: 4, // Equivalent to scale: 4 for high quality
-        backgroundColor: '#ffffff',
         style: {
           transform: 'none',
           boxShadow: 'none',
