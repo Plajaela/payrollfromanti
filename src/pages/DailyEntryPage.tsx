@@ -43,6 +43,8 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
   const [isUploading, setIsUploading] = useState(false);
   const isUploadingRef = useRef(false);
   const hasUserEditedRef = useRef(false);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const formDataRef = useRef<typeof formData>(null as any);
   const [isSaving, setIsSaving] = useState(false);
   const [saveToastVisible, setSaveToastVisible] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
@@ -100,6 +102,9 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
     guaranteeDeductionAmount: 100,
     lateRateRule: 'normal' as 'normal' | 'special',
   });
+
+  // Keep formDataRef always in sync so auto-save never reads stale closure data
+  useEffect(() => { formDataRef.current = formData; }, [formData]);
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
   const currentHoliday = holidays.find(h => h.date === dateStr);
@@ -734,6 +739,12 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
   const handleSave = async (isDraft: boolean, closeModal = true, showToast = true) => {
     if (!formData.workerId) return;
 
+    // Cancel any pending auto-save timer to prevent it from overwriting this save
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+    }
+
     const otRatePerHour = 100;
     const otPay = (formData.overtimeHours * otRatePerHour) + (formData.overtimeMinutes / 60 * otRatePerHour);
     const totalPay = calculateTotal();
@@ -776,6 +787,9 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
       setEditingId(newId);
     }
     
+    // Reset edit tracking after successful save to prevent stale auto-saves
+    hasUserEditedRef.current = false;
+
     if (showToast) {
       // Trigger save animation & toast
       setIsSaving(true);
@@ -791,15 +805,32 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
     if (!isModalOpen || !formData.workerId || isUploading) return;
     if (!hasUserEditedRef.current) return;
 
-    const timer = setTimeout(() => {
+    // Clear any previous auto-save timer
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+    }
+
+    autoSaveTimerRef.current = setTimeout(() => {
+      autoSaveTimerRef.current = null;
       // Double-check ref as a synchronous guard against React batching edge cases
       if (isUploadingRef.current) return;
+      // Guard: don't auto-save if user hasn't edited since last save
+      if (!hasUserEditedRef.current) return;
       // Only auto-save if it doesn't revert a finalized entry to a draft
       const isCurrentlyDraft = editingId ? (entries.find(e => e.id === editingId)?.isDraft ?? true) : true;
-      handleSave(isCurrentlyDraft, false, false);
+      // If entry is already finalized (not draft), skip auto-save entirely
+      // to prevent race conditions with manual "save complete" actions
+      if (!isCurrentlyDraft) return;
+      handleSave(true, false, false);
     }, 1500);
 
-    return () => clearTimeout(timer);
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData, isModalOpen, isUploading]);
 
@@ -1955,18 +1986,6 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
           }}
           onInput={() => {
             hasUserEditedRef.current = true;
-          }}
-          onClick={(e) => {
-            const target = e.target as HTMLElement;
-            if (
-              target.closest('button') ||
-              target.closest('input') ||
-              target.closest('label') ||
-              target.closest('select') ||
-              target.closest('textarea')
-            ) {
-              hasUserEditedRef.current = true;
-            }
           }}
         >
           {customAllowanceMessage && (
