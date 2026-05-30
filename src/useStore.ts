@@ -334,6 +334,13 @@ export function useStore() {
               ? updated.adjustments
               : existing.adjustments;
 
+            // For tolls, keep the version with more receipt URLs filled in
+            const existingTollReceiptCount = (existing.tolls || []).filter(t => t.receiptUrl).length;
+            const updatedTollReceiptCount = (updated.tolls || []).filter((t: any) => t.receiptUrl).length;
+            const mergedTolls = updatedTollReceiptCount >= existingTollReceiptCount
+              ? updated.tolls
+              : existing.tolls;
+
             return {
               ...existing,
               ...updated,
@@ -341,6 +348,7 @@ export function useStore() {
               transferSlipUrl: mergedSlipUrl,
               tollReceiptUrl: mergedTollReceipt,
               adjustments: mergedAdjustments,
+              tolls: mergedTolls,
             };
           }));
         }

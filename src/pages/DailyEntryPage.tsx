@@ -2494,9 +2494,10 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
                             <button type="button" onClick={(e) => handleCopySingleImage(adj.receiptUrl!, e)} className={`p-1 rounded transition-all ${lastCopiedUrl === adj.receiptUrl ? 'text-emerald-600 bg-emerald-50' : 'text-violet-600 hover:text-violet-700 hover:bg-violet-50'}`} title="คัดลอกรูป">
                               {lastCopiedUrl === adj.receiptUrl ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                             </button>
-                            <button type="button" onClick={() => {
+                            <button type="button" onClick={async () => {
                               const newAdjs = formData.adjustments.map(a => a.id === adj.id ? { ...a, receiptUrl: '' } : a);
                               setFormData(p => ({ ...p, adjustments: newAdjs }));
+                              if (editingId) await updateEntry(editingId, { adjustments: newAdjs });
                             }} className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors" title="ลบรูป">
                               <X className="w-3.5 h-3.5" />
                             </button>
@@ -2560,7 +2561,7 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
                         </button>
                         <button 
                           type="button" 
-                          onClick={() => {
+                          onClick={async () => {
                             if (window.confirm('ต้องการลบสลิปโอนเงินรูปนี้ใช่หรือไม่?')) {
                               const newSlips = formData.transferSlips.filter((_, index) => index !== idx);
                               setFormData(p => ({ 
@@ -2568,6 +2569,12 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
                                 transferSlips: newSlips,
                                 transferSlipUrl: newSlips[0] || ''
                               }));
+                              if (editingId) {
+                                await updateEntry(editingId, {
+                                  transferSlips: newSlips,
+                                  transferSlipUrl: newSlips[0] || ''
+                                });
+                              }
                             }
                           }} 
                           className="absolute -top-1 -right-1 bg-white flex items-center justify-center w-5 h-5 rounded-full text-red-500 border border-gray-100 shadow-sm hover:bg-red-50 hover:text-red-600 hover:scale-110 transition-all z-10" 
