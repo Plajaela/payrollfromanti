@@ -254,52 +254,52 @@ export function ReportsPage() {
     if (isEnglish) {
       text = `Summary for ${row.worker.name} (Date: ${dateRangeStr})\n`;
       text += `\n💰 Income:\n`;
-      text += `+ Wage: ฿${row.totalBaseWage}\n`;
-      if (row.totalTravel > 0) text += `+ Travel Allowance: ฿${row.totalTravel}\n`;
-      if (row.totalOT > 0) text += `+ Overtime: ฿${row.totalOT}\n`;
+      text += `+ Wage: ฿${row.totalBaseWage.toLocaleString()}\n`;
+      if (row.totalTravel > 0) text += `+ Travel Allowance: ฿${row.totalTravel.toLocaleString()}\n`;
+      if (row.totalOT > 0) text += `+ Overtime: ฿${row.totalOT.toLocaleString()}\n`;
 
       additionItems.forEach(({ note, amount }) => {
-        text += `+ ${note}: ฿${amount}\n`;
+        text += `+ ${note}: ฿${amount.toLocaleString()}\n`;
       });
 
       text += `\n💸 Deductions:\n`;
-      if (row.totalLate > 0) text += `- Late Deduction: ฿${row.totalLate}\n`;
-      if (row.rangeGuaranteeDeduction > 0) text += `- Guarantee Deduction: ฿${row.rangeGuaranteeDeduction}\n`;
+      if (row.totalLate > 0) text += `- Late Deduction: ฿${row.totalLate.toLocaleString()}\n`;
+      if (row.rangeGuaranteeDeduction > 0) text += `- Guarantee Deduction: ฿${row.rangeGuaranteeDeduction.toLocaleString()}\n`;
       deductionItems.forEach(({ note, amount }) => {
-        text += `- ${note}: ฿${amount}\n`;
+        text += `- ${note}: ฿${amount.toLocaleString()}\n`;
       });
 
-      text += `\n📌 Total: ฿${row.grandTotal}`;
+      text += `\n📌 Total: ฿${row.grandTotal.toLocaleString()}`;
       if (row.leaveDays > 0) text += ` (Leave: ${row.leaveDays} day${row.leaveDays > 1 ? 's' : ''})`;
 
       if (row.advanceDeduction > 0) {
-        text += `\n- Cash Advance Deduction: ฿${row.advanceDeduction}\n` +
-        `✅ Net Paid: ฿${row.finalPay}`;
+        text += `\n- Cash Advance Deduction: ฿${row.advanceDeduction.toLocaleString()}\n` +
+        `✅ Net Paid: ฿${row.finalPay.toLocaleString()}`;
       }
     } else {
       text = `สรุปยอด ${row.worker.name} (วันที่ ${dateRangeStr})\n`;
       text += `\n💰 รายรับ:\n`;
-      text += `+ ค่าแรง (${row.totalDays} วัน): ฿${row.totalBaseWage}\n`;
-      if (row.totalTravel > 0) text += `+ ค่ารถ: ฿${row.totalTravel}\n`;
-      if (row.totalOT > 0) text += `+ โอที: ฿${row.totalOT}\n`;
+      text += `+ ค่าแรง (${row.totalDays} วัน): ฿${row.totalBaseWage.toLocaleString()}\n`;
+      if (row.totalTravel > 0) text += `+ ค่ารถ: ฿${row.totalTravel.toLocaleString()}\n`;
+      if (row.totalOT > 0) text += `+ โอที: ฿${row.totalOT.toLocaleString()}\n`;
 
       additionItems.forEach(({ note, amount }) => {
-        text += `+ ${note}: ฿${amount}\n`;
+        text += `+ ${note}: ฿${amount.toLocaleString()}\n`;
       });
 
       text += `\n💸 รายหัก:\n`;
-      if (row.totalLate > 0) text += `- หักสาย: ฿${row.totalLate}\n`;
-      if (row.rangeGuaranteeDeduction > 0) text += `- หักประกันสะสมรอบนี้: ฿${row.rangeGuaranteeDeduction}\n`;
+      if (row.totalLate > 0) text += `- หักสาย: ฿${row.totalLate.toLocaleString()}\n`;
+      if (row.rangeGuaranteeDeduction > 0) text += `- หักประกันสะสมรอบนี้: ฿${row.rangeGuaranteeDeduction.toLocaleString()}\n`;
       deductionItems.forEach(({ note, amount }) => {
-        text += `- ${note}: ฿${amount}\n`;
+        text += `- ${note}: ฿${amount.toLocaleString()}\n`;
       });
 
-      text += `\n📌 ยอดรวม: ฿${row.grandTotal}`;
+      text += `\n📌 ยอดรวม: ฿${row.grandTotal.toLocaleString()}`;
       if (row.leaveDays > 0) text += ` (ลาหยุด ${row.leaveDays} วัน)`;
 
       if (row.advanceDeduction > 0) {
-        text += `\n- หักหนี้เบิกล่วงหน้า: ฿${row.advanceDeduction}\n` +
-        `✅ คงเหลือรับสุทธิ: ฿${row.finalPay}`;
+        text += `\n- หักหนี้เบิกล่วงหน้า: ฿${row.advanceDeduction.toLocaleString()}\n` +
+        `✅ คงเหลือรับสุทธิ: ฿${row.finalPay.toLocaleString()}`;
       }
     }
 
@@ -367,27 +367,27 @@ export function ReportsPage() {
       let workerText = '';
 
       if (isEnglish) {
-        workerText = `${index + 1}. ${row.worker.name}: Worked ${row.totalDays} day${row.totalDays > 1 ? 's' : ''}${row.leaveDays > 0 ? ` (+ Leave ${row.leaveDays})` : ''} | Net Paid ฿${row.finalPay}`;
+        workerText = `${index + 1}. ${row.worker.name}: Worked ${row.totalDays} day${row.totalDays > 1 ? 's' : ''}${row.leaveDays > 0 ? ` (+ Leave ${row.leaveDays})` : ''} | Net Paid ฿${row.finalPay.toLocaleString()}`;
         if (row.advanceDeduction > 0) {
-          workerText += ` (Total ฿${row.grandTotal} Deduct Advance ฿${row.advanceDeduction})`;
+          workerText += ` (Total ฿${row.grandTotal.toLocaleString()} Deduct Advance ฿${row.advanceDeduction.toLocaleString()})`;
         }
         if (row.guaranteeTotal > 0) {
-          workerText += ` (Guarantee ฿${row.guaranteeTotal})`;
+          workerText += ` (Guarantee ฿${row.guaranteeTotal.toLocaleString()})`;
         }
       } else {
-        workerText = `${index + 1}. ${row.worker.name}: ทำงาน ${row.totalDays} วัน${row.leaveDays > 0 ? ` (+ ลา ${row.leaveDays})` : ''} | รับสุทธิ ${row.finalPay}`;
+        workerText = `${index + 1}. ${row.worker.name}: ทำงาน ${row.totalDays} วัน${row.leaveDays > 0 ? ` (+ ลา ${row.leaveDays})` : ''} | รับสุทธิ ฿${row.finalPay.toLocaleString()}`;
         if (row.advanceDeduction > 0) {
-          workerText += ` (รวม ${row.grandTotal} หักเบิก ${row.advanceDeduction})`;
+          workerText += ` (รวม ฿${row.grandTotal.toLocaleString()} หักเบิก ฿${row.advanceDeduction.toLocaleString()})`;
         }
         if (row.guaranteeTotal > 0) {
-          workerText += ` (หักประกันสะสม ฿${row.guaranteeTotal})`;
+          workerText += ` (หักประกันสะสม ฿${row.guaranteeTotal.toLocaleString()})`;
         }
       }
       text += workerText + '\n';
     });
 
     const grandFinalPayTotal = reportData.reduce((sum, r) => sum + r.finalPay, 0);
-    text += `\n💰 รวมยอดที่ต้องจ่ายจริง: ฿${grandFinalPayTotal}`;
+    text += `\n💰 รวมยอดที่ต้องจ่ายจริง: ฿${grandFinalPayTotal.toLocaleString()}`;
 
     handleCopy(text, 'all');
   };
@@ -823,6 +823,23 @@ export function ReportsPage() {
     );
     wsSummary['!cols'] = summaryCols;
 
+    // Helper to format numeric cells with commas
+    const formatNumberCells = (ws: XLSX.WorkSheet) => {
+      if (!ws) return;
+      Object.keys(ws).forEach(key => {
+        if (key.startsWith('!')) return;
+        const cell = ws[key];
+        if (cell && cell.t === 'n' && typeof cell.v === 'number') {
+          cell.z = (cell.v % 1 === 0) ? '#,##0' : '#,##0.0';
+        }
+      });
+    };
+
+    formatNumberCells(wsSummary);
+    Object.keys(wb.Sheets).forEach(sheetName => {
+      formatNumberCells(wb.Sheets[sheetName]);
+    });
+
     // Save File
     XLSX.writeFile(wb, `Payroll_Report_${startDate}_to_${endDate}.xlsx`);
   };
@@ -937,22 +954,22 @@ export function ReportsPage() {
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-right">
                         <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'ค่าแรง', metricType: 'baseWage' })} className="hover:underline cursor-pointer transition-colors px-2 py-1 -mr-2 rounded-md hover:bg-zinc-100 text-zinc-500">
-                          ฿{row.totalBaseWage}
+                          ฿{row.totalBaseWage.toLocaleString()}
                         </button>
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-right">
                         <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'ค่ารถ', metricType: 'travel' })} className="hover:underline cursor-pointer transition-colors px-2 py-1 -mr-2 rounded-md hover:bg-zinc-100 text-zinc-500">
-                          ฿{row.totalTravel}
+                          ฿{row.totalTravel.toLocaleString()}
                         </button>
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-right">
                         <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'โอที', metricType: 'ot' })} className="hover:underline cursor-pointer transition-colors px-2 py-1 -mr-2 rounded-md hover:bg-zinc-100 text-zinc-500">
-                          ฿{row.totalOT}
+                          ฿{row.totalOT.toLocaleString()}
                         </button>
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-right">
                         <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'หักสาย', metricType: 'late' })} className="hover:underline cursor-pointer transition-colors px-2 py-1 -mr-2 rounded-md hover:bg-red-50 text-red-500 font-medium">
-                          -฿{row.totalLate}
+                          -฿{row.totalLate.toLocaleString()}
                         </button>
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm text-zinc-500 text-right">
@@ -962,34 +979,34 @@ export function ReportsPage() {
                             className={`hover:underline cursor-pointer transition-colors px-2 py-1 -mr-2 rounded-md hover:bg-zinc-100 ${row.netAdjustments > 0 ? 'text-emerald-600 font-medium' : row.netAdjustments < 0 ? 'text-red-600 font-medium' : ''}`}
                             title="คลิกเพื่อดูรายการอื่นๆ"
                           >
-                            {row.netAdjustments > 0 ? '+' : ''}{row.netAdjustments !== 0 ? `฿${row.netAdjustments}` : '-'}
+                            {row.netAdjustments > 0 ? '+' : ''}{row.netAdjustments !== 0 ? `฿${row.netAdjustments.toLocaleString()}` : '-'}
                           </button>
                         ) : (
                           <span className={row.netAdjustments > 0 ? 'text-emerald-600' : row.netAdjustments < 0 ? 'text-red-600' : ''}>
-                            {row.netAdjustments > 0 ? '+' : ''}{row.netAdjustments !== 0 ? `฿${row.netAdjustments}` : '-'}
+                            {row.netAdjustments > 0 ? '+' : ''}{row.netAdjustments !== 0 ? `฿${row.netAdjustments.toLocaleString()}` : '-'}
                           </span>
                         )}
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm font-bold text-right">
                         <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'หักประกันสะสมรอบนี้', metricType: 'guarantee' })} className={`hover:underline cursor-pointer transition-colors px-2 py-1 -mr-2 rounded-md hover:bg-orange-50 text-orange-600 ${row.guaranteeTotal > 0 ? '' : 'text-zinc-300 font-normal hover:bg-transparent cursor-default'}`} disabled={row.guaranteeTotal === 0}>
-                          {row.guaranteeTotal > 0 ? `฿${row.guaranteeTotal}` : '-'}
+                          {row.guaranteeTotal > 0 ? `฿${row.guaranteeTotal.toLocaleString()}` : '-'}
                         </button>
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm font-bold text-right">
                         <span className={`px-2 py-1 -mr-2 rounded-md ${row.socialSecurityDeduction > 0 ? 'text-purple-600 bg-purple-50' : 'text-zinc-300'} font-medium`}>
-                          {row.socialSecurityDeduction > 0 ? `-฿${row.socialSecurityDeduction}` : '-'}
+                          {row.socialSecurityDeduction > 0 ? `-฿${row.socialSecurityDeduction.toLocaleString()}` : '-'}
                         </span>
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm font-bold text-right">
                         <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'หักเบิก', metricType: 'advance' })} className={`hover:underline cursor-pointer transition-colors px-2 py-1 -mr-2 rounded-md hover:bg-red-50 text-red-500 ${row.advanceDeduction > 0 ? '' : 'text-zinc-300 font-normal hover:bg-transparent cursor-default'}`} disabled={row.advanceDeduction === 0}>
-                          {row.advanceDeduction > 0 ? `-฿${row.advanceDeduction}` : '-'}
+                          {row.advanceDeduction > 0 ? `-฿${row.advanceDeduction.toLocaleString()}` : '-'}
                         </button>
                       </td>
                       <td className="whitespace-nowrap px-3 py-4 text-sm font-bold text-right">
                         <button onClick={() => setSelectedMetric({ workerId: row.worker.id, workerName: row.worker.name, metricName: 'สุทธิ', metricType: 'net' })} className="hover:underline cursor-pointer transition-colors px-2 py-1 -mr-2 rounded-md hover:bg-blue-50 text-blue-600">
                           <div className="flex flex-col items-end">
-                              {row.advanceDeduction > 0 && <span className="text-[10px] text-zinc-400 line-through">฿{row.grandTotal}</span>}
-                              <span>฿{row.finalPay}</span>
+                              {row.advanceDeduction > 0 && <span className="text-[10px] text-zinc-400 line-through">฿{row.grandTotal.toLocaleString()}</span>}
+                              <span>฿{row.finalPay.toLocaleString()}</span>
                           </div>
                         </button>
                       </td>
@@ -1034,15 +1051,15 @@ export function ReportsPage() {
                   <tr>
                     <th scope="row" className="py-3 pl-4 pr-3 text-left text-sm font-bold text-blue-900 sm:pl-6">รวมทั้งหมด</th>
                     <td className="px-3 py-3 text-sm font-bold text-blue-900 text-center">{reportData.reduce((sum, r) => sum + r.totalDays, 0)}</td>
-                    <td className="px-3 py-3 text-sm font-bold text-blue-900 text-right">฿{reportData.reduce((sum, r) => sum + r.totalBaseWage, 0)}</td>
-                    <td className="px-3 py-3 text-sm font-bold text-blue-900 text-right">฿{reportData.reduce((sum, r) => sum + r.totalTravel, 0)}</td>
-                    <td className="px-3 py-3 text-sm font-bold text-blue-900 text-right">฿{reportData.reduce((sum, r) => sum + r.totalOT, 0)}</td>
-                    <td className="px-3 py-3 text-sm font-bold text-red-600 text-right">-฿{reportData.reduce((sum, r) => sum + r.totalLate, 0)}</td>
-                    <td className="px-3 py-3 text-sm font-bold text-blue-900 text-right">฿{reportData.reduce((sum, r) => sum + r.netAdjustments, 0)}</td>
-                    <td className="px-3 py-3 text-sm font-bold text-orange-600 text-right">฿{reportData.reduce((sum, r) => sum + r.guaranteeTotal, 0)}</td>
-                    <td className="px-3 py-3 text-sm font-bold text-purple-600 text-right">-฿{reportData.reduce((sum, r) => sum + r.socialSecurityDeduction, 0)}</td>
-                    <td className="px-3 py-3 text-sm font-bold text-red-600 text-right">-฿{reportData.reduce((sum, r) => sum + r.advanceDeduction, 0)}</td>
-                    <td className="px-3 py-3 text-sm font-bold text-blue-700 text-right">฿{reportData.reduce((sum, r) => sum + r.finalPay, 0)}</td>
+                    <td className="px-3 py-3 text-sm font-bold text-blue-900 text-right">฿{reportData.reduce((sum, r) => sum + r.totalBaseWage, 0).toLocaleString()}</td>
+                    <td className="px-3 py-3 text-sm font-bold text-blue-900 text-right">฿{reportData.reduce((sum, r) => sum + r.totalTravel, 0).toLocaleString()}</td>
+                    <td className="px-3 py-3 text-sm font-bold text-blue-900 text-right">฿{reportData.reduce((sum, r) => sum + r.totalOT, 0).toLocaleString()}</td>
+                    <td className="px-3 py-3 text-sm font-bold text-red-600 text-right">-฿{reportData.reduce((sum, r) => sum + r.totalLate, 0).toLocaleString()}</td>
+                    <td className="px-3 py-3 text-sm font-bold text-blue-900 text-right">฿{reportData.reduce((sum, r) => sum + r.netAdjustments, 0).toLocaleString()}</td>
+                    <td className="px-3 py-3 text-sm font-bold text-orange-600 text-right">฿{reportData.reduce((sum, r) => sum + r.guaranteeTotal, 0).toLocaleString()}</td>
+                    <td className="px-3 py-3 text-sm font-bold text-purple-600 text-right">-฿{reportData.reduce((sum, r) => sum + r.socialSecurityDeduction, 0).toLocaleString()}</td>
+                    <td className="px-3 py-3 text-sm font-bold text-red-600 text-right">-฿{reportData.reduce((sum, r) => sum + r.advanceDeduction, 0).toLocaleString()}</td>
+                    <td className="px-3 py-3 text-sm font-bold text-blue-700 text-right">฿{reportData.reduce((sum, r) => sum + r.finalPay, 0).toLocaleString()}</td>
                     <td className="py-3 pl-3 pr-4 sm:pr-6"></td>
                   </tr>
                 </tfoot>
@@ -1100,7 +1117,7 @@ export function ReportsPage() {
                       </div>
                     )}
                     <div className={`font-bold text-sm ${adj.type === 'add' ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {adj.type === 'add' ? '+' : '-'}฿{adj.amount}
+                      {adj.type === 'add' ? '+' : '-'}฿{adj.amount.toLocaleString()}
                     </div>
                   </div>
                 </div>
@@ -1111,7 +1128,7 @@ export function ReportsPage() {
                  <span>รวมยอดอื่นๆสุทธิ</span>
                  <span className={selectedAdjustments.list.reduce((acc, curr) => acc + (curr.type === 'add' ? curr.amount : -curr.amount), 0) > 0 ? 'text-emerald-600' : selectedAdjustments.list.reduce((acc, curr) => acc + (curr.type === 'add' ? curr.amount : -curr.amount), 0) < 0 ? 'text-red-600' : 'text-zinc-900 dark:text-zinc-100'}>
                     {selectedAdjustments.list.reduce((acc, curr) => acc + (curr.type === 'add' ? curr.amount : -curr.amount), 0) > 0 ? '+' : ''}
-                    ฿{selectedAdjustments.list.reduce((acc, curr) => acc + (curr.type === 'add' ? curr.amount : -curr.amount), 0)}
+                    ฿{selectedAdjustments.list.reduce((acc, curr) => acc + (curr.type === 'add' ? curr.amount : -curr.amount), 0).toLocaleString()}
                  </span>
                </div>
             </div>
@@ -1231,7 +1248,7 @@ export function ReportsPage() {
                             </div>
                              <div className={`font-bold text-sm ${item.isDeduct ? 'text-red-500' : (item.color || 'text-emerald-600')}`}>
                             {selectedMetric.metricType === 'days' || selectedMetric.metricType === 'leave' ? '' : (item.isDeduct ? '-' : '+')}
-                            {selectedMetric.metricType === 'days' || selectedMetric.metricType === 'leave' ? `${item.amount} วัน` : `฿${item.amount}`}
+                            {selectedMetric.metricType === 'days' || selectedMetric.metricType === 'leave' ? `${item.amount} วัน` : `฿${item.amount.toLocaleString()}`}
                             </div>
                         </div>
                         ))}
@@ -1242,7 +1259,7 @@ export function ReportsPage() {
                         <span className={selectedMetric.metricType === 'advance' ? 'text-red-600' : 'text-blue-600'}>
                             {selectedMetric.metricType === 'days' || selectedMetric.metricType === 'leave' 
                             ? `${items.reduce((s, i) => s + i.amount, 0)} วัน` 
-                            : `฿${items.reduce((s, i) => s + (i.isDeduct ? -i.amount : i.amount), 0)}`}
+                            : `฿${items.reduce((s, i) => s + (i.isDeduct ? -i.amount : i.amount), 0).toLocaleString()}`}
                         </span>
                     </div>
                   </>
