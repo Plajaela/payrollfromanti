@@ -217,7 +217,7 @@ export function SlipModal({ isOpen, onClose, dateRangeStr, data }: SlipModalProp
       if (webhookUrl) {
         const driveFormData = new URLSearchParams();
         driveFormData.append('workerName', data.worker.name || 'Unknown');
-        driveFormData.append('mainFolder', 'เซ็นสลิป'); // Requested generic MAIN folder
+        driveFormData.append('mainFolder', 'สลิปเงินเดือนพนักงาน'); // Root folder name
         driveFormData.append('date', dateRangeStr);
         driveFormData.append('imageUrl', publicUrl);
         driveFormData.append('type', 'signed_slip'); // Metadata hint
