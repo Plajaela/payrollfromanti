@@ -42,6 +42,8 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
   const [lalamoveDist, setLalamoveDist] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
   const isUploadingRef = useRef(false);
+  const isSavingRef = useRef(false);
+  const [isSavingDb, setIsSavingDb] = useState(false);
   const hasUserEditedRef = useRef(false);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const formDataRef = useRef<typeof formData>(null as any);
@@ -761,89 +763,99 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
   const handleSave = async (isDraft: boolean, closeModal = true, showToast = true): Promise<boolean> => {
     if (!formData.workerId) return false;
 
-    // A finalized entry must never be silently reverted to a draft by a
-    // background auto-save / close-save. Explicit saves (showToast) still pass.
-    if (isDraft && !showToast && isFinalizedRef.current) return true;
+    // Guard against concurrent saves (double click / auto-save race conditions)
+    if (isSavingRef.current) return false;
+    isSavingRef.current = true;
+    setIsSavingDb(true);
 
-    // Cancel any pending auto-save timer to prevent it from overwriting this save
-    if (autoSaveTimerRef.current) {
-      clearTimeout(autoSaveTimerRef.current);
-      autoSaveTimerRef.current = null;
-    }
+    try {
+      // A finalized entry must never be silently reverted to a draft by a
+      // background auto-save / close-save. Explicit saves (showToast) still pass.
+      if (isDraft && !showToast && isFinalizedRef.current) return true;
 
-    // Mark finalize intent synchronously so any in-flight auto-save aborts and
-    // can never enqueue a draft write after this finalize.
-    if (!isDraft) isFinalizedRef.current = true;
-
-    const otRatePerHour = 100;
-    const otPay = (formData.overtimeHours * otRatePerHour) + (formData.overtimeMinutes / 60 * otRatePerHour);
-    const totalPay = calculateTotal();
-
-    const tollTotal = formData.tolls.reduce((sum, t) => sum + Number(t.amount || 0), 0);
-    const entryData = {
-      workerId: formData.workerId,
-      date: dateStr,
-      clockIn: formData.clockIn,
-      clockOut: formData.clockOut,
-      baseWage: formData.baseWage,
-      travelAllowance: formData.travelAllowance,
-      tollFee: tollTotal,
-      tolls: formData.tolls,
-      lateDeduction: formData.lateDeduction,
-      overtimeHours: formData.overtimeHours,
-      overtimeMinutes: formData.overtimeMinutes,
-      overtimePay: otPay,
-      adjustments: formData.adjustments,
-      totalPay,
-      note: formData.note,
-      isDraft,
-      isLeave: formData.isLeave,
-      leaveType: formData.isLeave ? formData.leaveType : undefined,
-      leaveNote: formData.isLeave ? formData.leaveNote : undefined,
-      transferSlipUrl: formData.transferSlips[0] || formData.transferSlipUrl || '', // fallback legacy string
-      transferSlips: formData.transferSlips,
-      tollReceiptUrl: formData.tollReceiptUrl,
-      tollDate: formData.tollDate,
-      guaranteeDeduction: (!isDraft && formData.hasGuaranteeDeduction && (!formData.isLeave || formData.leaveType === 'ลาครึ่งวัน')) 
-        ? formData.guaranteeDeductionAmount
-        : 0, 
-      lateRateRule: formData.lateRateRule,
-    };
-
-    let ok = true;
-    if (editingId) {
-      ok = await updateEntry(editingId, entryData);
-    } else {
-      const res = await addEntry(entryData);
-      setEditingId(res.id);
-      ok = res.ok;
-    }
-
-    if (!ok) {
-      // Persisting failed — never pretend it succeeded (payroll integrity).
-      // Clear finalize intent so a draft backup / retry can still run, and the
-      // data the user typed stays on screen.
-      if (!isDraft) isFinalizedRef.current = false;
-      if (showToast) {
-        alert('บันทึกไม่สำเร็จ การเชื่อมต่อมีปัญหา กรุณากดบันทึกอีกครั้ง (ข้อมูลในหน้าจอยังอยู่ครบ)');
+      // Cancel any pending auto-save timer to prevent it from overwriting this save
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
       }
-      return false;
-    }
 
-    // Reflect the persisted draft/final state authoritatively.
-    isFinalizedRef.current = !isDraft;
-    // Reset edit tracking after successful save to prevent stale auto-saves
-    hasUserEditedRef.current = false;
+      // Mark finalize intent synchronously so any in-flight auto-save aborts and
+      // can never enqueue a draft write after this finalize.
+      if (!isDraft) isFinalizedRef.current = true;
 
-    if (showToast) {
-      // Trigger save animation & toast
-      setIsSaving(true);
-      setSaveToastVisible(true);
-      setTimeout(() => setIsSaving(false), 300);
-      setTimeout(() => setSaveToastVisible(false), 1000);
+      const otRatePerHour = 100;
+      const otPay = (formData.overtimeHours * otRatePerHour) + (formData.overtimeMinutes / 60 * otRatePerHour);
+      const totalPay = calculateTotal();
+
+      const tollTotal = formData.tolls.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+      const entryData = {
+        workerId: formData.workerId,
+        date: dateStr,
+        clockIn: formData.clockIn,
+        clockOut: formData.clockOut,
+        baseWage: formData.baseWage,
+        travelAllowance: formData.travelAllowance,
+        tollFee: tollTotal,
+        tolls: formData.tolls,
+        lateDeduction: formData.lateDeduction,
+        overtimeHours: formData.overtimeHours,
+        overtimeMinutes: formData.overtimeMinutes,
+        overtimePay: otPay,
+        adjustments: formData.adjustments,
+        totalPay,
+        note: formData.note,
+        isDraft,
+        isLeave: formData.isLeave,
+        leaveType: formData.isLeave ? formData.leaveType : undefined,
+        leaveNote: formData.isLeave ? formData.leaveNote : undefined,
+        transferSlipUrl: formData.transferSlips[0] || formData.transferSlipUrl || '', // fallback legacy string
+        transferSlips: formData.transferSlips,
+        tollReceiptUrl: formData.tollReceiptUrl,
+        tollDate: formData.tollDate,
+        guaranteeDeduction: (!isDraft && formData.hasGuaranteeDeduction && (!formData.isLeave || formData.leaveType === 'ลาครึ่งวัน')) 
+          ? formData.guaranteeDeductionAmount
+          : 0, 
+        lateRateRule: formData.lateRateRule,
+      };
+
+      let ok = true;
+      if (editingId) {
+        ok = await updateEntry(editingId, entryData);
+      } else {
+        const res = await addEntry(entryData);
+        setEditingId(res.id);
+        ok = res.ok;
+      }
+
+      if (!ok) {
+        // Persisting failed — never pretend it succeeded (payroll integrity).
+        // Clear finalize intent so a draft backup / retry can still run, and the
+        // data the user typed stays on screen.
+        if (!isDraft) isFinalizedRef.current = false;
+        if (showToast) {
+          alert('บันทึกไม่สำเร็จ การเชื่อมต่อมีปัญหา กรุณากดบันทึกอีกครั้ง (ข้อมูลในหน้าจอยังอยู่ครบ)');
+        }
+        return false;
+      }
+
+      // Reflect the persisted draft/final state authoritatively.
+      isFinalizedRef.current = !isDraft;
+      // Reset edit tracking after successful save to prevent stale auto-saves
+      hasUserEditedRef.current = false;
+
+      if (showToast) {
+        // Trigger save animation & toast
+        setIsSaving(true);
+        setSaveToastVisible(true);
+        setTimeout(() => setIsSaving(false), 300);
+        setTimeout(() => setSaveToastVisible(false), 1000);
+      }
+      if (closeModal) setIsModalOpen(false);
+      return true;
+    } finally {
+      isSavingRef.current = false;
+      setIsSavingDb(false);
     }
-    if (closeModal) setIsModalOpen(false);
-    return true;
   };
 
   // Auto-save draft when form changes
@@ -2687,21 +2699,21 @@ export function DailyEntryPage({ pendingDate, onPendingDateConsumed }: { pending
                 type="button"
                 whileTap={{ scale: 0.94 }}
                 animate={isSaving ? { scale: [1, 1.07, 1], transition: { duration: 0.35 } } : {}}
-                disabled={isUploading}
+                disabled={isUploading || isSavingDb}
                 className="px-6 py-4 text-base rounded-2xl shadow-sm bg-orange-500 hover:bg-orange-600 text-white flex-1 disabled:opacity-50 inline-flex items-center justify-center font-semibold"
                 onClick={() => handleSave(true)}
               >
-                {isUploading ? 'รออัพโหลดรูป...' : 'บันทึกฉบับร่าง'}
+                {isSavingDb ? 'กำลังบันทึก...' : (isUploading ? 'รออัพโหลดรูป...' : 'บันทึกฉบับร่าง')}
               </motion.button>
               <motion.button
                 type="button"
                 whileTap={{ scale: 0.94 }}
                 animate={isSaving ? { scale: [1, 1.09, 1], transition: { duration: 0.4 } } : {}}
-                disabled={isUploading}
+                disabled={isUploading || isSavingDb}
                 className="px-6 py-4 text-base rounded-2xl shadow-lg shadow-sky-200 flex-1 bg-sky-500 hover:bg-sky-600 text-white disabled:opacity-50 inline-flex items-center justify-center font-semibold"
                 onClick={() => handleSave(false)}
               >
-                {isUploading ? 'รออัพโหลดรูป...' : 'บันทึกสมบูรณ์'}
+                {isSavingDb ? 'กำลังบันทึก...' : (isUploading ? 'รออัพโหลดรูป...' : 'บันทึกสมบูรณ์')}
               </motion.button>
             </div>
           </div>

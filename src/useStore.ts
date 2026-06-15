@@ -19,6 +19,12 @@ export function useStore() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  const entriesRef = useRef<DailyEntry[]>([]);
+
+  useEffect(() => {
+    entriesRef.current = entries;
+  }, [entries]);
+
   const [advances, setAdvances] = useState<AdvancePayment[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [salaryHistory, setSalaryHistory] = useState<SalaryHistory[]>([]);
@@ -302,11 +308,11 @@ export function useStore() {
         { event: 'INSERT', schema: 'public', table: 'daily_entries' },
         (payload) => {
           const newEntry = mapEntry(payload.new);
-          setEntries(prev => {
-            // Only add if not already present (avoids duplicates from optimistic add)
-            if (prev.some(e => e.id === newEntry.id)) return prev;
-            return [newEntry, ...prev];
-          });
+          if (entriesRef.current.some(e => e.id === newEntry.id || (e.workerId === newEntry.workerId && e.date === newEntry.date))) {
+            return;
+          }
+          entriesRef.current = [newEntry, ...entriesRef.current];
+          setEntries(entriesRef.current);
         }
       )
       .on(
@@ -314,10 +320,10 @@ export function useStore() {
         { event: 'UPDATE', schema: 'public', table: 'daily_entries' },
         (payload) => {
           const updated = mapEntry(payload.new);
-          setEntries(prev => prev.map(existing => {
+          let found = false;
+          entriesRef.current = entriesRef.current.map(existing => {
             if (existing.id !== updated.id) return existing;
-            // Protect locally-added slip URLs from being overwritten by stale server data.
-            // If local state has slips but server payload doesn't, keep local version.
+            found = true;
             const mergedSlips = (updated.transferSlips && updated.transferSlips.length > 0)
               ? updated.transferSlips
               : existing.transferSlips;
@@ -327,14 +333,12 @@ export function useStore() {
             const mergedTollReceipt = (updated.tollReceiptUrl)
               ? updated.tollReceiptUrl
               : existing.tollReceiptUrl;
-            // For adjustments, keep the version with more receipt URLs filled in
             const existingReceiptCount = (existing.adjustments || []).filter(a => a.receiptUrl).length;
             const updatedReceiptCount = (updated.adjustments || []).filter((a: any) => a.receiptUrl).length;
             const mergedAdjustments = updatedReceiptCount >= existingReceiptCount
               ? updated.adjustments
               : existing.adjustments;
 
-            // For tolls, keep the version with more receipt URLs filled in
             const existingTollReceiptCount = (existing.tolls || []).filter(t => t.receiptUrl).length;
             const updatedTollReceiptCount = (updated.tolls || []).filter((t: any) => t.receiptUrl).length;
             const mergedTolls = updatedTollReceiptCount >= existingTollReceiptCount
@@ -350,7 +354,11 @@ export function useStore() {
               adjustments: mergedAdjustments,
               tolls: mergedTolls,
             };
-          }));
+          });
+
+          if (found) {
+            setEntries(entriesRef.current);
+          }
         }
       )
       .on(
@@ -359,7 +367,8 @@ export function useStore() {
         (payload) => {
           const deletedId = (payload.old as any)?.id;
           if (deletedId) {
-            setEntries(prev => prev.filter(e => e.id !== deletedId));
+            entriesRef.current = entriesRef.current.filter(e => e.id !== deletedId);
+            setEntries(entriesRef.current);
           }
         }
       )
@@ -554,9 +563,19 @@ export function useStore() {
   };
 
   const addEntry = async (entry: Omit<DailyEntry, 'id'>): Promise<{ id: string; ok: boolean }> => {
+    // Read the latest entries from ref synchronously to prevent duplicates
+    const existing = entriesRef.current.find(e => e.workerId === entry.workerId && e.date === entry.date);
+    if (existing) {
+      console.warn('Duplicate entry detected in addEntry, returning existing entry ID:', existing.id);
+      return { id: existing.id, ok: true };
+    }
+
     const newId = uuidv4();
     const newEntry = { ...entry, id: newId };
-    setEntries((prev) => [...prev, newEntry]);
+    
+    // Update ref and state synchronously
+    entriesRef.current = [newEntry, ...entriesRef.current];
+    setEntries(entriesRef.current);
 
     const row = {
       id: newId,
@@ -592,9 +611,9 @@ export function useStore() {
   };
 
   const updateEntry = async (id: string, updated: Partial<DailyEntry>): Promise<boolean> => {
-    setEntries((prev) =>
-      prev.map((e) => (e.id === id ? { ...e, ...updated } : e))
-    );
+    // Update ref and state synchronously
+    entriesRef.current = entriesRef.current.map((e) => (e.id === id ? { ...e, ...updated } : e));
+    setEntries(entriesRef.current);
 
     const updateData: any = {};
     if (updated.workerId !== undefined) updateData.worker_id = updated.workerId;
@@ -627,7 +646,9 @@ export function useStore() {
   };
 
   const deleteEntry = async (id: string) => {
-    setEntries((prev) => prev.filter((e) => e.id !== id));
+    // Update ref and state synchronously
+    entriesRef.current = entriesRef.current.filter((e) => e.id !== id);
+    setEntries(entriesRef.current);
 
     try {
       const { error } = await supabase
